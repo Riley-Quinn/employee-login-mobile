@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Linking,
   FlatList,
+  Modal,
   Image,
   ActivityIndicator,
   Alert,
@@ -29,6 +30,7 @@ const ViewTickets = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const ticketId = route.params?.ticketId;
+  const [emailPopup, setEmailPopup] = useState(null);
 
   const [ticket, setTicket] = useState(null);
   const [userId, setUserId] = useState(null);
@@ -211,14 +213,17 @@ const ViewTickets = () => {
             >
               {ticket.customer_phone}
             </Text>
-
-            <Text
-              style={styles.emailText}
-              numberOfLines={1}
-              ellipsizeMode="clip"
+            <TouchableOpacity
+              onPress={() => setEmailPopup(ticket.customer_email)}
             >
-              {ticket.customer_email}
-            </Text>
+              <Text
+                style={styles.emailText}
+                numberOfLines={1}
+                ellipsizeMode="clip"
+              >
+                {ticket.customer_email}
+              </Text>
+            </TouchableOpacity>
 
             <Text
               style={styles.priorityText}
@@ -253,6 +258,56 @@ const ViewTickets = () => {
             fetchData={fetchTicket}
           />
         </View>
+        <Modal
+          visible={!!emailPopup}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setEmailPopup(null)}
+        >
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: 'rgba(0,0,0,0.5)',
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+          >
+            <View
+              style={{
+                backgroundColor: '#fff',
+                padding: 10,
+                borderRadius: 10,
+                width: '50%',
+                alignItems: 'center',
+              }}
+            >
+              <View
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  width: '100%',
+                }}
+              >
+                <Text style={{ fontSize: 16, fontWeight: 'bold' }}>Email</Text>
+
+                <TouchableOpacity onPress={() => setEmailPopup(null)}>
+                  <MaterialIcons name="close" size={24} color="#333" />
+                </TouchableOpacity>
+              </View>
+
+              <Text
+                style={{
+                  fontSize: 15,
+                  marginVertical: 15,
+                  textAlign: 'center',
+                }}
+              >
+                {emailPopup}
+              </Text>
+            </View>
+          </View>
+        </Modal>
 
         <View style={styles.Media}>
           <Text style={styles.sectionTitle}>Media</Text>

@@ -10,7 +10,8 @@ import {
   Alert,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-// import { Picker } from '@react-native-picker/picker';
+import { Dropdown } from 'react-native-element-dropdown';
+import { StatusBar } from 'react-native';
 
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -19,6 +20,7 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import { BASE_URL } from '@env';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const serviceReasons = [
   'Power Supply Issues',
@@ -53,47 +55,45 @@ const Dashboard = ({ navigation }) => {
   const [statusFilter, setStatusFilter] = useState(null);
   const [ticketStatuses, setTicketStatuses] = useState([]);
 
-  // ticketStatuses is your array from API
-  // Example: [{ status_id: 1, status_name: "Open" }, ...]
-
   useEffect(() => {
     const init = async () => {
       try {
         const id = await AsyncStorage.getItem('userId');
         setUserId(id);
 
-        const res = await axios.get(`${BASE_URL}/api/ticket-statuses`, {});
-
+        const res = await axios.get(`${BASE_URL}/api/ticket-statuses`);
         setTicketStatuses(res?.data || []);
       } catch (err) {
         console.error('Failed to initialize or fetch statuses:', err);
       }
     };
-
     init();
   }, []);
 
   const fetchTickets = useCallback(async () => {
     if (!userId) return;
-    try {
-      const endpoint =
-        statusFilter === '1' || statusFilter === null
-          ? `${BASE_URL}/api/tickets`
-          : `${BASE_URL}/api/tickets/employee/${userId}`;
 
+    try {
       const response = await axios.get(
         `${BASE_URL}/api/tickets/employee/${userId}`,
-        // {
-        //   params: { status_id: statusFilter },
-        // },
       );
-      setTickets(response?.data?.list || []);
+      let list = response?.data?.list || [];
+
+      // ✅ Apply filtering by selected status
+      if (statusFilter && statusFilter !== 'all') {
+        list = list.filter(
+          ticket => ticket.status_id.toString() === statusFilter,
+        );
+      }
+
+      setTickets(list);
+
+      setTickets(list);
     } catch (error) {
-      console.error(error);
+      console.error('Error fetching tickets:', error);
       setTickets([]);
     }
   }, [userId, statusFilter]);
-
   useEffect(() => {
     if (userId) {
       fetchTickets();
@@ -125,7 +125,7 @@ const Dashboard = ({ navigation }) => {
       });
       fetchTickets();
       Alert.alert('Success', 'Ticket assigned successfully');
-    } catch (err) {
+    } catch {
       Alert.alert('Error', 'Failed to assign ticket');
     }
   };
@@ -142,17 +142,14 @@ const Dashboard = ({ navigation }) => {
       item.employee_name,
       item.employee_phone,
     );
-    const ticketData = {
-      status_id: 3,
-      status_tracker: trackerData,
-    };
+
     try {
       await axios.put(`${BASE_URL}/api/tickets/${item.ticket_id}`, {
-        ticketData,
+        ticketData: { status_id: 3, status_tracker: trackerData },
       });
       fetchTickets();
       Alert.alert('Success', 'Work started');
-    } catch (err) {
+    } catch {
       Alert.alert('Error', 'Failed to start work');
     }
   };
@@ -166,11 +163,11 @@ const Dashboard = ({ navigation }) => {
     const msg = reasonForDelay
       ? `Engineer will arrive on ${arrivalDate.toDateString()} at ${
           arrivalTime.toTimeString().split(' ')[0]
-        } 
-          // due to ${reasonForDelay}`
+        } due to ${reasonForDelay}`
       : `Engineer will arrive on ${arrivalDate.toDateString()} at ${
           arrivalTime.toTimeString().split(' ')[0]
         }`;
+
     const trackerData = StatusTracker(
       selectedTicket.status_tracker,
       msg,
@@ -180,19 +177,17 @@ const Dashboard = ({ navigation }) => {
       selectedTicket.employee_name,
       selectedTicket.employee_phone,
     );
-
-    const ticketData = {
-      employee_arrival_date: formattedDate,
-      status_tracker: trackerData,
-    };
     try {
       await axios.put(`${BASE_URL}/api/tickets/${selectedTicket.ticket_id}`, {
-        ticketData,
+        ticketData: {
+          employee_arrival_date: formattedDate,
+          status_tracker: trackerData,
+        },
       });
       fetchTickets();
       setModalVisible(false);
       Alert.alert('Success', 'Arrival date updated');
-    } catch (err) {
+    } catch {
       Alert.alert('Error', 'Failed to update arrival');
     }
   };
@@ -203,7 +198,7 @@ const Dashboard = ({ navigation }) => {
     const reason =
       serviceReason === 'Other'
         ? customServiceReason
-        : serviceReason || 'Service Update from Employee';
+        : serviceReason || 'Service Update';
     const trackerData = StatusTracker(
       selectedTicket.status_tracker,
       reason,
@@ -214,20 +209,16 @@ const Dashboard = ({ navigation }) => {
       selectedTicket.employee_phone || '',
     );
 
-    const ticketData = {
-      status_tracker: trackerData,
-      status_id: 3,
-    };
     try {
       await axios.put(`${BASE_URL}/api/tickets/${selectedTicket.ticket_id}`, {
-        ticketData,
+        ticketData: { status_tracker: trackerData, status_id: 3 },
       });
       fetchTickets();
       setServiceVisible(false);
       setServiceReason('');
       setCustomServiceReason('');
       Alert.alert('Success', 'Service updated');
-    } catch (err) {
+    } catch {
       Alert.alert('Error', 'Failed to update service');
     }
   };
@@ -256,11 +247,7 @@ const Dashboard = ({ navigation }) => {
       selectedTicket.employee_phone || '',
     );
 
-    const ticketData = {
-      status_id,
-      status_tracker: trackerData,
-    };
-
+    const ticketData = { status_id, status_tracker: trackerData };
     if (editStatus === 'On Hold' || editStatus === 'Pending') {
       ticketData.pending_reason = editReason;
     }
@@ -274,10 +261,11 @@ const Dashboard = ({ navigation }) => {
       setEditStatus('');
       setEditReason('');
       Alert.alert('Success', 'Ticket status updated');
-    } catch (err) {
+    } catch {
       Alert.alert('Error', 'Failed to update status');
     }
   };
+
   const getStatusChipStyle = status => {
     switch (status?.toLowerCase()) {
       case 'open':
@@ -456,29 +444,35 @@ const Dashboard = ({ navigation }) => {
   return (
     <>
       <View style={styles.headerContainer}>
-        <View style={styles.header}>
+        {/* Set status bar color (Android) */}
+        <StatusBar barStyle="light-content" backgroundColor="#069b7c" />
+
+        {/* Top safe area background for iOS */}
+        <SafeAreaView style={{ backgroundColor: '#069b7c', flex: 0 }}>
           <Text style={styles.headerTitle}>Dashboard</Text>
-        </View>
+        </SafeAreaView>
 
         <View style={{ marginTop: 10, paddingHorizontal: 20 }}>
           <Text style={styles.filterLabel}> Status</Text>
-          <View style={styles.pickerWrapper}>
-            {/* <Picker
-              selectedValue={statusFilter}
-              onValueChange={value => setStatusFilter(value)}
-              style={styles.picker}
-              dropdownIconColor="#069b7c"
-            >
-              <Picker.Item label="All" value={null} />
-              {ticketStatuses.map(status => (
-                <Picker.Item
-                  key={status.status_id}
-                  label={status.status_name}
-                  value={status.status_id.toString()}
-                />
-              ))}
-            </Picker> */}
-          </View>
+          <Dropdown
+            data={[
+              { label: 'All', value: 'all' },
+              ...ticketStatuses.map(s => ({
+                label: s.status_name,
+                value: s.status_id.toString(),
+              })),
+            ]}
+            labelField="label"
+            valueField="value"
+            placeholder="Select Status"
+            placeholderTextColor="#000"
+            placeholderStyle={{ color: '#000' }}
+            selectedTextStyle={{ color: '#000' }}
+            itemTextStyle={{ color: '#000' }}
+            style={styles.picker}
+            value={statusFilter}
+            onChange={item => setStatusFilter(item.value)}
+          />
         </View>
       </View>
 
@@ -489,21 +483,26 @@ const Dashboard = ({ navigation }) => {
           renderItem={renderItem}
         />
 
+        {/* Edit Modal */}
         <Modal visible={editVisible} transparent animationType="slide">
           <View style={styles.modalWrapper}>
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>Update Status</Text>
 
-              {/* <Picker
-                selectedValue={editStatus}
-                onValueChange={val => setEditStatus(val)}
+              <Dropdown
+                data={[
+                  { label: 'Done', value: 'Done' },
+                  { label: 'On Hold', value: 'On Hold' },
+                  { label: 'Pending', value: 'Pending' },
+                ]}
+                labelField="label"
+                valueField="value"
+                placeholder="Select Status"
+                placeholderTextColor="#000"
                 style={styles.input}
-              >
-                <Picker.Item label="Select Status" value="" />
-                <Picker.Item label="Done" value="Done" />
-                <Picker.Item label="On Hold" value="On Hold" />
-                <Picker.Item label="Pending" value="Pending" />
-              </Picker> */}
+                value={editStatus}
+                onChange={item => setEditStatus(item.value)}
+              />
 
               {(editStatus === 'On Hold' || editStatus === 'Pending') && (
                 <TextInput
@@ -582,25 +581,25 @@ const Dashboard = ({ navigation }) => {
             </View>
           </View>
         </Modal>
-
+        {/* Service Update Modal */}
         <Modal visible={serviceVisible} transparent animationType="slide">
           <View style={styles.modalWrapper}>
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>Update Service</Text>
 
-              {/* <Picker
-                selectedValue={serviceReason}
-                onValueChange={itemValue => setServiceReason(itemValue)}
+              <Dropdown
+                data={serviceReasons.map(r => ({ label: r, value: r }))}
+                labelField="label"
+                valueField="value"
+                placeholder="Select Reason"
                 style={styles.input}
-              >
-                {serviceReasons.map((reason, idx) => (
-                  <Picker.Item key={idx} label={reason} value={reason} />
-                ))}
-              </Picker> */}
+                value={serviceReason}
+                onChange={item => setServiceReason(item.value)}
+              />
 
               {serviceReason === 'Other' && (
                 <TextInput
-                  placeholder=" Reason"
+                  placeholder="Reason"
                   value={customServiceReason}
                   onChangeText={setCustomServiceReason}
                   style={styles.input}
@@ -625,24 +624,24 @@ const Dashboard = ({ navigation }) => {
           </View>
         </Modal>
 
+        {/* Date/Time Pickers */}
         {showDatePicker && (
           <DateTimePicker
             value={arrivalDate}
             mode="date"
             display="default"
-            onChange={(event, selectedDate) => {
+            onChange={(e, selectedDate) => {
               setShowDatePicker(false);
               if (selectedDate) setArrivalDate(selectedDate);
             }}
           />
         )}
-
         {showTimePicker && (
           <DateTimePicker
             value={arrivalTime}
             mode="time"
             display="default"
-            onChange={(event, selectedTime) => {
+            onChange={(e, selectedTime) => {
               setShowTimePicker(false);
               if (selectedTime) setArrivalTime(selectedTime);
             }}
@@ -916,20 +915,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
-  header: {
-    backgroundColor: '#069b7c',
-    height: 50,
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-    elevation: 4,
-    // paddingTop: 40,
-  },
-
   headerTitle: {
+    color: '#fff',
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#fff',
-    marginLeft: 12,
+    marginLeft: 30,
   },
 
   filterSection: {

@@ -6,16 +6,18 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  StatusBar,
 } from 'react-native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-// import { Picker } from '@react-native-picker/picker';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
+import { Dropdown } from 'react-native-element-dropdown';
 import { BASE_URL } from '@env';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const EventsOverview = () => {
   const [eventType, setEventType] = useState('Scheduled');
@@ -23,6 +25,11 @@ const EventsOverview = () => {
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState(null);
   const navigation = useNavigation();
+
+  const eventOptions = [
+    { label: 'Scheduled', value: 'Scheduled' },
+    { label: 'Unscheduled', value: 'Unscheduled' },
+  ];
 
   useEffect(() => {
     const loadUserId = async () => {
@@ -85,21 +92,27 @@ const EventsOverview = () => {
 
   return (
     <>
-      <View View style={styles.title}>
+      <StatusBar barStyle="light-content" backgroundColor="#069b7c" />
+
+      <SafeAreaView style={{ backgroundColor: '#069b7c', flex: 0 }}>
         <Text style={styles.ticketNumber}>Events</Text>
-      </View>
+      </SafeAreaView>
 
       <View style={{ flex: 1 }}>
         <View style={styles.container}>
           <View style={styles.dropdownContainer}>
-            {/* <Picker
-              selectedValue={eventType}
-              onValueChange={value => setEventType(value)}
+            <Dropdown
+              data={eventOptions}
+              labelField="label"
+              valueField="value"
+              value={eventType}
+              onChange={item => setEventType(item.value)}
               style={styles.picker}
-            >
-              <Picker.Item label="Scheduled" value="Scheduled" />
-              <Picker.Item label="Unscheduled" value="Unscheduled" />
-            </Picker> */}
+              placeholder="Select Event Type"
+              placeholderStyle={{ color: '#000' }}
+              selectedTextStyle={{ color: '#000' }} // selected value text color
+              itemTextStyle={{ color: '#000' }} // items in list
+            />
           </View>
 
           {loading ? (
@@ -168,14 +181,7 @@ const styles = StyleSheet.create({
     marginLeft: 20,
     color: '#fff',
   },
-  title: {
-    backgroundColor: '#069b7c',
-    height: 50,
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-    elevation: 4,
-    // paddingTop: 40,
-  },
+
   container: {
     flex: 1,
     backgroundColor: '#f2f4f7',

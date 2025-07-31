@@ -57,16 +57,16 @@ const Login = ({ navigation }) => {
 
   return (
     <ImageBackground
-      source={require('../Assets/bg.jpg')}
+      source={require('../Assets/bg-mobile.png')}
       style={styles.backgroundImage}
     >
       <View style={styles.container}>
-        <Text style={styles.title}>Login</Text>
+        <Text style={styles.title}>Welcome</Text>
 
         <Formik
           initialValues={{
-            email: 'testemp@gmail.com',
-            password: 'Password123!',
+            email: '',
+            password: '',
           }}
           validationSchema={Validation}
           onSubmit={handleLogin}
@@ -174,11 +174,12 @@ const styles = StyleSheet.create({
     marginBottom: 30,
     textAlign: 'center',
     fontWeight: 'bold',
+    color: '#000',
   },
   input: {
     padding: 14,
     borderColor: 'gray',
-    borderWidth: 2,
+    borderWidth: 1,
     fontSize: 12,
     fontWeight: 'bold',
     backgroundColor: 'white',
@@ -187,9 +188,9 @@ const styles = StyleSheet.create({
     color: '#000',
   },
   loginBtn: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#069b7c',
     padding: 15,
-    borderRadius: 6,
+    borderRadius: 30,
   },
   loginText: {
     color: '#fff',

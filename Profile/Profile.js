@@ -16,6 +16,7 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { BASE_URL } from '@env';
+import { SafeAreaView } from 'react-native-safe-area-context';
 const ProfileScreen = ({ navigation }) => {
   const [profile, setProfile] = useState({});
   const [userId, setUserId] = useState(null);
@@ -24,19 +25,31 @@ const ProfileScreen = ({ navigation }) => {
 
   useEffect(() => {
     const getUserId = async () => {
-      const id = await AsyncStorage.getItem('userId');
-      setUserId(id);
+      try {
+        const id = await AsyncStorage.getItem('userId');
+        if (id) {
+          setUserId(id);
+        } else {
+          console.warn('No user ID found in AsyncStorage');
+        }
+      } catch (error) {
+        console.error('Error reading userId from AsyncStorage:', error.message);
+      }
     };
+
     getUserId();
   }, []);
-
   useEffect(() => {
     if (userId) {
       const fetchProfile = async () => {
         try {
-          const res = await axios.get(`${BASE_URL}/api/employee/${userId}`);
-          const Data = res.data;
-          setProfile(Data);
+          const clientId = await AsyncStorage.getItem('clientId');
+          const res = await axios.get(`${BASE_URL}/api/employee/${userId}`, {
+            headers: {
+              'x-client-id': clientId,
+            },
+          });
+          setProfile(res.data);
         } catch (error) {
           console.error('Failed to fetch profile:', error.message);
         }
@@ -86,9 +99,11 @@ const ProfileScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Profile</Text>
-      </View>
+      <SafeAreaView style={{ backgroundColor: '#069b7c', padding: 0 }}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Profile</Text>
+        </View>
+      </SafeAreaView>
 
       <ScrollView>
         <View style={styles.body}>
@@ -114,13 +129,13 @@ const ProfileScreen = ({ navigation }) => {
             <Icon name="lock-closed" size={24} color="#069b7c" />
             <Text style={styles.itemText}>Change Password</Text>
           </TouchableOpacity>
-          <TouchableOpacity
+          {/* <TouchableOpacity
             style={styles.item}
             onPress={() => navigation.navigate('EditAddress')}
           >
             <Icon name="location-outline" size={24} color="#069b7c" />
             <Text style={styles.itemText}>Edit Address</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
 
           <TouchableOpacity style={styles.item} onPress={handleLogout}>
             <Icon name="log-out-outline" size={24} color="#069b7c" />
@@ -133,7 +148,7 @@ const ProfileScreen = ({ navigation }) => {
           style={styles.navItem}
           onPress={() => navigation.navigate('Dashboard')}
         >
-          <FontAwesome name="home" size={30} color="#3EB489" />
+          <FontAwesome name="home" size={30} color="#888" />
           <Text style={styles.navText}>Home</Text>
         </TouchableOpacity>
 
@@ -173,18 +188,11 @@ const styles = StyleSheet.create({
     marginRight: 20,
   },
 
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: '#069b7c',
-  },
-
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#fff',
+    marginLeft: 30,
   },
 
   body: {

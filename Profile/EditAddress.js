@@ -15,6 +15,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { BASE_URL } from '@env';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const addressValidationSchema = Yup.object({
   state_id: Yup.string().required('State is required'),
@@ -64,7 +65,6 @@ export default function EditAddress() {
   const fetchCities = async stateId => {
     try {
       const res = await axios.get(`${BASE_URL}/api/cities/${stateId}`);
-      console.log('resssssssssss1', res);
       setCities(Array.isArray(res.data) ? res.data : []);
     } catch (error) {
       console.error('Error fetching cities:', error);
@@ -74,7 +74,6 @@ export default function EditAddress() {
   const fetchRegions = async cityId => {
     try {
       const res = await axios.get(`${BASE_URL}/api/regions/${cityId}`);
-      console.log('resssssssssss2', res);
       setRegions(Array.isArray(res.data) ? res.data : []);
     } catch (error) {
       console.error('Error fetching regions:', error);
@@ -98,13 +97,14 @@ export default function EditAddress() {
 
   return (
     <View style={{ flex: 1 }}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Icon name="arrow-back" size={26} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.headerText}>Edit Address</Text>
-      </View>
-
+      <SafeAreaView style={{ backgroundColor: '#069b7c', padding: 0 }}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Icon name="arrow-back" size={26} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Edit Address</Text>
+        </View>
+      </SafeAreaView>
       {userData && (
         <Formik
           enableReinitialize
@@ -251,12 +251,8 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    borderBottomWidth: 1,
-    borderColor: '#ddd',
-    backgroundColor: '#069b7C',
   },
-  headerText: {
+  headerTitle: {
     fontSize: 18,
     color: '#fff',
     fontWeight: 'bold',

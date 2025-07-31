@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   ScrollView,
+  StatusBar,
 } from 'react-native';
 import axios from 'axios';
 import { Calendar as BigCalendar } from 'react-native-big-calendar';
@@ -17,6 +18,7 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import { BASE_URL } from '@env';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const EventsCalendar = () => {
   const [events, setEvents] = useState([]);
@@ -109,6 +111,10 @@ const EventsCalendar = () => {
 
   return (
     <>
+      <StatusBar barStyle="light-content" backgroundColor="#069b7c" />
+      <SafeAreaView
+        style={{ backgroundColor: '#069b7c', flex: 0, padding: 15 }}
+      />
       <View style={styles.topHeader}>
         <Text style={styles.headerTitle}> Calendar</Text>
       </View>
@@ -282,15 +288,15 @@ const styles = StyleSheet.create({
 
   topHeader: {
     backgroundColor: '#069b7c',
-    height: 50,
     justifyContent: 'center',
-    paddingHorizontal: 16,
     elevation: 4,
+    paddingHorizontal: 16,
   },
   headerTitle: {
     color: '#fff',
     fontSize: 20,
     fontWeight: 'bold',
+    marginTop: -40,
   },
   header: {
     backgroundColor: '#fff',

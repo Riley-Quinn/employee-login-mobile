@@ -15,6 +15,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Formik } from 'formik';
 import * as Yup from 'yup';
 import { BASE_URL } from '@env';
+import { SafeAreaView } from 'react-native-safe-area-context';
 const validationSchema = Yup.object().shape({
   name: Yup.string().required('Name is required'),
   phone: Yup.string()
@@ -35,7 +36,12 @@ const EditProfile = ({ navigation }) => {
       try {
         const userId = await AsyncStorage.getItem('userId'); // ensure correct key
 
-        const res = await axios.get(`${BASE_URL}/api/employee/${userId}`);
+        const clientId = await AsyncStorage.getItem('clientId');
+        const res = await axios.get(`${BASE_URL}/api/employee/${userId}`, {
+          headers: {
+            'x-client-id': clientId,
+          },
+        });
         const data = res.data;
         setInitialValues({
           name: data?.name || '',
@@ -64,12 +70,14 @@ const EditProfile = ({ navigation }) => {
 
   return (
     <>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Edit Profile</Text>
-      </View>
+      <SafeAreaView style={{ backgroundColor: '#069b7c', padding: 0 }}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={26} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Edit Profile</Text>
+        </View>
+      </SafeAreaView>
 
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.profileCircle}>
@@ -169,15 +177,18 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    // paddingHorizontal: 16,
     backgroundColor: '#069b7c',
+    // height: 1,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#fff',
     marginLeft: 15,
+  },
+  backicon: {
+    marginTop: -23,
   },
   label: {
     fontSize: 16,

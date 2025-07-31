@@ -14,6 +14,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Formik } from 'formik';
 import * as Yup from 'yup';
 import { BASE_URL } from '@env';
+import { SafeAreaView } from 'react-native-safe-area-context';
 const validationSchema = Yup.object().shape({
   currentPassword: Yup.string().required('Current password is required'),
   newPassword: Yup.string()
@@ -62,13 +63,14 @@ const Password = ({ navigation }) => {
 
   return (
     <>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Password </Text>
-      </View>
-
+      <SafeAreaView style={{ backgroundColor: '#069b7c', padding: 0 }}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={26} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Change Password</Text>
+        </View>
+      </SafeAreaView>
       <ScrollView contentContainerStyle={styles.container}>
         <Formik
           initialValues={{
@@ -189,9 +191,6 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: '#069b7c',
   },
   headerTitle: {
     fontSize: 20,
