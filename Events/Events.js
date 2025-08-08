@@ -70,11 +70,11 @@ const EventsOverview = () => {
     const address = `${item.address}, ${item.state_name}`;
 
     return (
-      <View style={styles.ticketcard}>
+      <View style={styles.ticketCard}>
         <View style={styles.card}>
           <View style={styles.cards}>
             <View style={styles.avatars}>
-              <MaterialIcons name="person" size={24} color="#fff" />
+              <FontAwesome name="ticket" size={24} color="#fff" />
             </View>
             <Text style={styles.serviceId}>#{item.ticket_service_id}</Text>
           </View>
@@ -93,8 +93,8 @@ const EventsOverview = () => {
             <Text style={styles.boldLabel}>
               Customer: <Text style={styles.Label}>{item.customer_name}</Text>
             </Text>
-            <Text style={styles.labelText}>
-              Phone: <Text style={styles.valueText}>{item.customer_phone}</Text>
+            <Text style={styles.boldLabel}>
+              Phone: <Text style={styles.Label}>{item.customer_phone}</Text>
             </Text>
           </View>
         </View>
@@ -193,7 +193,15 @@ const styles = StyleSheet.create({
     marginLeft: 20,
     color: '#fff',
   },
-
+  avatars: {
+    width: 30,
+    height: 30,
+    borderRadius: 20,
+    backgroundColor: '#008080',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
   container: {
     flex: 1,
     backgroundColor: '#f2f4f7',
@@ -215,6 +223,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+
   cards: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -224,7 +233,21 @@ const styles = StyleSheet.create({
   serviceId: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#222',
+    color: '#008080',
+  },
+  boldLabel: {
+    fontWeight: 'bold',
+    color: '#888',
+    fontSize: 14,
+  },
+  Label: {
+    color: '#008080',
+    fontWeight: '500',
+    fontSize: 14,
+  },
+
+  infoSection: {
+    marginHorizontal: 40,
   },
   field: {
     fontSize: 14,

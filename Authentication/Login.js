@@ -9,6 +9,7 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
 import { Formik } from 'formik';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -67,103 +68,105 @@ const Login = ({ navigation }) => {
       source={require('../Assets/black-bg.png')}
       style={styles.background}
     >
-      <View style={styles.container}>
-        <Image
-          source={require('../Assets/ScouTrack-final.png')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
+      <ScrollView>
+        <View style={styles.container}>
+          <Image
+            source={require('../Assets/ScouTrack-final.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
 
-        <Text style={styles.welcome}>WELCOME BACK</Text>
+          <Text style={styles.welcome}>WELCOME BACK</Text>
 
-        <Formik
-          initialValues={{
-            email: 'Employees@example.com',
-            password: 'Password123!',
-          }}
-          validationSchema={Validation}
-          onSubmit={handleLogin}
-        >
-          {({
-            handleChange,
-            handleBlur,
-            handleSubmit,
-            values,
-            errors,
-            touched,
-          }) => (
-            <>
-              <View style={[styles.inputWrapper, { marginTop: 80 }]}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Enter your email ID"
-                  placeholderTextColor="#000"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  onChangeText={handleChange('email')}
-                  onBlur={handleBlur('email')}
-                  value={values.email}
-                />
-              </View>
-              {touched.email && errors.email && (
-                <Text style={styles.error}>{errors.email}</Text>
-              )}
-              <View style={styles.inputWrapper}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Password"
-                  placeholderTextColor="#000"
-                  secureTextEntry={secureText}
-                  autoCapitalize="none"
-                  onChangeText={handleChange('password')}
-                  onBlur={handleBlur('password')}
-                  value={values.password}
-                />
-                <TouchableOpacity
-                  style={styles.iconContainer}
-                  onPress={() => setSecureText(!secureText)}
-                >
-                  <Icon
-                    name={secureText ? 'eye-off' : 'eye'}
-                    size={24}
-                    color="#009688"
+          <Formik
+            initialValues={{
+              email: '',
+              password: '',
+            }}
+            validationSchema={Validation}
+            onSubmit={handleLogin}
+          >
+            {({
+              handleChange,
+              handleBlur,
+              handleSubmit,
+              values,
+              errors,
+              touched,
+            }) => (
+              <>
+                <View style={[styles.inputWrapper, { marginTop: 50 }]}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter your email ID"
+                    placeholderTextColor="#000"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    onChangeText={handleChange('email')}
+                    onBlur={handleBlur('email')}
+                    value={values.email}
                   />
-                </TouchableOpacity>
-              </View>
-              {touched.password && errors.password && (
-                <Text style={styles.error}>{errors.password}</Text>
-              )}
-
-              {/* Login Button */}
-              {loading ? (
-                <ActivityIndicator size="large" color="#f97316" />
-              ) : (
-                <TouchableOpacity
-                  style={styles.loginBtn}
-                  onPress={handleSubmit}
-                >
-                  <Text style={styles.loginText}>LOGIN</Text>
-                </TouchableOpacity>
-              )}
-
-              <View style={styles.options}>
-                <TouchableOpacity onPress={handleForgotPassword}>
-                  <Text style={styles.forgotText}>Forgot Password ?</Text>
-                </TouchableOpacity>
-
-                <View style={styles.checkboxContainer}>
-                  <CheckBox
-                    value={rememberMe}
-                    onValueChange={setRememberMe}
-                    tintColors={{ true: '#fff', false: '#fff' }}
-                  />
-                  <Text style={styles.rememberMe}>Remember Me</Text>
                 </View>
-              </View>
-            </>
-          )}
-        </Formik>
-      </View>
+                {touched.email && errors.email && (
+                  <Text style={styles.error}>{errors.email}</Text>
+                )}
+                <View style={styles.inputWrapper}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Password"
+                    placeholderTextColor="#000"
+                    secureTextEntry={secureText}
+                    autoCapitalize="none"
+                    onChangeText={handleChange('password')}
+                    onBlur={handleBlur('password')}
+                    value={values.password}
+                  />
+                  <TouchableOpacity
+                    style={styles.iconContainer}
+                    onPress={() => setSecureText(!secureText)}
+                  >
+                    <Icon
+                      name={secureText ? 'eye-off' : 'eye'}
+                      size={24}
+                      color="#009688"
+                    />
+                  </TouchableOpacity>
+                </View>
+                {touched.password && errors.password && (
+                  <Text style={styles.error}>{errors.password}</Text>
+                )}
+
+                {/* Login Button */}
+                {loading ? (
+                  <ActivityIndicator size="large" color="#f97316" />
+                ) : (
+                  <TouchableOpacity
+                    style={styles.loginBtn}
+                    onPress={handleSubmit}
+                  >
+                    <Text style={styles.loginText}>LOGIN</Text>
+                  </TouchableOpacity>
+                )}
+
+                <View style={styles.options}>
+                  <TouchableOpacity onPress={handleForgotPassword}>
+                    <Text style={styles.forgotText}>Forgot Password ?</Text>
+                  </TouchableOpacity>
+
+                  <View style={styles.checkboxContainer}>
+                    <CheckBox
+                      value={rememberMe}
+                      onValueChange={setRememberMe}
+                      tintColors={{ true: '#fff', false: '#fff' }}
+                    />
+                    <Text style={styles.rememberMe}>Remember Me</Text>
+                  </View>
+                </View>
+              </>
+            )}
+          </Formik>
+        </View>
+      </ScrollView>
     </ImageBackground>
   );
 };
@@ -184,10 +187,10 @@ const styles = StyleSheet.create({
   },
 
   logo: {
-    width: 220,
-    height: 220,
+    width: 180,
+    height: 180,
     alignSelf: 'center',
-    marginBottom: 30,
+    marginBottom: 10,
   },
 
   welcome: {
@@ -195,7 +198,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '600',
     textAlign: 'center',
-    marginBottom: 20,
   },
 
   inputWrapper: {
@@ -206,7 +208,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     marginBottom: 40,
     height: 50,
-    width: '90%',
+    width: '100%',
     alignSelf: 'center',
   },
 
@@ -216,7 +218,7 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     alignItems: 'center',
     marginBottom: 10,
-    width: '90%',
+    width: '100%',
     alignSelf: 'center',
   },
 
@@ -268,7 +270,8 @@ const styles = StyleSheet.create({
   error: {
     color: 'red',
     fontSize: 12,
-    marginTop: 10,
     marginLeft: 5,
+    marginTop: -30,
+    marginBottom: 2,
   },
 });

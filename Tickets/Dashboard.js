@@ -6,13 +6,12 @@ import {
   TouchableOpacity,
   StyleSheet,
   Modal,
-  ScrollView,
   TextInput,
   Alert,
+  StatusBar,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Dropdown } from 'react-native-element-dropdown';
-import { StatusBar } from 'react-native';
 
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -298,15 +297,12 @@ const Dashboard = ({ navigation }) => {
         };
       default:
         return {
-          backgroundColor: '#ff5e65',
+          backgroundColor: '#008080',
           color: '#FFFFFF',
         };
     }
   };
   const renderItem = ({ item }) => {
-    const chipStyle = getStatusChipStyle(item.status_name);
-    const fullAddress = `, ${item.city_name}, ${item.region_name}`;
-
     return (
       <TouchableOpacity
         style={styles.ticketCard}
@@ -461,58 +457,54 @@ const Dashboard = ({ navigation }) => {
 
   return (
     <>
-      <View style={styles.headerContainer}>
-        <View style={styles.headerRow}>
-          <TouchableOpacity style={{ paddingLeft: 8 }}>
-            <Ionicons name="chevron-back" size={24} color="#fff" />
-          </TouchableOpacity>
+      <StatusBar barStyle="light-content" backgroundColor="#008080" />
 
-          <Text style={styles.headerTitle}>Dashboard</Text>
-        </View>
+      <SafeAreaView style={{ backgroundColor: '#008080', flex: 0 }}>
+        <Text style={styles.ticketNumber}>Dashboard</Text>
+      </SafeAreaView>
 
-        <View style={styles.filterRow}>
-          <TouchableOpacity onPress={() => setShowDropdown(!showDropdown)}>
-            <MaterialIcons name="filter-list" size={24} color="#000" />
-          </TouchableOpacity>
-        </View>
-        <Modal visible={showDropdown} transparent animationType="slide">
-          <View style={styles.modalWrapper}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Filter by Status</Text>
-
-              <Dropdown
-                data={[
-                  { label: 'All', value: 'all' },
-                  ...ticketStatuses.map(s => ({
-                    label: s.status_name,
-                    value: s.status_id.toString(),
-                  })),
-                ]}
-                labelField="label"
-                valueField="value"
-                placeholder="Select Status"
-                placeholderTextColor="#000"
-                placeholderStyle={{ color: '#000' }}
-                selectedTextStyle={{ color: '#000', fontSize: 16 }}
-                itemTextStyle={{ color: '#000', fontSize: 16 }}
-                style={styles.input}
-                value={statusFilter}
-                onChange={item => {
-                  setStatusFilter(item.value);
-                  setShowDropdown(false);
-                }}
-              />
-
-              <TouchableOpacity
-                style={styles.modalCancelButton}
-                onPress={() => setShowDropdown(false)}
-              >
-                <Text style={styles.modalButtonText}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
+      <View style={styles.filterRow}>
+        <TouchableOpacity onPress={() => setShowDropdown(!showDropdown)}>
+          <MaterialIcons name="filter-list" size={24} color="#000" />
+        </TouchableOpacity>
       </View>
+      <Modal visible={showDropdown} transparent animationType="slide">
+        <View style={styles.modalWrapper}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Filter by Status</Text>
+
+            <Dropdown
+              data={[
+                { label: 'All', value: 'all' },
+                ...ticketStatuses.map(s => ({
+                  label: s.status_name,
+                  value: s.status_id.toString(),
+                })),
+              ]}
+              labelField="label"
+              valueField="value"
+              placeholder="Select Status"
+              placeholderTextColor="#000"
+              placeholderStyle={{ color: '#000' }}
+              selectedTextStyle={{ color: '#000', fontSize: 16 }}
+              itemTextStyle={{ color: '#000', fontSize: 16 }}
+              style={styles.input}
+              value={statusFilter}
+              onChange={item => {
+                setStatusFilter(item.value);
+                setShowDropdown(false);
+              }}
+            />
+
+            <TouchableOpacity
+              style={styles.modalCancelButton}
+              onPress={() => setShowDropdown(false)}
+            >
+              <Text style={styles.modalButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       <View style={styles.container}>
         <FlatList
@@ -732,7 +724,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 10,
     padding: 16,
-    marginHorizontal: 16,
+    marginHorizontal: 6,
     marginVertical: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -761,7 +753,7 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 20,
     paddingHorizontal: 16,
     backgroundColor: '#008080',
   },

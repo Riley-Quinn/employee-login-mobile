@@ -112,13 +112,9 @@ const EventsCalendar = () => {
   return (
     <>
       <StatusBar barStyle="light-content" backgroundColor="#008080" />
-      <SafeAreaView
-        style={{ backgroundColor: '#008080', flex: 0, padding: 15 }}
-      />
-      <View style={styles.topHeader}>
-        <Text style={styles.headerTitle}> Calendar</Text>
-      </View>
-
+      <SafeAreaView style={{ backgroundColor: '#008080', flex: 0 }}>
+        <Text style={styles.headerTitle}>Calendar</Text>
+      </SafeAreaView>
       <GestureHandlerRootView style={styles.wrapper}>
         <View style={styles.header}>
           <View style={styles.navRow}>
@@ -293,10 +289,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   headerTitle: {
-    color: '#fff',
     fontSize: 20,
     fontWeight: 'bold',
-    marginTop: -70,
+    marginLeft: 20,
+    color: '#fff',
   },
   header: {
     backgroundColor: '#fff',

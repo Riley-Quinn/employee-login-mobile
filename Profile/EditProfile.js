@@ -149,7 +149,7 @@ const EditProfile = ({ navigation }) => {
                   handleSubmit();
                 }}
               >
-                <Text style={styles.saveButtonText}>update</Text>
+                <Text style={styles.saveButtonText}>Update</Text>
               </TouchableOpacity>
             </>
           )}
@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     alignItems: 'center',
     marginTop: 40,
-    padding: 15,
+    padding: 12,
   },
   saveButtonText: {
     color: '#fff',

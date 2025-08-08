@@ -21,7 +21,6 @@ import {
   useRoute,
   useFocusEffect,
 } from '@react-navigation/native';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import FormatStatusTrackerData from './FormatStatusTrackerData';
 import AddConversation from './Conversation';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
@@ -134,14 +133,14 @@ const ViewTickets = () => {
           </View>
           <View style={styles.infoSection}>
             <Text style={styles.labelText}>
-              Customer:{' '}
-              <Text style={styles.valueText}>{ticket.customer_name}</Text>
+              Category :{' '}
+              <Text style={styles.valueText}> {ticket.category_name}</Text>
             </Text>
 
             <Text style={styles.labelText}>
-              Address:{' '}
+              Address :{' '}
               <Text style={styles.valueText}>
-                {`, ${ticket.city_name}, ${ticket.region_name},`}
+                {`${ticket.state_name},${ticket.city_name},${ticket.region_name}, ${ticket.address_type}, ${ticket.address},`}
               </Text>
             </Text>
 
@@ -161,19 +160,19 @@ const ViewTickets = () => {
             </TouchableOpacity>
 
             <Text style={styles.labelText}>
-              Phone:{' '}
-              <Text style={styles.valueText}>{ticket.customer_phone}</Text>
+              Phone :{' '}
+              <Text style={styles.valueText}> {ticket.customer_phone}</Text>
             </Text>
 
             <Text style={styles.labelText}>
-              Email:{' '}
-              <Text style={styles.valueText}>{ticket.customer_email}</Text>
+              Email :{' '}
+              <Text style={styles.valueText}> {ticket.customer_email}</Text>
             </Text>
           </View>
 
           <View style={styles.headerRow}>
             <View style={styles.avatar}>
-              <MaterialIcons name="person" size={24} color="#fff" />
+              <MaterialIcons name="calendar-month" size={24} color="#fff" />
             </View>
             <Text style={styles.createdLabel}>Created on</Text>
 
@@ -196,16 +195,16 @@ const ViewTickets = () => {
             )}
           </View>
         )}
-
-        <View style={styles.cards}>
-          <AddConversation
-            user={{ userId }}
-            data={ticket}
-            customerComments={ticket?.customer_comments}
-            fetchData={fetchTicket}
-          />
-        </View>
-
+        {ticket.status_name === 'In-Progress' && (
+          <View style={styles.cards}>
+            <AddConversation
+              user={{ userId }}
+              data={ticket}
+              customerComments={ticket?.customer_comments}
+              fetchData={fetchTicket}
+            />
+          </View>
+        )}
         {ticket?.multimedia?.length > 0 && (
           <View style={styles.Media}>
             <Text style={styles.sectionTitle}>Media</Text>
@@ -277,9 +276,9 @@ const styles = StyleSheet.create({
 
   customerNameText: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: '600',
-    color: '#333',
+    color: '#008080',
   },
 
   labelText: {
@@ -310,6 +309,8 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginHorizontal: 30,
     color: '#333',
+    marginTop: -12,
+    marginLeft: 40,
   },
 
   createdLabel: {
@@ -420,7 +421,6 @@ const styles = StyleSheet.create({
   subText: {
     fontSize: 14,
     color: '#333',
-    backgroundColor: '#e0f7fa',
     padding: 10,
     borderRadius: 10,
     marginVertical: 6,
