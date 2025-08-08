@@ -97,7 +97,7 @@ export default function EditAddress() {
 
   return (
     <View style={{ flex: 1 }}>
-      <SafeAreaView style={{ backgroundColor: '#069b7c', padding: 0 }}>
+      <SafeAreaView style={{ backgroundColor: '#008080', padding: 0 }}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Icon name="arrow-back" size={26} color="#fff" />
@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
     color: '#000',
   },
   btn: {
-    backgroundColor: '#069b7C',
+    backgroundColor: '#008080',
     padding: 12,
     borderRadius: 10,
     alignItems: 'center',

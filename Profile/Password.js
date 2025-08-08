@@ -63,7 +63,7 @@ const Password = ({ navigation }) => {
 
   return (
     <>
-      <SafeAreaView style={{ backgroundColor: '#069b7c', padding: 0 }}>
+      <SafeAreaView style={{ backgroundColor: '#008080', padding: 0 }}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Ionicons name="arrow-back" size={26} color="#fff" />
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
   },
 
   saveButton: {
-    backgroundColor: '#069b7C',
+    backgroundColor: '#008080',
     borderRadius: 20,
     alignItems: 'center',
     marginTop: 30,

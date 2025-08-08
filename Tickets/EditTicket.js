@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
     width: 20,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: '#069b7c',
+    borderColor: '#008080',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#069b7c',
+    backgroundColor: '#008080',
   },
   radioLabel: {
     fontSize: 16,
@@ -223,7 +223,7 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   saveButton: {
-    backgroundColor: '#069b7c',
+    backgroundColor: '#008080',
     padding: 12,
     borderRadius: 6,
     flex: 0.48,

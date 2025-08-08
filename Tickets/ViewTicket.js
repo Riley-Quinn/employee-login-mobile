@@ -1,3 +1,4 @@
+/* eslint-disable react-native/no-inline-styles */
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
@@ -41,7 +42,7 @@ const ViewTickets = () => {
       try {
         const storedId = await AsyncStorage.getItem('userId');
         if (storedId) {
-          setUserId(storedId); // No JSON.parse unless it's stored as object
+          setUserId(storedId);
         }
       } catch (err) {
         console.error('Error getting userId from AsyncStorage:', err);
@@ -122,133 +123,79 @@ const ViewTickets = () => {
           </View>
         )}
         <View style={styles.ticketCard}>
-          <View style={styles.ticketHeader}>
-            <Text style={styles.customerName}>{ticket.customer_name}</Text>
+          <View style={styles.headerRow}>
+            <View style={styles.avatar}>
+              <MaterialIcons name="person" size={24} color="#fff" />
+            </View>
+            <Text style={styles.customerNameText}>{ticket.customer_name}</Text>
+            <View style={styles.badgeNew}>
+              <Text style={styles.badgeText}>{ticket.priority_rank}</Text>
+            </View>
+          </View>
+          <View style={styles.infoSection}>
+            <Text style={styles.labelText}>
+              Customer:{' '}
+              <Text style={styles.valueText}>{ticket.customer_name}</Text>
+            </Text>
+
+            <Text style={styles.labelText}>
+              Address:{' '}
+              <Text style={styles.valueText}>
+                {`, ${ticket.city_name}, ${ticket.region_name},`}
+              </Text>
+            </Text>
+
+            <TouchableOpacity
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                marginTop: 6,
+              }}
+              onPress={() =>
+                openMap(ticket.address, ticket.city_name, ticket.state_name)
+              }
+            >
+              <Text style={styles.viewMapText}>
+                View Location on Google Maps
+              </Text>
+            </TouchableOpacity>
+
+            <Text style={styles.labelText}>
+              Phone:{' '}
+              <Text style={styles.valueText}>{ticket.customer_phone}</Text>
+            </Text>
+
+            <Text style={styles.labelText}>
+              Email:{' '}
+              <Text style={styles.valueText}>{ticket.customer_email}</Text>
+            </Text>
+          </View>
+
+          <View style={styles.headerRow}>
+            <View style={styles.avatar}>
+              <MaterialIcons name="person" size={24} color="#fff" />
+            </View>
+            <Text style={styles.createdLabel}>Created on</Text>
+
             <View style={styles.badgeNew}>
               <Text style={styles.badgeText}>{ticket.status_name}</Text>
             </View>
           </View>
-
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              marginBottom: 4,
-            }}
-          >
-            <MaterialCommunityIcons
-              name="tag-outline"
-              size={18}
-              color="#069b7C"
-              style={{ marginLeft: 10 }}
-            />
-            <Text style={styles.Text}>{ticket.category_name}</Text>
-          </View>
-          {/* Created Date */}
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              marginBottom: 10,
-            }}
-          >
-            <MaterialCommunityIcons
-              name="clock-outline"
-              size={18}
-              color="#069b7C"
-              style={{ marginLeft: 10 }}
-            />
-            <Text style={styles.Text}>{ticket.created_at?.split('T')[0]}</Text>
-          </View>
-
-          {/* Address */}
-          <TouchableOpacity
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              marginBottom: 10,
-            }}
-            onPress={() =>
-              openMap(ticket.address, ticket.city_name, ticket.state_name)
-            }
-          >
-            <MaterialCommunityIcons
-              name="map-marker"
-              size={18}
-              color="#069b7C"
-              style={{ marginLeft: 8 }}
-            />
-            <Text style={styles.Text}>
-              {ticket.state_name}, {ticket.city_name}, {ticket.region_name},
-              {ticket.address_type},{ticket.address}
-            </Text>
-          </TouchableOpacity>
-
-          {/* View on Google Maps */}
-          <TouchableOpacity
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              marginBottom: 4,
-            }}
-            onPress={() =>
-              openMap(ticket.address, ticket.city_name, ticket.state_name)
-            }
-          >
-            <MaterialCommunityIcons
-              name="google-maps"
-              size={18}
-              color=" #1976D2"
-              style={{ marginLeft: 10 }}
-            />
-            <Text style={styles.viewMapText}>View Location on Google Maps</Text>
-          </TouchableOpacity>
-
-          <View style={styles.divider} />
-          <View style={styles.infoRowContainer}>
-            <Text
-              style={styles.phoneText}
-              numberOfLines={1}
-              ellipsizeMode="clip"
-            >
-              {ticket.customer_phone}
-            </Text>
-            <TouchableOpacity
-              onPress={() => setEmailPopup(ticket.customer_email)}
-            >
-              <Text
-                style={styles.emailText}
-                numberOfLines={1}
-                ellipsizeMode="clip"
-              >
-                {ticket.customer_email}
-              </Text>
-            </TouchableOpacity>
-
-            <Text
-              style={styles.priorityText}
-              numberOfLines={1}
-              ellipsizeMode="clip"
-            >
-              {ticket.priority_rank}
-            </Text>
-          </View>
-
-          {ticket.customer_reject_reason && (
-            <Text style={styles.subText}>
-              Reject: {ticket.customer_reject_reason}
-            </Text>
-          )}
-          {ticket.pending_reason && (
-            <Text style={styles.subText}>Pending: {ticket.pending_reason}</Text>
-          )}
-          {ticket.feedback && (
-            <Text style={styles.subText}> Feedback: {ticket.feedback}</Text>
-          )}
-          {ticket.rating && (
-            <Text style={styles.subText}> Rating: {ticket.rating}/5</Text>
-          )}
+          <Text style={styles.dateOnlyText}>
+            {ticket.created_at?.split('T')[0]}
+          </Text>
         </View>
+
+        {(ticket.feedback || ticket.rating) && (
+          <View style={styles.ticketCard}>
+            {ticket.feedback && (
+              <Text style={styles.subText}>Feedback: {ticket.feedback}</Text>
+            )}
+            {ticket.rating && (
+              <Text style={styles.subText}>Rating: {ticket.rating}/5</Text>
+            )}
+          </View>
+        )}
 
         <View style={styles.cards}>
           <AddConversation
@@ -258,60 +205,10 @@ const ViewTickets = () => {
             fetchData={fetchTicket}
           />
         </View>
-        <Modal
-          visible={!!emailPopup}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setEmailPopup(null)}
-        >
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: 'rgba(0,0,0,0.5)',
-              justifyContent: 'center',
-              alignItems: 'center',
-            }}
-          >
-            <View
-              style={{
-                backgroundColor: '#fff',
-                padding: 10,
-                borderRadius: 10,
-                width: '50%',
-                alignItems: 'center',
-              }}
-            >
-              <View
-                style={{
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  width: '100%',
-                }}
-              >
-                <Text style={{ fontSize: 16, fontWeight: 'bold' }}>Email</Text>
 
-                <TouchableOpacity onPress={() => setEmailPopup(null)}>
-                  <MaterialIcons name="close" size={24} color="#333" />
-                </TouchableOpacity>
-              </View>
-
-              <Text
-                style={{
-                  fontSize: 15,
-                  marginVertical: 15,
-                  textAlign: 'center',
-                }}
-              >
-                {emailPopup}
-              </Text>
-            </View>
-          </View>
-        </Modal>
-
-        <View style={styles.Media}>
-          <Text style={styles.sectionTitle}>Media</Text>
-          {ticket?.multimedia?.length ? (
+        {ticket?.multimedia?.length > 0 && (
+          <View style={styles.Media}>
+            <Text style={styles.sectionTitle}>Media</Text>
             <FlatList
               data={ticket.multimedia}
               horizontal
@@ -333,10 +230,8 @@ const ViewTickets = () => {
                 </TouchableOpacity>
               )}
             />
-          ) : (
-            <Text style={styles.info}>No Media Available</Text>
-          )}
-        </View>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -345,7 +240,7 @@ const ViewTickets = () => {
 const styles = StyleSheet.create({
   safeContainer: { flex: 1, backgroundColor: '#f2f2f2' },
   header: {
-    backgroundColor: '#069b7c',
+    backgroundColor: '#008080',
     height: 50,
     justifyContent: 'flex-start',
     paddingHorizontal: 16,
@@ -353,11 +248,82 @@ const styles = StyleSheet.create({
     elevation: 4,
     paddingTop: 20,
   },
+  infoSection: {
+    marginHorizontal: 40,
+  },
   headerTitle: {
-    color: '#fff',
+    color: '#efedf4',
     fontSize: 18,
     marginLeft: 10,
     fontWeight: 'bold',
+  },
+
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+
+  avatar: {
+    width: 30,
+    height: 30,
+    borderRadius: 20,
+    backgroundColor: '#008080',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+
+  customerNameText: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+
+  labelText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#444',
+    marginTop: 6,
+  },
+
+  valueText: {
+    color: '#008080',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  badgeText: {
+    color: '#efedf4',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  viewMapText: {
+    fontSize: 14,
+    color: '#1976D2',
+    fontWeight: '500',
+  },
+
+  dateOnlyText: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginHorizontal: 30,
+    color: '#333',
+  },
+
+  createdLabel: {
+    fontSize: 16,
+    flex: 1,
+    color: '#008080',
+    fontWeight: '500',
+  },
+
+  Text: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#888',
+    marginHorizontal: 10,
   },
   scrollContent: { padding: 12, paddingBottom: 30 },
   ticketHeader: {
@@ -369,7 +335,7 @@ const styles = StyleSheet.create({
   customerName: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: 'black',
+    color: '#888',
     marginHorizontal: 10,
   },
   badgeNew: {
@@ -378,55 +344,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
-  badgeText: { fontSize: 12, fontWeight: 'bold', color: '#FFFFFF' },
-  infoRowContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 6,
-  },
-  phoneText: {
-    flex: 1,
+  addressText: {
     fontSize: 14,
     color: '#000',
-    fontWeight: 'bold',
-    backgroundColor: '#2196F3',
-    padding: 8,
-    borderRadius: 8,
-    marginRight: 6,
-    textAlign: 'center',
-    minWidth: 0,
+    paddingVertical: 2,
+    paddingHorizontal: 4,
     flexShrink: 1,
+    textAlignVertical: 'center',
   },
-  emailText: {
-    flex: 1,
-    fontSize: 14,
-    color: '#000',
-    fontWeight: 'bold',
-    backgroundColor: '#069b7c',
-    padding: 8,
-    borderRadius: 8,
-    marginRight: 6,
-    textAlign: 'center',
-    minWidth: 0,
-    flexShrink: 1,
-  },
-  priorityText: {
-    flex: 1,
-    fontSize: 14,
-    color: '#000',
-    fontWeight: 'bold',
-    backgroundColor: '#FF9800',
-    padding: 8,
-    borderRadius: 8,
-    textAlign: 'center',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#bbb',
-    marginVertical: 12,
-  },
-  Text: {
+
+  Texts: {
     fontSize: 13,
     color: '#444',
     fontWeight: 'bold',
@@ -505,12 +432,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     alignSelf: 'flex-start',
     marginHorizontal: 10,
-  },
-  viewMapText: {
-    color: '#1E88E5',
-    fontWeight: 'bold',
-    fontSize: 13,
-    marginLeft: 8,
   },
 });
 

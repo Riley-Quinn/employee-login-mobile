@@ -70,21 +70,33 @@ const EventsOverview = () => {
     const address = `${item.address}, ${item.state_name}`;
 
     return (
-      <View style={styles.card}>
-        <View style={styles.cards}>
-          <Text style={styles.serviceId}>#{item.ticket_service_id}</Text>
-          <Text style={styles.field}>{address}</Text>
-          <Text style={styles.field}>
-            {item.customer_name}
-            {'   '}
-            {item.customer_phone}
-          </Text>
+      <View style={styles.ticketcard}>
+        <View style={styles.card}>
+          <View style={styles.cards}>
+            <View style={styles.avatars}>
+              <MaterialIcons name="person" size={24} color="#fff" />
+            </View>
+            <Text style={styles.serviceId}>#{item.ticket_service_id}</Text>
+          </View>
+          <View style={styles.infoSection}>
+            <Text style={styles.boldLabel}>
+              Category: <Text style={styles.Label}>{item.category_name}</Text>
+            </Text>
 
-          <Text style={styles.field}>
-            {item.category_name}
-            {'   '}
-            {item.description}
-          </Text>
+            <Text style={styles.boldLabel}>
+              Address:{' '}
+              <Text style={styles.Label}>
+                {`, ${item.city_name}, ${item.region_name},`}
+              </Text>
+            </Text>
+
+            <Text style={styles.boldLabel}>
+              Customer: <Text style={styles.Label}>{item.customer_name}</Text>
+            </Text>
+            <Text style={styles.labelText}>
+              Phone: <Text style={styles.valueText}>{item.customer_phone}</Text>
+            </Text>
+          </View>
         </View>
       </View>
     );
@@ -92,9 +104,9 @@ const EventsOverview = () => {
 
   return (
     <>
-      <StatusBar barStyle="light-content" backgroundColor="#069b7c" />
+      <StatusBar barStyle="light-content" backgroundColor="#008080" />
 
-      <SafeAreaView style={{ backgroundColor: '#069b7c', flex: 0 }}>
+      <SafeAreaView style={{ backgroundColor: '#008080', flex: 0 }}>
         <Text style={styles.ticketNumber}>Events</Text>
       </SafeAreaView>
 
@@ -157,7 +169,7 @@ const EventsOverview = () => {
           style={styles.navItem}
           onPress={() => navigation.navigate('EventsOverview')}
         >
-          <MaterialIcons name="event" size={30} color="#069b7c" />
+          <MaterialIcons name="event" size={30} color="#008080" />
           <Text style={styles.navText}>Events</Text>
         </TouchableOpacity>
 
@@ -189,21 +201,26 @@ const styles = StyleSheet.create({
   },
 
   card: {
+    marginBottom: 12,
+  },
+  ticketCard: {
     backgroundColor: '#fff',
-    marginBottom: 30,
+    borderRadius: 10,
     padding: 16,
-    borderRadius: 12,
-    elevation: 4,
+    marginHorizontal: 16,
+    marginVertical: 8,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 1.41,
-    borderWidth: 1,
-    borderColor: '#bbb',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   cards: {
-    gap: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
   },
+
   serviceId: {
     fontSize: 16,
     fontWeight: 'bold',

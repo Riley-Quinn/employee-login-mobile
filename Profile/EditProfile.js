@@ -70,7 +70,7 @@ const EditProfile = ({ navigation }) => {
 
   return (
     <>
-      <SafeAreaView style={{ backgroundColor: '#069b7c', padding: 0 }}>
+      <SafeAreaView style={{ backgroundColor: '#008080', padding: 0 }}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Ionicons name="arrow-back" size={26} color="#fff" />
@@ -104,7 +104,6 @@ const EditProfile = ({ navigation }) => {
           }) => (
             <>
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>Name</Text>
                 <TextInput
                   style={styles.input}
                   value={values.name}
@@ -117,7 +116,6 @@ const EditProfile = ({ navigation }) => {
                   <Text style={styles.errorText}>{errors.name}</Text>
                 )}
 
-                <Text style={styles.label}>Phone Number</Text>
                 <TextInput
                   style={styles.input}
                   value={values.phone}
@@ -131,7 +129,6 @@ const EditProfile = ({ navigation }) => {
                   <Text style={styles.errorText}>{errors.phone}</Text>
                 )}
 
-                <Text style={styles.label}>Email</Text>
                 <TextInput
                   style={styles.input}
                   value={values.email}
@@ -152,7 +149,7 @@ const EditProfile = ({ navigation }) => {
                   handleSubmit();
                 }}
               >
-                <Text style={styles.saveButtonText}>Save Changes</Text>
+                <Text style={styles.saveButtonText}>update</Text>
               </TouchableOpacity>
             </>
           )}
@@ -178,7 +175,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     // paddingHorizontal: 16,
-    backgroundColor: '#069b7c',
+    backgroundColor: '#008080',
     // height: 1,
   },
   headerTitle: {
@@ -206,6 +203,8 @@ const styles = StyleSheet.create({
     color: '#000',
     fontSize: 14,
     borderColor: 'black',
+    marginBottom: 10,
+    marginTop: 30,
     borderWidth: 1,
   },
 
@@ -213,10 +212,10 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#069b7C',
+    backgroundColor: '#008080',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 30,
+    marginTop: 20,
   },
   initials: {
     fontSize: 40,
@@ -230,12 +229,12 @@ const styles = StyleSheet.create({
   },
 
   saveButton: {
-    backgroundColor: '#069b7C',
+    backgroundColor: '#008080',
     width: '100%',
-    borderRadius: 20,
+    borderRadius: 28,
     alignItems: 'center',
     marginTop: 40,
-    padding: 10,
+    padding: 15,
   },
   saveButtonText: {
     color: '#fff',

@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 50,
     borderWidth: 1,
-    borderColor: '#069b7c',
+    borderColor: '#008080',
     textAlign: 'center',
     fontSize: 20,
     borderRadius: 10,
@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   saveButton: {
-    backgroundColor: '#069b7c',
+    backgroundColor: '#008080',
     paddingHorizontal: 80,
     paddingVertical: 10,
     borderRadius: 20,

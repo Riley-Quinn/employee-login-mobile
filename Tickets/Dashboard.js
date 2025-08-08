@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Modal,
+  ScrollView,
   TextInput,
   Alert,
 } from 'react-native';
@@ -49,6 +50,7 @@ const Dashboard = ({ navigation }) => {
   const [serviceReason, setServiceReason] = useState('');
   const [customServiceReason, setCustomServiceReason] = useState('');
   const [userId, setUserId] = useState(null);
+  const [showDropdown, setShowDropdown] = useState(false);
 
   const [editStatus, setEditStatus] = useState('');
   const [editReason, setEditReason] = useState('');
@@ -270,7 +272,7 @@ const Dashboard = ({ navigation }) => {
     switch (status?.toLowerCase()) {
       case 'open':
         return {
-          backgroundColor: '#FFC107',
+          backgroundColor: '#008080',
           color: '#000000',
         };
       case 'todo':
@@ -280,7 +282,7 @@ const Dashboard = ({ navigation }) => {
         };
       case 'in-progress':
         return {
-          backgroundColor: '#4D96FF',
+          backgroundColor: '#ff954d',
           color: '#FFFFFF',
         };
       case 'pending':
@@ -296,184 +298,220 @@ const Dashboard = ({ navigation }) => {
         };
       default:
         return {
-          backgroundColor: '#9CA3AF',
+          backgroundColor: '#ff5e65',
           color: '#FFFFFF',
         };
     }
   };
-
   const renderItem = ({ item }) => {
-    const hasButtons =
-      item.status_id === 1 || item.status_id === 2 || item.status_id === 3;
+    const chipStyle = getStatusChipStyle(item.status_name);
+    const fullAddress = `, ${item.city_name}, ${item.region_name}`;
 
     return (
-      <>
-        <TouchableOpacity
-          style={styles.ticketCard}
-          onPress={() => {
-            if (item.status_id !== 1) {
-              navigation.navigate('ViewTickets', { ticketId: item.ticket_id });
-            }
-          }}
-        >
-          <View style={styles.ticketHeader}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
-                {item.customer_name?.charAt(0).toUpperCase()}
-              </Text>
+      <TouchableOpacity
+        style={styles.ticketCard}
+        onPress={() => {
+          if (item.status_id !== 1) {
+            navigation.navigate('ViewTickets', { ticketId: item.ticket_id });
+          }
+        }}
+      >
+        <View style={styles.cardContent}>
+          <View style={styles.headerRows}>
+            <View style={styles.avatars}>
+              <MaterialIcons name="person" size={24} color="#fff" />
             </View>
-            <View style={styles.headerInfo}>
-              <Text style={styles.ticketDate}>#{item.ticket_service_id}</Text>
-              <Text style={styles.ticketTitle}>{item.customer_name}</Text>
-              <Text style={styles.ticketTitle}>
-                <Text style={styles.categoryLabel}>Category : </Text>
-                <Text style={styles.categoryName}>{item.category_name}</Text>
-              </Text>
-
-              <View style={styles.dateRow}>
-                <MaterialIcons
-                  name="access-time"
-                  size={18}
-                  color="#069b7c"
-                  style={{ marginRight: 4 }}
-                />
-                <Text style={styles.ticketDates}>
-                  {item.created_at?.split('T')[0]}
-                </Text>
-              </View>
-
-              <View style={styles.dateRow}>
-                <MaterialIcons
-                  name="location-on"
-                  size={18}
-                  color="#069b7c"
-                  style={{ marginRight: 4 }}
-                />
-                <Text style={styles.ticketDates}>
-                  {item.state_name},{item.city_name},{item.region_name},
-                  {item.address_type},{item.address}
-                </Text>
-              </View>
-            </View>
-            {(() => {
-              const chipStyle = getStatusChipStyle(item.status_name);
-              return (
-                <View
-                  style={[
-                    styles.statusChip,
-                    { backgroundColor: chipStyle.backgroundColor },
-                  ]}
-                >
-                  <Text style={[styles.statusText, { color: chipStyle.color }]}>
-                    {item.status_name}
-                  </Text>
-                </View>
-              );
-            })()}
+            <Text style={styles.ticketId}>{item.ticket_service_id}</Text>
           </View>
 
-          {hasButtons && <View style={styles.divider} />}
+          <View style={styles.infoSection}>
+            <Text style={styles.boldLabel}>
+              Category: <Text style={styles.Label}>{item.category_name}</Text>
+            </Text>
+
+            <Text style={styles.boldLabel}>
+              Address:{' '}
+              <Text style={styles.Label}>
+                {`, ${item.city_name}, ${item.region_name},`}
+              </Text>
+            </Text>
+
+            <Text style={styles.boldLabel}>
+              Customer: <Text style={styles.Label}>{item.customer_name}</Text>
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.bottomRow}>
+          <View style={styles.avatars}>
+            <MaterialIcons
+              name="access-time"
+              size={24}
+              color="#fff"
+              style={{ marginRight: 4, marginTop: 2 }}
+            />
+          </View>
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              flex: 1,
+            }}
+          >
+            <View>
+              <Text style={styles.createdLabel}>Created on</Text>
+              <Text style={styles.dateOnlyText}>
+                {item.created_at?.split('T')[0]}
+              </Text>
+            </View>
+
+            {/* Status chip column (centered vertically between two lines) */}
+            <View style={{ justifyContent: 'center' }}>
+              {(() => {
+                const chipStyle = getStatusChipStyle(item.status_name);
+                return (
+                  <View
+                    style={[
+                      styles.statusChip,
+                      {
+                        backgroundColor: chipStyle.backgroundColor,
+                        paddingHorizontal: 10,
+                        paddingVertical: 4,
+                        borderRadius: 12,
+                        alignSelf: 'flex-start',
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[styles.statusText, { color: chipStyle.color }]}
+                    >
+                      {item.status_name}
+                    </Text>
+                  </View>
+                );
+              })()}
+            </View>
+          </View>
+        </View>
+
+        {item.status_id === 1 && (
+          <View style={styles.singleButtonWrapper}>
+            <TouchableOpacity
+              style={styles.Assign}
+              onPress={() => handleAssignToMe(item)}
+            >
+              <Text style={styles.buttonText}>Assign to Me</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {item.status_id === 2 && (
           <View style={styles.buttonRow}>
-            {item.status_id === 1 && (
-              <View style={{ alignItems: 'flex-end', width: '100%' }}>
-                <TouchableOpacity
-                  style={styles.Assign}
-                  onPress={() => handleAssignToMe(item)}
-                >
-                  <Text style={styles.buttonText}>Assign to Me</Text>
-                </TouchableOpacity>
-              </View>
+            <TouchableOpacity
+              style={
+                item.employee_arrival_date
+                  ? styles.arrivalButton
+                  : styles.arrivalDateAlone
+              }
+              onPress={() => {
+                setSelectedTicket(item);
+                setModalVisible(true);
+              }}
+            >
+              <Text style={styles.buttonText}>Arrival Date</Text>
+            </TouchableOpacity>
+
+            {item.employee_arrival_date && (
+              <TouchableOpacity
+                style={styles.startButton}
+                onPress={() => handleStartWork(item)}
+              >
+                <Text style={styles.buttonText}>Start</Text>
+              </TouchableOpacity>
             )}
           </View>
+        )}
 
-          {item.status_id === 2 && (
-            <View style={styles.buttonRow}>
-              <TouchableOpacity
-                style={
-                  item.employee_arrival_date
-                    ? styles.arrivalButton
-                    : styles.arrivalDateAlone
-                }
-                onPress={() => {
-                  setSelectedTicket(item);
-                  setModalVisible(true);
-                }}
-              >
-                <Text style={styles.buttonText}>Arrival Date</Text>
-              </TouchableOpacity>
+        {item.status_id === 3 && (
+          <View style={styles.inProgressActionRow}>
+            <TouchableOpacity
+              style={styles.serviceButton}
+              onPress={() => {
+                setSelectedTicket(item);
+                setServiceVisible(true);
+              }}
+            >
+              <Text style={styles.whiteButtonText}>Service Update</Text>
+            </TouchableOpacity>
 
-              {item.employee_arrival_date && (
-                <TouchableOpacity
-                  style={styles.startButton}
-                  onPress={() => handleStartWork(item)}
-                >
-                  <Text style={styles.buttonText}>Start</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          )}
-
-          {item.status_id === 3 && (
-            <View style={styles.inProgressActionRow}>
-              <TouchableOpacity
-                style={styles.serviceButton}
-                onPress={() => {
-                  setSelectedTicket(item);
-                  setServiceVisible(true);
-                }}
-              >
-                <Text style={styles.whiteButtonText}>Service Update</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.editButton}
-                onPress={() => {
-                  setSelectedTicket(item);
-                  setEditVisible(true);
-                }}
-              >
-                <Text style={styles.whiteButtonText}>Edit</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </TouchableOpacity>
-      </>
+            <TouchableOpacity
+              style={styles.editButton}
+              onPress={() => {
+                setSelectedTicket(item);
+                setEditVisible(true);
+              }}
+            >
+              <Text style={styles.whiteButtonText}>Edit</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </TouchableOpacity>
     );
   };
 
   return (
     <>
       <View style={styles.headerContainer}>
-        {/* Set status bar color (Android) */}
-        <StatusBar barStyle="light-content" backgroundColor="#069b7c" />
+        <View style={styles.headerRow}>
+          <TouchableOpacity style={{ paddingLeft: 8 }}>
+            <Ionicons name="chevron-back" size={24} color="#fff" />
+          </TouchableOpacity>
 
-        {/* Top safe area background for iOS */}
-        <SafeAreaView style={{ backgroundColor: '#069b7c', flex: 0 }}>
           <Text style={styles.headerTitle}>Dashboard</Text>
-        </SafeAreaView>
-
-        <View style={{ marginTop: 10, paddingHorizontal: 20 }}>
-          <Text style={styles.filterLabel}> Status</Text>
-          <Dropdown
-            data={[
-              { label: 'All', value: 'all' },
-              ...ticketStatuses.map(s => ({
-                label: s.status_name,
-                value: s.status_id.toString(),
-              })),
-            ]}
-            labelField="label"
-            valueField="value"
-            placeholder="Select Status"
-            placeholderTextColor="#000"
-            placeholderStyle={{ color: '#000' }}
-            selectedTextStyle={{ color: '#000' }}
-            itemTextStyle={{ color: '#000' }}
-            style={styles.picker}
-            value={statusFilter}
-            onChange={item => setStatusFilter(item.value)}
-          />
         </View>
+
+        <View style={styles.filterRow}>
+          <TouchableOpacity onPress={() => setShowDropdown(!showDropdown)}>
+            <MaterialIcons name="filter-list" size={24} color="#000" />
+          </TouchableOpacity>
+        </View>
+        <Modal visible={showDropdown} transparent animationType="slide">
+          <View style={styles.modalWrapper}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Filter by Status</Text>
+
+              <Dropdown
+                data={[
+                  { label: 'All', value: 'all' },
+                  ...ticketStatuses.map(s => ({
+                    label: s.status_name,
+                    value: s.status_id.toString(),
+                  })),
+                ]}
+                labelField="label"
+                valueField="value"
+                placeholder="Select Status"
+                placeholderTextColor="#000"
+                placeholderStyle={{ color: '#000' }}
+                selectedTextStyle={{ color: '#000', fontSize: 16 }}
+                itemTextStyle={{ color: '#000', fontSize: 16 }}
+                style={styles.input}
+                value={statusFilter}
+                onChange={item => {
+                  setStatusFilter(item.value);
+                  setShowDropdown(false);
+                }}
+              />
+
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => setShowDropdown(false)}
+              >
+                <Text style={styles.modalButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       </View>
 
       <View style={styles.container}>
@@ -482,8 +520,6 @@ const Dashboard = ({ navigation }) => {
           keyExtractor={item => item.ticket_id.toString()}
           renderItem={renderItem}
         />
-
-        {/* Edit Modal */}
         <Modal visible={editVisible} transparent animationType="slide">
           <View style={styles.modalWrapper}>
             <View style={styles.modalContent}>
@@ -498,7 +534,9 @@ const Dashboard = ({ navigation }) => {
                 labelField="label"
                 valueField="value"
                 placeholder="Select Status"
-                placeholderTextColor="#000"
+                placeholderStyle={{ color: '#000' }}
+                selectedTextStyle={{ color: '#000', fontSize: 16 }}
+                itemTextStyle={{ color: '#000', fontSize: 16 }}
                 style={styles.input}
                 value={editStatus}
                 onChange={item => setEditStatus(item.value)}
@@ -507,9 +545,10 @@ const Dashboard = ({ navigation }) => {
               {(editStatus === 'On Hold' || editStatus === 'Pending') && (
                 <TextInput
                   placeholder="Reason"
+                  placeholderTextColor="#555"
                   value={editReason}
                   onChangeText={setEditReason}
-                  style={styles.input}
+                  style={[styles.input, { color: '#000' }]}
                 />
               )}
 
@@ -520,6 +559,7 @@ const Dashboard = ({ navigation }) => {
                 >
                   <Text style={styles.modalButtonText}>Update</Text>
                 </TouchableOpacity>
+
                 <TouchableOpacity
                   style={styles.modalCancelButton}
                   onPress={() => setEditVisible(false)}
@@ -530,7 +570,7 @@ const Dashboard = ({ navigation }) => {
             </View>
           </View>
         </Modal>
-
+        {/* Edit Modal */}
         <Modal visible={modalVisible} transparent animationType="slide">
           <View style={styles.modalWrapper}>
             <View style={styles.modalContent}>
@@ -592,6 +632,9 @@ const Dashboard = ({ navigation }) => {
                 labelField="label"
                 valueField="value"
                 placeholder="Select Reason"
+                placeholderStyle={{ color: '#000' }}
+                selectedTextStyle={{ color: '#000', fontSize: 16 }}
+                itemTextStyle={{ color: '#000', fontSize: 16 }}
                 style={styles.input}
                 value={serviceReason}
                 onChange={item => setServiceReason(item.value)}
@@ -600,9 +643,10 @@ const Dashboard = ({ navigation }) => {
               {serviceReason === 'Other' && (
                 <TextInput
                   placeholder="Reason"
+                  placeholderTextColor="#555"
                   value={customServiceReason}
                   onChangeText={setCustomServiceReason}
-                  style={styles.input}
+                  style={[styles.input, { color: '#000' }]}
                 />
               )}
 
@@ -623,8 +667,6 @@ const Dashboard = ({ navigation }) => {
             </View>
           </View>
         </Modal>
-
-        {/* Date/Time Pickers */}
         {showDatePicker && (
           <DateTimePicker
             value={arrivalDate}
@@ -654,7 +696,7 @@ const Dashboard = ({ navigation }) => {
           style={styles.navItem}
           onPress={() => navigation.navigate('Dashboard')}
         >
-          <FontAwesome name="home" size={30} color="#069b7c" />
+          <FontAwesome name="home" size={30} color="#008080" />
           <Text style={styles.navText}>Home</Text>
         </TouchableOpacity>
 
@@ -687,19 +729,124 @@ const Dashboard = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   ticketCard: {
-    marginBottom: 12,
+    backgroundColor: '#fff',
+    borderRadius: 10,
     padding: 16,
-    borderRadius: 12,
-    backgroundColor: '#ffffff',
-    elevation: 2,
+    marginHorizontal: 16,
+    marginVertical: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.1,
     shadowRadius: 4,
-    borderWidth: 0.1,
-    borderColor: '#000',
+    elevation: 3,
+  },
+  infoSection: {
+    marginHorizontal: 40,
   },
 
+  cardContent: {
+    marginBottom: 12,
+  },
+
+  ticketId: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 6,
+    color: '#008080',
+  },
+  headerContainer: {
+    backgroundColor: '#008080',
+  },
+
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#008080',
+  },
+
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#efedf4',
+    flex: 1,
+    marginLeft: 12, // moves text a bit right
+  },
+
+  bottomRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginTop: 10,
+    marginLeft: 10,
+  },
+  createdLabel: {
+    fontSize: 14,
+    fontWeight: 'bold',
+
+    color: '#008080',
+  },
+  dateOnlyText: {
+    fontSize: 14,
+    color: '#666',
+
+    fontWeight: 'bold',
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  statusChip: {
+    marginTop: 2,
+  },
+
+  filterRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    backgroundColor: '#fff',
+  },
+
+  dropdownWrapper: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    backgroundColor: '#fff',
+  },
+  headerRows: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+
+  avatars: {
+    width: 30,
+    height: 30,
+    borderRadius: 20,
+    backgroundColor: '#008080',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+
+  picker: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+  },
+
+  cardLabel: {
+    fontSize: 14,
+    marginBottom: 4,
+    color: '#333',
+  },
+
+  boldLabel: {
+    fontWeight: 'bold',
+    color: '#888',
+    fontSize: 14,
+  },
   divider: {
     backgroundColor: '#bbb',
     marginTop: 10,
@@ -713,7 +860,7 @@ const styles = StyleSheet.create({
   avatar: {
     width: 30,
     height: 30,
-    backgroundColor: '#069b7c',
+    backgroundColor: '#008080',
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
@@ -740,11 +887,37 @@ const styles = StyleSheet.create({
     color: '#000',
     fontWeight: '400',
   },
+  Label: {
+    color: '#008080',
+    fontWeight: '500',
+    fontSize: 14,
+  },
 
   categoryName: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#000', // Tailwind gray-900
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 5,
+  },
+
+  iconBox: {
+    width: 10,
+    height: 10,
+    backgroundColor: '#008080', // Your desired color
+    marginRight: 8,
+    marginTop: 6,
+    borderRadius: 2,
+  },
+
+  emptyBox: {
+    width: 10,
+    height: 10,
+    marginRight: 8,
+    marginTop: 6,
   },
 
   ticketDate: {
@@ -754,27 +927,29 @@ const styles = StyleSheet.create({
     marginBottom: 3,
   },
   dateRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
+    marginBottom: 12,
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: '#ffffff',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    borderWidth: 0.1,
+    borderColor: '#000',
   },
 
   ticketDates: {
     fontSize: 14,
     color: '#000', // Tailwind gray-500
   },
-
-  statusChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    alignSelf: 'flex-start',
-  },
-  statusText: {
-    color: '#fff',
-    fontSize: 12,
-
-    fontWeight: 'bold',
+  tickets: {
+    fontSize: 14,
+    color: '#000',
+    paddingVertical: 2,
+    paddingHorizontal: 4,
+    textAlignVertical: 'center',
   },
 
   priorityText: {
@@ -795,7 +970,7 @@ const styles = StyleSheet.create({
   buttonFilled: {
     paddingVertical: 6,
     paddingHorizontal: 14,
-    backgroundColor: '#069b7c',
+    backgroundColor: '#008080',
 
     borderRadius: 8,
     marginTop: 8,
@@ -854,7 +1029,7 @@ const styles = StyleSheet.create({
 
   modalButton: {
     flex: 1,
-    backgroundColor: '#069b7c',
+    backgroundColor: '#008080',
     paddingVertical: 12,
     marginRight: 8,
     borderRadius: 8,
@@ -907,19 +1082,12 @@ const styles = StyleSheet.create({
 
   actionButton: {
     flex: 1,
-    backgroundColor: '#069b7c',
+    backgroundColor: '#008080',
     paddingVertical: 10,
     marginHorizontal: 5,
 
     borderRadius: 8,
     alignItems: 'center',
-  },
-
-  headerTitle: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginLeft: 30,
   },
 
   filterSection: {
@@ -942,22 +1110,12 @@ const styles = StyleSheet.create({
   },
 
   pickerWrapper: {
-    borderColor: '#ccc',
-    borderWidth: 1,
+    borderColor: '#000',
+    borderWidth: 0.5,
     borderRadius: 8,
     overflow: 'hidden',
   },
 
-  picker: {
-    height: 50,
-    width: '100%',
-
-    fontWeight: 'bold',
-    fontSize: 16,
-    color: '#000',
-    backgroundColor: '#f9f9f9',
-    paddingHorizontal: 10,
-  },
   buttonRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -967,7 +1125,7 @@ const styles = StyleSheet.create({
 
   Assign: {
     marginLeft: 'auto',
-    backgroundColor: '#069b7c',
+    backgroundColor: '#008080',
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 8,
@@ -975,7 +1133,7 @@ const styles = StyleSheet.create({
 
   arrivalDateAlone: {
     marginLeft: 'auto',
-    backgroundColor: '#069b7c',
+    backgroundColor: '#008080',
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 8,

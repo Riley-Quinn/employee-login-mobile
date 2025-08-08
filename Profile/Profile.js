@@ -99,7 +99,7 @@ const ProfileScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <SafeAreaView style={{ backgroundColor: '#069b7c', padding: 0 }}>
+      <SafeAreaView style={{ backgroundColor: '#008080', padding: 0 }}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Profile</Text>
         </View>
@@ -118,7 +118,7 @@ const ProfileScreen = ({ navigation }) => {
             style={styles.item}
             onPress={() => navigation.navigate('EditProfile')}
           >
-            <Icon name="person" size={24} color="#069b7c" />
+            <Icon name="person" size={24} color="#008080" />
             <Text style={styles.itemText}>Edit Profile</Text>
           </TouchableOpacity>
 
@@ -126,19 +126,19 @@ const ProfileScreen = ({ navigation }) => {
             style={styles.item}
             onPress={() => navigation.navigate('Password')}
           >
-            <Icon name="lock-closed" size={24} color="#069b7c" />
+            <Icon name="lock-closed" size={24} color="#008080" />
             <Text style={styles.itemText}>Change Password</Text>
           </TouchableOpacity>
           {/* <TouchableOpacity
             style={styles.item}
             onPress={() => navigation.navigate('EditAddress')}
           >
-            <Icon name="location-outline" size={24} color="#069b7c" />
+            <Icon name="location-outline" size={24} color="#008080" />
             <Text style={styles.itemText}>Edit Address</Text>
           </TouchableOpacity> */}
 
           <TouchableOpacity style={styles.item} onPress={handleLogout}>
-            <Icon name="log-out-outline" size={24} color="#069b7c" />
+            <Icon name="log-out-outline" size={24} color="#008080" />
             <Text style={styles.itemText}>Logout</Text>
           </TouchableOpacity>
         </View>
@@ -171,7 +171,7 @@ const ProfileScreen = ({ navigation }) => {
           style={styles.navItem}
           onPress={() => navigation.navigate('ProfileScreen')}
         >
-          <FontAwesome name="user" size={30} color="#069b7c" />
+          <FontAwesome name="user" size={30} color="#008080" />
           <Text style={styles.navText}>Profile</Text>
         </TouchableOpacity>
       </View>
@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
     width: 150,
     height: 150,
     borderRadius: 100,
-    backgroundColor: '#069b7c',
+    backgroundColor: '#008080',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 4,

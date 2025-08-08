@@ -111,9 +111,9 @@ const EventsCalendar = () => {
 
   return (
     <>
-      <StatusBar barStyle="light-content" backgroundColor="#069b7c" />
+      <StatusBar barStyle="light-content" backgroundColor="#008080" />
       <SafeAreaView
-        style={{ backgroundColor: '#069b7c', flex: 0, padding: 15 }}
+        style={{ backgroundColor: '#008080', flex: 0, padding: 15 }}
       />
       <View style={styles.topHeader}>
         <Text style={styles.headerTitle}> Calendar</Text>
@@ -162,7 +162,7 @@ const EventsCalendar = () => {
 
         {loading ? (
           <View style={styles.loader}>
-            <ActivityIndicator size="large" color="#069b7c" />
+            <ActivityIndicator size="large" color="#008080" />
           </View>
         ) : mode === 'agenda' ? (
           <ScrollView>
@@ -203,7 +203,7 @@ const EventsCalendar = () => {
             swipeEnabled
             maxVisibleEventCount={9999}
             eventCellStyle={{
-              backgroundColor: '#069b7c',
+              backgroundColor: '#008080',
               borderRadius: 6,
               padding: 2,
               minHeight: 22,
@@ -254,7 +254,7 @@ const EventsCalendar = () => {
           style={styles.navItem}
           onPress={() => navigation.navigate('EventsCalendar')}
         >
-          <Ionicons name="calendar" size={30} color="#069b7c" />
+          <Ionicons name="calendar" size={30} color="#008080" />
           <Text style={styles.navTexts}>Calendar</Text>
         </TouchableOpacity>
 
@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
   },
 
   topHeader: {
-    backgroundColor: '#069b7c',
+    backgroundColor: '#008080',
     justifyContent: 'center',
     elevation: 4,
     paddingHorizontal: 16,
@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 20,
     fontWeight: 'bold',
-    marginTop: -40,
+    marginTop: -70,
   },
   header: {
     backgroundColor: '#fff',
@@ -319,13 +319,13 @@ const styles = StyleSheet.create({
   },
   navText: {
     fontSize: 18,
-    color: '#069b7c',
+    color: '#008080',
     fontWeight: 'bold',
   },
   todayButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: '#069b7c',
+    backgroundColor: '#008080',
     borderRadius: 6,
   },
   todayText: {
@@ -354,7 +354,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#eee',
   },
   viewButtonActive: {
-    backgroundColor: '#069b7c',
+    backgroundColor: '#008080',
   },
   viewText: {
     fontSize: 14,
