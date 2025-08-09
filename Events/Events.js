@@ -44,7 +44,7 @@ const EventsOverview = () => {
     try {
       setLoading(true);
       const response = await axios.get(
-        `${BASE_URL}/api/tickets/employee/${userId}`,
+        `http://10.0.2.2:5000/api/tickets/employee/${userId}`,
         { params: { status_id: 2 } },
       );
       const tickets = response.data?.list || [];

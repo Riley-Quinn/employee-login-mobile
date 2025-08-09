@@ -28,11 +28,14 @@ const Login = ({ navigation }) => {
   const handleLogin = async values => {
     setLoading(true);
     try {
-      const res = await axios.post(`${BASE_URL}/api/auth/admin/login`, {
-        email: values.email,
-        password: values.password,
-        rememberMe: rememberMe,
-      });
+      const res = await axios.post(
+        `http://10.0.2.2:5000/api/auth/admin/login`,
+        {
+          email: values.email,
+          password: values.password,
+          rememberMe: rememberMe,
+        },
+      );
       const userData = res.data.empData;
 
       if (res.status === 200) {

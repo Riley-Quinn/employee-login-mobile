@@ -44,11 +44,14 @@ const ProfileScreen = ({ navigation }) => {
       const fetchProfile = async () => {
         try {
           const clientId = await AsyncStorage.getItem('clientId');
-          const res = await axios.get(`${BASE_URL}/api/employee/${userId}`, {
-            headers: {
-              'x-client-id': clientId,
+          const res = await axios.get(
+            `http://10.0.2.2:5000/api/employee/${userId}`,
+            {
+              headers: {
+                'x-client-id': clientId,
+              },
             },
-          });
+          );
           setProfile(res.data);
         } catch (error) {
           console.error('Failed to fetch profile:', error.message);
@@ -60,7 +63,7 @@ const ProfileScreen = ({ navigation }) => {
   }, [userId]);
   const handleLogout = async () => {
     try {
-      const response = await axios.get(`${BASE_URL}/api/auth/logout`);
+      const response = await axios.get(`http://10.0.2.2:5000/api/auth/logout`);
 
       if (response.status === 200) {
         await AsyncStorage.removeItem('userId');

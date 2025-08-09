@@ -42,7 +42,7 @@ const Password = ({ navigation }) => {
       }
 
       const res = await axios.put(
-        `${BASE_URL}/api/employee/password/${userId}`,
+        `http://10.0.2.2:5000/api/employee/password/${userId}`,
         {
           password: values.currentPassword,
           newPassword: values.newPassword,
