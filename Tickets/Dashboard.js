@@ -81,10 +81,8 @@ const Dashboard = ({ navigation }) => {
     return null;
   };
 
-  // Compute priority ticket for highlighting
   const ticketToDisplay = getPriorityTicket(tickets);
 
-  // --- Compute ticketToDisplay after defining the function ---
   useEffect(() => {
     const init = async () => {
       try {
@@ -124,9 +122,14 @@ const Dashboard = ({ navigation }) => {
         );
       }
 
-      const highPriorityTickets = list.filter(
+      let highPriorityTickets = list.filter(
         ticket => ticket.priority_rank === 'High',
       );
+
+      highPriorityTickets = highPriorityTickets
+        .filter(ticket => ticket.urgency != null)
+        .sort((a, b) => a.urgency - b.urgency)
+        .slice(0, 3);
 
       setTickets(highPriorityTickets);
     } catch (error) {
@@ -424,8 +427,7 @@ const Dashboard = ({ navigation }) => {
 
           <View style={styles.infoSection}>
             <View style={styles.infoRows}>
-              <Text style={styles.title}>{item.title}</Text>
-
+              <Text style={styles.title}>{item.title ? item.title : '-'}</Text>
               <Text style={styles.label}>{item.description}</Text>
             </View>
 
@@ -1032,6 +1034,7 @@ const styles = StyleSheet.create({
     width: '48%',
     borderRadius: 12,
     padding: 16,
+
     marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },

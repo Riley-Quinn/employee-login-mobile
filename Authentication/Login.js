@@ -261,7 +261,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   checkboxWrapper: {
-    transform: [{ scaleX: 0.6 }, { scaleY: 0.6 }], // works better on Android this way
+    transform: [{ scaleX: 0.6 }, { scaleY: 0.6 }],
     marginRight: 8,
   },
   rememberMe: {

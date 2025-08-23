@@ -155,7 +155,6 @@ const ViewTickets = () => {
       formData.append('media_type', 'Document');
       formData.append('uploaded_by', userId);
 
-      // Optional: log the FormData parts
       for (let [key, value] of formData._parts) {
         console.log(`${key}:`, value);
       }
@@ -165,8 +164,6 @@ const ViewTickets = () => {
       const response = await axios.post(uploadUrl, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
-          // Add auth token if required by backend
-          // Authorization: `Bearer ${token}`,
         },
       });
 
@@ -311,10 +308,11 @@ const ViewTickets = () => {
 
           <View style={styles.infoRow}>
             <MaterialIcons name="person-outline" size={20} color="#555" />
-            <Text style={styles.infoLabel}>Customer</Text>
-            <Text style={styles.colonss}>:</Text>
-            <Text style={styles.infoValue}>{ticket.customer_name}</Text>
 
+            <Text style={styles.infoLabel2}>Customer</Text>
+            <Text style={styles.colon}>:</Text>
+
+            <Text style={styles.infoValue}>{ticket.customer_name}</Text>
             <TouchableOpacity onPress={() => setShowCustomerModal(true)}>
               <Text style={styles.detailsBtn}>Details</Text>
             </TouchableOpacity>
@@ -791,12 +789,6 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
-  },
 
   leftRow: {
     flexDirection: 'row',
@@ -854,7 +846,13 @@ const styles = StyleSheet.create({
     color: '#333',
     marginLeft: 6,
   },
-
+  infoLabel2: {
+    flex: 1.6,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginLeft: 6,
+  },
   colon: {
     width: 12,
     textAlign: 'center',
@@ -862,17 +860,22 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
   },
-  colonss: {
-    width: 10,
-    textAlign: 'center',
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
   },
   infoValue: {
     flex: 2,
     fontSize: 14,
+    alignItems: 'center',
+    justifyContent: 'space-between',
     color: '#555',
+    fontWeight: '600',
+  },
+  detailsBtn: {
+    color: '#007BFF',
     fontWeight: '600',
   },
   infoValues: {
@@ -886,6 +889,13 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#444',
     marginTop: 6,
+  },
+  colonss: {
+    width: 200,
+    textAlign: 'center',
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
   },
   uploadCard: {
     backgroundColor: '#008080',
@@ -970,10 +980,6 @@ const styles = StyleSheet.create({
   },
   mapRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
   mapText: { marginLeft: 6, color: '#007bff', fontSize: 14 },
-  detailsBtn: {
-    color: '#007BFF',
-    fontWeight: '600',
-  },
 
   modalContainer: {
     flex: 1,
