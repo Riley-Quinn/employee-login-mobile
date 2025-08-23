@@ -4,154 +4,124 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Animated,
   ScrollView,
   Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import Ionicons from 'react-native-vector-icons/Ionicons';
-import FontAwesome from 'react-native-vector-icons/FontAwesome';
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
-import { BASE_URL } from '@env';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import FontAwesome6 from 'react-native-vector-icons/FontAwesome6';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import FontAwesome from 'react-native-vector-icons/FontAwesome';
+import Feather from 'react-native-vector-icons/Feather';
+
 const ProfileScreen = ({ navigation }) => {
   const [profile, setProfile] = useState({});
   const [userId, setUserId] = useState(null);
-  const [menuVisible, setMenuVisible] = useState(false);
-  const slideAnim = useState(new Animated.Value(-250))[0];
 
   useEffect(() => {
     const getUserId = async () => {
       try {
         const id = await AsyncStorage.getItem('userId');
-        if (id) {
-          setUserId(id);
-        } else {
-          console.warn('No user ID found in AsyncStorage');
-        }
+        if (id) setUserId(id);
       } catch (error) {
-        console.error('Error reading userId from AsyncStorage:', error.message);
+        console.error(error);
       }
     };
-
     getUserId();
   }, []);
+
   useEffect(() => {
     if (userId) {
       const fetchProfile = async () => {
         try {
-          const clientId = await AsyncStorage.getItem('clientId');
           const res = await axios.get(
             `http://10.0.2.2:5000/api/employee/${userId}`,
-            {
-              headers: {
-                'x-client-id': clientId,
-              },
-            },
           );
           setProfile(res.data);
         } catch (error) {
-          console.error('Failed to fetch profile:', error.message);
+          console.error(error.message);
         }
       };
-
       fetchProfile();
     }
   }, [userId]);
+
   const handleLogout = async () => {
     try {
-      const response = await axios.get(`http://10.0.2.2:5000/api/auth/logout`);
-
-      if (response.status === 200) {
-        await AsyncStorage.removeItem('userId');
-        await AsyncStorage.removeItem('userName');
-
-        navigation.navigate('Login');
-      } else {
-        Alert.alert('Error', response.data.error || 'Error logging out');
-      }
+      await AsyncStorage.removeItem('userId');
+      await AsyncStorage.removeItem('userName');
+      navigation.navigate('Login');
     } catch (error) {
-      Alert.alert('Error', error.message || 'Error logging out');
+      Alert.alert('Error', 'Error logging out');
     }
   };
 
-  const openMenu = () => {
-    setMenuVisible(true);
-    Animated.timing(slideAnim, {
-      toValue: 0,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const closeMenu = () => {
-    Animated.timing(slideAnim, {
-      toValue: -250,
-      duration: 300,
-      useNativeDriver: true,
-    }).start(() => setMenuVisible(false));
-  };
-
-  const handleNavigation = screen => {
-    closeMenu();
-    navigation.navigate(screen);
-  };
+  const CardButton = ({ icon, title, subtitle, onPress }) => (
+    <TouchableOpacity style={styles.cardButton} onPress={onPress}>
+      <View style={styles.iconContainer}>
+        <Icon name={icon} size={24} color="#fff" />
+      </View>
+      <View style={{ marginLeft: 15 }}>
+        <Text style={styles.cardTitle}>{title}</Text>
+        {subtitle && <Text style={styles.cardSubtitle}>{subtitle}</Text>}
+      </View>
+      <Icon
+        name="chevron-forward"
+        size={24}
+        color="#888"
+        style={{ marginLeft: 'auto' }}
+      />
+    </TouchableOpacity>
+  );
 
   return (
     <View style={styles.container}>
-      <SafeAreaView style={{ backgroundColor: '#008080', padding: 0 }}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Profile</Text>
-        </View>
-      </SafeAreaView>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Profile</Text>
 
-      <ScrollView>
-        <View style={styles.body}>
-          <View style={styles.profilecircle}>
-            <Text style={styles.profileInitial}>{profile.name}</Text>
-            <Text style={styles.profileInitial}>{profile.phone}</Text>
+        <View style={styles.profileCircle}>
+          <View style={styles.iconBackground}>
+            <Feather name="user" size={50} color="#fff" />
           </View>
+          <Text style={styles.profileName}>{profile.name || 'Employee'}</Text>
+          <Text style={styles.profileEmail}>
+            {profile.email || 'employee@email.com'}
+          </Text>
+          <Text style={styles.profilePhone}>
+            {profile.phone || '9876543210'}
+          </Text>
         </View>
+      </View>
 
-        <View style={styles.content}>
-          <TouchableOpacity
-            style={styles.item}
-            onPress={() => navigation.navigate('EditProfile')}
-          >
-            <Icon name="person" size={24} color="#008080" />
-            <Text style={styles.itemText}>Edit Profile</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.item}
-            onPress={() => navigation.navigate('Password')}
-          >
-            <Icon name="lock-closed" size={24} color="#008080" />
-            <Text style={styles.itemText}>Change Password</Text>
-          </TouchableOpacity>
-          {/* <TouchableOpacity
-            style={styles.item}
-            onPress={() => navigation.navigate('EditAddress')}
-          >
-            <Icon name="location-outline" size={24} color="#008080" />
-            <Text style={styles.itemText}>Edit Address</Text>
-          </TouchableOpacity> */}
-
-          <TouchableOpacity style={styles.item} onPress={handleLogout}>
-            <Icon name="log-out-outline" size={24} color="#008080" />
-            <Text style={styles.itemText}>Logout</Text>
-          </TouchableOpacity>
-        </View>
+      <ScrollView contentContainerStyle={{ padding: 20 }}>
+        <CardButton
+          icon="pencil"
+          title="Edit Profile"
+          subtitle="Update your personal information"
+          onPress={() => navigation.navigate('EditProfile')}
+        />
+        <CardButton
+          icon="lock-closed"
+          title="Change Password"
+          subtitle="Update your account security"
+          onPress={() => navigation.navigate('Password')}
+        />
+        <CardButton
+          icon="log-out-outline"
+          title="Logout"
+          subtitle="Sign out of your account"
+          onPress={handleLogout}
+        />
       </ScrollView>
       <View style={styles.bottomBar}>
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => navigation.navigate('Dashboard')}
         >
-          <FontAwesome name="home" size={30} color="#888" />
+          <FontAwesome name="home" size={30} color="#008080" />
           <Text style={styles.navText}>Home</Text>
         </TouchableOpacity>
 
@@ -174,77 +144,79 @@ const ProfileScreen = ({ navigation }) => {
           style={styles.navItem}
           onPress={() => navigation.navigate('ProfileScreen')}
         >
-          <FontAwesome name="user" size={30} color="#008080" />
+          <FontAwesome name="user" size={30} color="#888" />
           <Text style={styles.navText}>Profile</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 };
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
+  container: { flex: 1, backgroundColor: '#f0f4f7' },
+  header: {
+    paddingVertical: 40,
+    alignItems: 'center',
+    backgroundColor: '#4ac7b7',
   },
-
-  menuButton: {
-    marginRight: 20,
-  },
-
   headerTitle: {
+    color: '#fff',
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#fff',
-    marginLeft: 30,
+    alignSelf: 'flex-start',
+    marginLeft: 20,
   },
-
-  body: {
-    alignItems: 'center',
-    marginTop: 20,
-  },
-
-  profilecircle: {
-    marginTop: 30,
-    width: 150,
-    height: 150,
-    borderRadius: 100,
+  iconBackground: {
+    width: 100,
+    height: 100,
+    borderRadius: 55,
     backgroundColor: '#008080',
+    alignItems: 'center',
     justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 4,
-    marginHorizontal: 70,
-    borderColor: '#fff',
+    marginBottom: 10,
   },
 
-  card: {
-    backgroundColor: '#e0f7f5',
-    borderRadius: 10,
-    padding: 20,
-    alignItems: 'center',
-    elevation: 4,
-    width: 300,
-  },
-
-  profileInitial: {
+  profileCircle: { marginTop: 20, alignItems: 'center' },
+  profileName: {
+    color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
-    marginVertical: 5,
+    marginTop: 10,
+  },
+  profileEmail: {
     color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginTop: 7,
   },
-
-  content: {
-    marginTop: 80,
-    paddingHorizontal: 50,
+  profilePhone: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginTop: 5,
   },
-
-  item: {
+  cardButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 15,
-    marginBottom: 30,
+    backgroundColor: '#fff',
+    padding: 15,
+    borderRadius: 10,
+    marginVertical: 10,
+    marginHorizontal: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
 
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+  iconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: '#4ac7b7',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
   bottomBar: {
@@ -264,10 +236,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginTop: 4,
   },
-  itemText: {
-    fontSize: 18,
-    marginLeft: 20,
-    color: 'black',
+
+  cardTitle: { fontSize: 16, fontWeight: 'bold', color: '#000' },
+  cardSubtitle: {
+    fontSize: 14,
+    color: '#888',
+    marginTop: 3,
     fontWeight: 'bold',
   },
 });

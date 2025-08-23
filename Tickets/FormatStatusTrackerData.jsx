@@ -13,55 +13,60 @@ const FormatStatusTrackerData = ({ trackingData }) => {
   }
 
   return (
-    <View style={styles.container}>
-      {parsed.map((item, index) => {
-        const rawTimestamp =
-          item.timestamp ||
-          item.Date ||
-          item.updatedDate ||
-          item.created_at ||
-          item.updated_at;
+    <>
+      <View style={styles.container}>
+        <View style={styles.historyHeader}>
+          <Text style={styles.historyText}>History</Text>
+        </View>
 
-        const timestamp = new Date(rawTimestamp);
-        const isValidDate = !isNaN(timestamp.getTime());
+        {parsed.map((item, index) => {
+          const rawTimestamp =
+            item.timestamp ||
+            item.Date ||
+            item.updatedDate ||
+            item.created_at ||
+            item.updated_at;
 
-        return (
-          <View key={index} style={styles.entry}>
-            <View style={styles.bulletRow}>
-              <Text style={styles.bullet}>{'\u2022'}</Text>
-              <View style={styles.messageBlock}>
-                <Text style={styles.message}>{item.message}</Text>
-                {item.changedBy && (
-                  <Text style={styles.subText}>
-                    {item.changedBy} {item.employeePhone}
-                  </Text>
-                )}
+          const timestamp = new Date(rawTimestamp);
+          const isValidDate = !isNaN(timestamp.getTime());
 
-                {item.statusName === 'Engineer Assigned' &&
-                  console.log(
-                    ' Data:',
-                    item,
-                  )(item.employeeName || item.employeePhone) && (
+          return (
+            <View key={index} style={styles.entry}>
+              <View style={styles.bulletRow}>
+                <Text style={styles.bullet}>{'\u2022'}</Text>
+                <View style={styles.messageBlock}>
+                  <Text style={styles.message}>{item.message}</Text>
+                  {item.changedBy && (
                     <Text style={styles.subText}>
-                      {item.employeeName} {item.employeePhone}
+                      {item.changedBy} {item.employeePhone}
                     </Text>
                   )}
 
-                {item.arrivalDate && (
-                  <Text style={styles.subText}>
-                    Arrival:{' '}
-                    {new Date(item.arrivalDate).toLocaleString('en-US', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                      hour: 'numeric',
-                      minute: '2-digit',
-                      hour12: true,
-                    })}
-                  </Text>
-                )}
+                  {item.statusName === 'Engineer Assigned' &&
+                    console.log(
+                      ' Data:',
+                      item,
+                    )(item.employeeName || item.employeePhone) && (
+                      <Text style={styles.subText}>
+                        {item.employeeName} {item.employeePhone}
+                      </Text>
+                    )}
 
-                {/* {rawTimestamp && (
+                  {item.arrivalDate && (
+                    <Text style={styles.subText}>
+                      Arrival:{' '}
+                      {new Date(item.arrivalDate).toLocaleString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true,
+                      })}
+                    </Text>
+                  )}
+
+                  {/* {rawTimestamp && (
                   <Text style={styles.timestamp}>
                     {isValidDate
                       ? `${timestamp.toLocaleString('en-US', {
@@ -77,28 +82,29 @@ const FormatStatusTrackerData = ({ trackingData }) => {
                       : String(rawTimestamp)}
                   </Text>
                 )} */}
-                {item.message !== 'Ticket created' && rawTimestamp && (
-                  <Text style={styles.timestamp}>
-                    {isValidDate
-                      ? `${timestamp.toLocaleString('en-US', {
-                          month: 'short',
-                        })} ${timestamp.getDate()} ${timestamp.getFullYear()} ${timestamp.toLocaleTimeString(
-                          'en-US',
-                          {
-                            hour: 'numeric',
-                            minute: '2-digit',
-                            hour12: true,
-                          },
-                        )}`
-                      : String(rawTimestamp)}
-                  </Text>
-                )}
+                  {item.message !== 'Ticket created' && rawTimestamp && (
+                    <Text style={styles.timestamp}>
+                      {isValidDate
+                        ? `${timestamp.toLocaleString('en-US', {
+                            month: 'short',
+                          })} ${timestamp.getDate()} ${timestamp.getFullYear()} ${timestamp.toLocaleTimeString(
+                            'en-US',
+                            {
+                              hour: 'numeric',
+                              minute: '2-digit',
+                              hour12: true,
+                            },
+                          )}`
+                        : String(rawTimestamp)}
+                    </Text>
+                  )}
+                </View>
               </View>
             </View>
-          </View>
-        );
-      })}
-    </View>
+          );
+        })}
+      </View>
+    </>
   );
 };
 
@@ -114,6 +120,17 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
+  },
+  historyHeader: {
+    backgroundColor: '#008080',
+    padding: 8,
+    borderRadius: 6,
+    marginBottom: 12,
+  },
+  historyText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
   entry: {
     marginBottom: 12,

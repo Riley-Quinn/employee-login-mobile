@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Linking,
   FlatList,
+  TextInput,
   Modal,
   Dimensions,
   Image,
@@ -16,6 +17,10 @@ import {
 } from 'react-native';
 import axios from 'axios';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
+import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
+import Feather from 'react-native-vector-icons/Feather';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+
 import Video from 'react-native-video';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -29,7 +34,10 @@ import AddConversation from './Conversation';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { BASE_URL } from '@env';
 import getLocation from './getLocation';
+import { reverseGeocode } from './Geocode';
+import LocationExample from './LoactionDisplay';
 import { launchImageLibrary } from 'react-native-image-picker';
+
 const { width, height } = Dimensions.get('window');
 const GOOGLE_MAPS_API_KEY = 'AIzaSyBUusGFrajBXyPHb2yuwF_VGBjmaVRzLqY';
 
@@ -40,10 +48,16 @@ const ViewTickets = () => {
   const [emailPopup, setEmailPopup] = useState(null);
   const [selectedMedia, setSelectedMedia] = useState(null);
   const customerMedia = ticket?.customer_media || [];
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [showDropdownPost, setShowDropdownPost] = useState(false);
+  const [showCustomerModal, setShowCustomerModal] = useState(false);
+
+  const [locationName, setLocationName] = useState('Loading location...');
 
   const [ticket, setTicket] = useState(null);
   const [userId, setUserId] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [docUrl, setDocUrl] = useState('');
 
   useEffect(() => {
     const init = async () => {
@@ -58,21 +72,26 @@ const ViewTickets = () => {
     };
     init();
   }, []);
-  async function getAddressFromCoords(lat, lng) {
-    try {
-      const response = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${GOOGLE_MAPS_API_KEY}`,
-      );
-      const data = await response.json();
-      if (data.status === 'OK' && data.results.length > 0) {
-        return data.results[0].formatted_address;
+
+  useEffect(() => {
+    if (!ticket) return;
+
+    const preuploads = ticket.multimedia?.filter(m => m.media_stage === 'pre');
+
+    if (preuploads && preuploads.length > 0) {
+      const { latitude, longitude } = preuploads[0];
+
+      if (latitude && longitude) {
+        reverseGeocode(parseFloat(latitude), parseFloat(longitude))
+          .then(name => setLocationName(name))
+          .catch(() => setLocationName('Location unknown'));
+      } else {
+        setLocationName('Location data not available');
       }
-      return null;
-    } catch (error) {
-      console.error('Reverse geocode failed:', error);
-      return null;
+    } else {
+      setLocationName('No Preupload media');
     }
-  }
+  }, [ticket]);
 
   const handleEmployeeMediaUpload = async mediaStage => {
     try {
@@ -88,7 +107,6 @@ const ViewTickets = () => {
       const file = result.assets[0];
 
       const { latitude, longitude } = await getLocation();
-      const address = await getAddressFromCoords(latitude, longitude);
 
       const isImage = file.type?.startsWith('image/');
       const mediaType = isImage ? 'Photo' : 'Video';
@@ -104,14 +122,13 @@ const ViewTickets = () => {
       formData.append('media_stage', mediaStage);
       formData.append('latitude', latitude);
       formData.append('longitude', longitude);
-      formData.append('location_name', address || '');
       formData.append('uploaded_by', userId);
 
       for (let [key, value] of formData._parts) {
         console.log(`${key}:`, value);
       }
 
-      const uploadUrl = `${BASE_URL}/api/employee-uploads`;
+      const uploadUrl = `http://10.0.2.2:5000/api/employee-uploads`;
 
       const response = await axios.post(uploadUrl, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -125,6 +142,44 @@ const ViewTickets = () => {
         err?.response?.data || err.message,
       );
       Alert.alert('Error', 'Upload failed. Try again.');
+    }
+  };
+  const handleDocumentUpload = async () => {
+    if (!docUrl) return Alert.alert('Error', 'Enter document URL');
+
+    try {
+      const formData = new FormData();
+      formData.append('ticket', ticketId);
+      formData.append('file_url', docUrl);
+      formData.append('media_stage', 'pre');
+      formData.append('media_type', 'Document');
+      formData.append('uploaded_by', userId);
+
+      // Optional: log the FormData parts
+      for (let [key, value] of formData._parts) {
+        console.log(`${key}:`, value);
+      }
+
+      const uploadUrl = `${BASE_URL}/api/employee-uploads`;
+
+      const response = await axios.post(uploadUrl, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          // Add auth token if required by backend
+          // Authorization: `Bearer ${token}`,
+        },
+      });
+
+      Alert.alert('Success', 'Document uploaded!');
+      setDocUrl('');
+      fetchTicket();
+    } catch (err) {
+      console.error(
+        '❌ Document upload failed:',
+        err?.response?.status,
+        err?.response?.data || err.message,
+      );
+      Alert.alert('Error', 'Document upload failed');
     }
   };
 
@@ -149,6 +204,8 @@ const ViewTickets = () => {
       );
 
       if (res.status === 200) {
+        console.log('Fetched multimedia:', res.data.list.multimedia);
+
         setTicket(res.data.list);
       } else {
         Alert.alert('Error', 'Unexpected response from server');
@@ -198,79 +255,102 @@ const ViewTickets = () => {
   return (
     <SafeAreaView style={styles.safeContainer}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <MaterialIcons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Ticket Details</Text>
+        <View style={styles.leftSection}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <MaterialIcons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>{ticket.title}</Text>
+        </View>
+
+        <View style={styles.badgeNew}>
+          <Text style={styles.badgeText}>{ticket.status_name}</Text>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {ticket.status_tracker && (
-          <View style={styles.card}>
-            <FormatStatusTrackerData trackingData={ticket.status_tracker} />
-          </View>
-        )}
+        <View style={styles.ticket}>
+          <Text style={styles.ticketId}>#{ticket.ticket_service_id}</Text>
+          <Text style={styles.ticketDescription}>{ticket.description}</Text>
+        </View>
         <View style={styles.ticketCard}>
-          <View style={styles.headerRow}>
-            <View style={styles.avatar}>
-              <MaterialIcons name="person" size={24} color="#fff" />
-            </View>
-            <Text style={styles.customerNameText}>{ticket.customer_name}</Text>
-            <View style={styles.badgeNew}>
-              <Text style={styles.badgeText}>{ticket.priority_rank}</Text>
-            </View>
-          </View>
-          <View style={styles.infoSection}>
-            <Text style={styles.labelText}>
-              Category :{' '}
-              <Text style={styles.valueText}> {ticket.category_name}</Text>
-            </Text>
+          <View style={styles.headerRow}></View>
 
-            <Text style={styles.labelText}>
-              Address :{' '}
-              <Text style={styles.valueText}>
-                {`${ticket.state_name},${ticket.city_name},${ticket.region_name}, ${ticket.address_type}, ${ticket.address}`}
-              </Text>
-            </Text>
-
-            <TouchableOpacity
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                marginTop: 6,
-              }}
-              onPress={() =>
-                openMap(ticket.address, ticket.city_name, ticket.state_name)
-              }
+          <View style={styles.infoRow}>
+            <FontAwesome name="flag" size={20} color="#555" />
+            <Text style={styles.infoLabel}>Priority</Text>
+            <Text style={styles.colon}>:</Text>
+            <Text
+              style={[
+                styles.infoValue,
+                ticket.priority_rank === 'High'
+                  ? styles.priorityHigh
+                  : ticket.priority_rank === 'Medium'
+                  ? styles.priorityMedium
+                  : styles.priorityLow,
+              ]}
             >
-              <Text style={styles.viewMapText}>
-                View Location on Google Maps
-              </Text>
+              {ticket.priority_rank}
+            </Text>
+          </View>
+
+          <View style={styles.infoRow}>
+            <MaterialIcons name="person" size={20} color="#555" />
+            <Text style={styles.infoLabel}>Assigned</Text>
+            <Text style={styles.colon}>:</Text>
+            <Text style={styles.infoValue}>
+              {ticket.employee_name || 'N/A'}
+            </Text>
+          </View>
+
+          <View style={styles.infoRow}>
+            <FontAwesome5 name="cogs" size={20} color="#555" />
+            <Text style={styles.infoLabel}>Asset</Text>
+            <Text style={styles.colon}>:</Text>
+            <Text style={styles.infoValue}>{ticket.asset_name || 'N/A'}</Text>
+          </View>
+
+          <View style={styles.infoRow}>
+            <MaterialIcons name="person-outline" size={20} color="#555" />
+            <Text style={styles.infoLabel}>Customer</Text>
+            <Text style={styles.colonss}>:</Text>
+            <Text style={styles.infoValue}>{ticket.customer_name}</Text>
+
+            <TouchableOpacity onPress={() => setShowCustomerModal(true)}>
+              <Text style={styles.detailsBtn}>Details</Text>
             </TouchableOpacity>
+          </View>
 
-            <Text style={styles.labelText}>
-              Phone :{' '}
-              <Text style={styles.valueText}> {ticket.customer_phone}</Text>
-            </Text>
-
-            <Text style={styles.labelText}>
-              Email :{' '}
-              <Text style={styles.valueText}> {ticket.customer_email}</Text>
+          <View style={styles.infoRow}>
+            <MaterialIcons name="access-time" size={20} color="#555" />
+            <Text style={styles.infoLabel}>Assigned On</Text>
+            <Text style={styles.colon}>:</Text>
+            <Text style={styles.infoValue}>
+              {ticket.created_at?.split('T')[0]}
             </Text>
           </View>
 
-          <View style={styles.headerRow}>
-            <View style={styles.avatar}>
-              <MaterialIcons name="calendar-month" size={24} color="#fff" />
-            </View>
-            <Text style={styles.createdLabel}>Created on</Text>
-            <View style={styles.badgeNew}>
-              <Text style={styles.badgeText}>{ticket.status_name}</Text>
-            </View>
+          <View style={styles.infoRow}>
+            <MaterialIcons name="category" size={20} color="#555" />
+            <Text style={styles.infoLabel}>Category</Text>
+            <Text style={styles.colon}>:</Text>
+            <Text style={styles.infoValues}>{ticket.category_name}</Text>
           </View>
-          <Text style={styles.dateOnlyText}>
-            {ticket.created_at?.split('T')[0]}
-          </Text>
+
+          <TouchableOpacity
+            style={styles.infoRow}
+            onPress={() =>
+              openMap(ticket.address, ticket.city_name, ticket.state_name)
+            }
+          >
+            <View style={styles.leftRow}>
+              <Feather name="map-pin" size={20} color="#555" />
+              <Text style={styles.viewMapText}>View Location</Text>
+            </View>
+
+            <Text style={styles.boldLabel}>
+              Region: <Text style={styles.labels}>{ticket.region_name}</Text>
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {(ticket.feedback || ticket.rating) && (
@@ -284,6 +364,339 @@ const ViewTickets = () => {
           </View>
         )}
 
+        <View style={styles.upload}>
+          <Text style={styles.uploadddddd}>Customer uploads</Text>
+          <TouchableOpacity onPress={() => setShowDropdown(!showDropdown)}>
+            <MaterialIcons name="arrow-drop-down" size={30} color="#fff" />
+          </TouchableOpacity>
+        </View>
+
+        {customerMedia?.length > 0 ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={true}>
+            {customerMedia.map((media, index) => (
+              <TouchableOpacity
+                key={index}
+                onPress={() => openMediaModal(media)}
+                style={styles.mediaWrapper}
+              >
+                <Image
+                  source={{
+                    uri: `https://da5uskjymuj4t.cloudfront.net/${media.file_name}`,
+                  }}
+                  style={styles.mediaImage}
+                />
+
+                {media.latitude && media.longitude && (
+                  <View style={styles.locationOverlay}>
+                    <LocationExample
+                      latitude={parseFloat(media.latitude)}
+                      longitude={parseFloat(media.longitude)}
+                    />
+                  </View>
+                )}
+
+                {media.latitude && media.longitude && (
+                  <TouchableOpacity
+                    onPress={() =>
+                      openMap(media.address, media.city, media.state)
+                    }
+                    style={styles.mapRow}
+                  >
+                    <Text style={styles.mapText}>Google Maps</Text>
+                  </TouchableOpacity>
+                )}
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        ) : (
+          <Text style={styles.noMediaText}>No media from customer</Text>
+        )}
+
+        <View style={styles.uploadHeaders}>
+          <Text style={styles.uploadTitles}>Preupload</Text>
+          <View style={styles.iconRow}>
+            <TouchableOpacity onPress={() => handleEmployeeMediaUpload('pre')}>
+              <View
+                style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: 20,
+                  backgroundColor: '#4FB06D',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <MaterialIcons name="add" size={24} color="#fff" />
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setShowDropdown(!showDropdown)}>
+              <MaterialIcons
+                name={showDropdown ? 'arrow-drop-up' : 'arrow-drop-down'}
+                size={30}
+                color="#fff"
+              />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {showDropdown && (
+          <>
+            {preMedia?.length > 0 ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={true}
+                style={styles.mediaScroll}
+              >
+                {preMedia.map((media, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    onPress={() => openMediaModal(media)}
+                    style={styles.mediaWrapper}
+                  >
+                    <Image
+                      source={{
+                        uri: `https://da5uskjymuj4t.cloudfront.net/${media.file_name}`,
+                      }}
+                      style={styles.mediaImage}
+                    />
+                    {media.latitude && media.longitude && (
+                      <View style={styles.locationOverlay}>
+                        <LocationExample
+                          latitude={parseFloat(media.latitude)}
+                          longitude={parseFloat(media.longitude)}
+                        />
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            ) : (
+              <Text style={styles.noMediaText}>No Preupload media</Text>
+            )}
+
+            {preMedia?.[0]?.latitude && preMedia?.[0]?.longitude && (
+              <TouchableOpacity
+                onPress={() =>
+                  openMap(
+                    preMedia[0].address,
+                    preMedia[0].city,
+                    preMedia[0].state,
+                  )
+                }
+                style={styles.mapRow}
+              >
+                <Text style={styles.mapText}> Google Maps</Text>
+              </TouchableOpacity>
+            )}
+          </>
+        )}
+
+        <View style={styles.uploadHeadersss}>
+          <Text style={styles.uploadTitlesss}>Post Upload</Text>
+          <View style={styles.iconRow}>
+            <TouchableOpacity onPress={() => handleEmployeeMediaUpload('post')}>
+              <View
+                style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: 20,
+                  backgroundColor: '#4FB06D',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <MaterialIcons name="add" size={24} color="#fff" />
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setShowDropdownPost(!showDropdownPost)}
+            >
+              <MaterialIcons
+                name={showDropdown ? 'arrow-drop-up' : 'arrow-drop-down'}
+                size={30}
+                color="#fff"
+              />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {showDropdownPost && (
+          <>
+            {postMedia?.length > 0 ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={true}
+                style={styles.mediaScroll}
+              >
+                {postMedia.map((media, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    onPress={() => openMediaModal(media)}
+                    style={styles.mediaWrapper}
+                  >
+                    {media.file_type === 'Photo' ? (
+                      <Image
+                        source={{
+                          uri: `https://da5uskjymuj4t.cloudfront.net/${media.file_name}`,
+                        }}
+                        style={styles.mediaImage}
+                      />
+                    ) : (
+                      <View style={styles.videoContainer}>
+                        <Text style={styles.videoText}>{media.file_name}</Text>
+                      </View>
+                    )}
+
+                    {media.latitude && media.longitude && (
+                      <View style={styles.locationOverlay}>
+                        <LocationExample
+                          latitude={parseFloat(media.latitude)}
+                          longitude={parseFloat(media.longitude)}
+                        />
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            ) : (
+              <Text style={styles.noMediaText}>No Post Upload media</Text>
+            )}
+
+            {postMedia?.[0]?.latitude && postMedia?.[0]?.longitude && (
+              <TouchableOpacity
+                onPress={() =>
+                  openMap(
+                    postMedia[0].address,
+                    postMedia[0].city,
+                    postMedia[0].state,
+                  )
+                }
+                style={styles.mapRow}
+              >
+                <Text style={styles.mapText}> Google Maps</Text>
+              </TouchableOpacity>
+            )}
+          </>
+        )}
+
+        <View style={styles.uploadCard}>
+          <Text style={styles.uploadTitle}>Upload Document</Text>
+          <TextInput
+            placeholder="Enter document URL"
+            value={docUrl}
+            onChangeText={setDocUrl}
+            style={styles.input}
+            placeholderTextColor="#fff"
+          />
+          <TouchableOpacity
+            onPress={handleDocumentUpload}
+            style={{
+              backgroundColor: docUrl ? '#007AFF' : '#ccc',
+              padding: 10,
+              borderRadius: 8,
+              marginTop: 8,
+              alignItems: 'center',
+            }}
+            disabled={!docUrl}
+          >
+            <Text style={{ color: '#fff', fontSize: 14, fontWeight: 'bold' }}>
+              Upload Document
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <Modal
+          visible={showCustomerModal}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowCustomerModal(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <TouchableOpacity
+                style={styles.closeIcon}
+                onPress={() => setShowCustomerModal(false)}
+              >
+                <Ionicons name="close" size={24} color="#333" />
+              </TouchableOpacity>
+
+              <Text style={styles.modalTitle}>
+                {ticket.customer_type === 'company'
+                  ? 'Company Details'
+                  : 'Customer Details'}
+              </Text>
+
+              {ticket.customer_type === 'company' ? (
+                <>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Company</Text>
+                    <Text style={styles.colons}>:</Text>
+                    <Text style={styles.detailValue}>
+                      {ticket.customer_name}
+                    </Text>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Division</Text>
+                    <Text style={styles.colons}>:</Text>
+                    <Text style={styles.detailValue}>
+                      {ticket.customer_division}
+                    </Text>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Phone</Text>
+                    <Text style={styles.colons}>:</Text>
+                    <Text style={styles.detailValue}>
+                      {ticket.customer_phone}
+                    </Text>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Email</Text>
+                    <Text style={styles.colons}>:</Text>
+                    <Text style={styles.detailValue}>
+                      {ticket.customer_email}
+                    </Text>
+                  </View>
+                </>
+              ) : (
+                <>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Name</Text>
+                    <Text style={styles.colons}>:</Text>
+                    <Text style={styles.detailValue}>
+                      {ticket.customer_name}
+                    </Text>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Phone</Text>
+                    <Text style={styles.colons}>:</Text>
+                    <Text style={styles.detailValue}>
+                      {ticket.customer_phone}
+                    </Text>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Email</Text>
+                    <Text style={styles.colons}>:</Text>
+                    <Text style={styles.detailValue}>
+                      {ticket.customer_email}
+                    </Text>
+                  </View>
+                </>
+              )}
+            </View>
+          </View>
+        </Modal>
+
+        {ticket.status_tracker && (
+          <View style={styles.card}>
+            <FormatStatusTrackerData trackingData={ticket.status_tracker} />
+          </View>
+        )}
+
         {ticket.status_name === 'In-Progress' && (
           <View style={styles.cards}>
             <AddConversation
@@ -294,184 +707,6 @@ const ViewTickets = () => {
             />
           </View>
         )}
-        <View style={styles.section}>
-          <Text style={styles.label}>Customer Media</Text>
-          {customerMedia.length > 0 ? (
-            <View style={styles.imageContainer}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={true}>
-                {customerMedia.map((media, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    onPress={() => openMediaModal(media)}
-                  >
-                    <Image
-                      source={{
-                        uri: `https://da5uskjymuj4t.cloudfront.net/${media.file_name}`,
-                      }}
-                      style={styles.image}
-                    />
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          ) : (
-            <Text
-              style={{
-                color: '#888',
-                fontSize: 14,
-                fontWeight: 600,
-                textAlign: 'center',
-              }}
-            >
-              No media from customer
-            </Text>
-          )}
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.label}>Pre Upload</Text>
-          <TouchableOpacity
-            style={styles.button}
-            onPress={() => handleEmployeeMediaUpload('pre')}
-          >
-            <Text style={styles.buttonText}>Upload Pre Media</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.section}>
-          {preMedia?.length > 0 && (
-            <View style={styles.imageContainer}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={true}>
-                {/* REPLACE THIS: */}
-                {preMedia.map((media, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    onPress={() => openMediaModal(media)}
-                    style={{ marginRight: 10, width: width * 0.8 }}
-                  >
-                    <View
-                      style={{
-                        width: '100%',
-                        height: height * 0.4,
-                        marginBottom: 4,
-                        borderRadius: 8,
-                        overflow: 'hidden',
-                      }}
-                    >
-                      <Image
-                        source={{
-                          uri: `https://da5uskjymuj4t.cloudfront.net/${media.file_name}`,
-                        }}
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          borderRadius: 8,
-                          resizeMode: 'cover',
-                        }}
-                      />
-                    </View>
-
-                    {media.location_name && (
-                      <View
-                        style={{
-                          position: 'absolute',
-                          top: 10,
-                          left: 10,
-                          backgroundColor: 'rgba(0,0,0,0.6)',
-                          paddingHorizontal: 8,
-                          paddingVertical: 4,
-                          borderRadius: 6,
-                          maxWidth: width * 0.7,
-                          zIndex: 999,
-                        }}
-                      >
-                        <Text
-                          style={{
-                            color: 'white',
-                            fontWeight: '600',
-                            fontSize: 14,
-                          }}
-                          numberOfLines={1}
-                          ellipsizeMode="tail"
-                        >
-                          {media.location_name}
-                        </Text>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          )}
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.label}>Post Upload</Text>
-          <TouchableOpacity
-            style={styles.button}
-            onPress={() => handleEmployeeMediaUpload('post')}
-          >
-            <Text style={styles.buttonText}>Upload Post Media</Text>
-          </TouchableOpacity>
-
-          {postMedia?.length > 0 && (
-            <View style={styles.imageContainer}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={true}>
-                {postMedia.map((media, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    onPress={() => openMediaModal(media)}
-                  >
-                    {media.file_type === 'Photo' ? (
-                      <Image
-                        source={{
-                          uri: `https://da5uskjymuj4t.cloudfront.net/${media.file_name}`,
-                        }}
-                        style={styles.image}
-                      />
-                    ) : (
-                      <View style={styles.videoContainer}>
-                        <Text style={styles.videoText}>{media.file_name}</Text>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          )}
-        </View>
-
-        <Modal
-          visible={selectedMedia !== null}
-          transparent={true}
-          onRequestClose={closeModal}
-        >
-          <View style={styles.modalBackground}>
-            <TouchableOpacity
-              style={styles.modalCloseButton}
-              onPress={closeModal}
-            >
-              <FontAwesome name="close" size={30} color="#fff" />
-            </TouchableOpacity>
-
-            {selectedMedia?.file_type === 'Photo' ? (
-              <Image
-                source={{
-                  uri: `https://da5uskjymuj4t.cloudfront.net/${selectedMedia.file_name}`,
-                }}
-                style={styles.modalImage}
-              />
-            ) : selectedMedia?.file_type === 'Video' ? (
-              <Video
-                source={{
-                  uri: `https://da5uskjymuj4t.cloudfront.net/${selectedMedia.file_name}`,
-                }}
-                style={styles.modalVideo}
-                controls
-                resizeMode="cover"
-              />
-            ) : null}
-          </View>
-        </Modal>
       </ScrollView>
     </SafeAreaView>
   );
@@ -479,25 +714,49 @@ const ViewTickets = () => {
 
 const styles = StyleSheet.create({
   safeContainer: { flex: 1, backgroundColor: '#f2f2f2' },
-  header: {
-    backgroundColor: '#008080',
-    height: 50,
-    justifyContent: 'flex-start',
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-    elevation: 4,
-    paddingTop: 20,
-  },
+
   infoSection: {
     marginHorizontal: 40,
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#008080',
+    paddingHorizontal: 10,
+    paddingVertical: 12,
+  },
+
+  leftSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+
   headerTitle: {
-    color: '#efedf4',
     fontSize: 18,
-    marginLeft: 10,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+
+  badgeNew: {
+    backgroundColor: '#ff9800',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+  },
+  badgeText: {
+    color: '#fff',
     fontWeight: 'bold',
   },
 
+  noMediaText: {
+    fontWeight: 'bold',
+    fontSize: 14,
+    color: '#333',
+    marginTop: 10,
+    textAlign: 'center',
+  },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -521,32 +780,269 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#008080',
   },
+  ticketCard: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 12,
+    marginVertical: 8,
+    marginHorizontal: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+  },
 
+  leftRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+
+  viewMapText: {
+    fontSize: 14,
+    color: '#1976D2',
+    fontWeight: 'bold',
+  },
+
+  boldLabel: {
+    fontWeight: 'bold',
+    fontSize: 14,
+    color: '#333',
+    marginLeft: 15,
+  },
+
+  labels: {
+    fontWeight: '600',
+    color: '#008080',
+    fontSize: 12,
+  },
+  ticket: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 12,
+    marginVertical: 8,
+    marginHorizontal: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+
+  ticketId: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#008080',
+    marginBottom: 6,
+  },
+
+  ticketDescription: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+  },
+
+  infoLabel: {
+    flex: 1.2,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginLeft: 6,
+  },
+
+  colon: {
+    width: 12,
+    textAlign: 'center',
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  colonss: {
+    width: 10,
+    textAlign: 'center',
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  infoValue: {
+    flex: 2,
+    fontSize: 14,
+    color: '#555',
+    fontWeight: '600',
+  },
+  infoValues: {
+    flex: 2,
+    fontSize: 14,
+    color: '#008080',
+    fontWeight: '600',
+  },
   labelText: {
     fontSize: 14,
     fontWeight: '500',
     color: '#444',
     marginTop: 6,
   },
+  uploadCard: {
+    backgroundColor: '#008080',
+    borderRadius: 10,
+    padding: 12,
+    marginVertical: 8,
+    marginHorizontal: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    marginTop: 30,
+    elevation: 3,
+  },
+  uploadHeadersss: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 20,
+    padding: 8,
+    marginVertical: 8,
+    marginHorizontal: 8,
+    borderRadius: 10,
+    backgroundColor: '#008080',
+  },
+  uploadTitlesss: { fontSize: 16, fontWeight: 'bold', color: '#fff' },
+  uploadHeaders: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 30,
+    padding: 8,
+    marginVertical: 8,
+    marginHorizontal: 8,
+    borderRadius: 10,
+    backgroundColor: '#008080',
+  },
+  uploadTitle: { fontSize: 16, fontWeight: 'bold', color: '#fff' },
+
+  uploadTitles: { fontSize: 16, fontWeight: 'bold', color: '#fff' },
+  upload: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+    padding: 8,
+    marginVertical: 8,
+    marginHorizontal: 8,
+    borderRadius: 10,
+    backgroundColor: '#008080',
+  },
+  uploadddddd: { fontSize: 16, fontWeight: 'bold', color: '#fff' },
+  iconRow: { flexDirection: 'row', alignItems: 'center' },
+  mediaScroll: { marginVertical: 6 },
+  mediaWrapper: {
+    marginRight: 10,
+    width: width * 0.8,
+    height: height * 0.2,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  mediaImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 8,
+    resizeMode: 'cover',
+  },
   locationOverlay: {
     position: 'absolute',
-    bottom: 10,
+    top: 10,
     left: 10,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)', // a bit transparent black
+    backgroundColor: 'rgba(0,0,0,0.6)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
-    maxWidth: width * 0.75,
-    zIndex: 9999,
-    elevation: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.8,
-    shadowRadius: 4,
+    zIndex: 999,
+  },
+  addressText: {
+    marginTop: 6,
+    fontSize: 14,
+    color: '#888',
+    fontWeight: 'bold,',
+  },
+  mapRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
+  mapText: { marginLeft: 6, color: '#007bff', fontSize: 14 },
+  detailsBtn: {
+    color: '#007BFF',
+    fontWeight: '600',
+  },
+
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  modalContent: {
+    width: '85%',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
+    elevation: 5,
+  },
+
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 12,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+    marginHorizontal: 20,
+  },
+
+  detailLabel: {
+    fontWeight: '600',
+    color: '#000',
+    fontSize: 16,
+    width: 110,
+  },
+
+  colons: {
+    fontSize: 16,
+    color: '#000',
+    marginRight: 6,
+  },
+
+  detailValue: {
+    fontWeight: '600',
+    color: '#888',
+    fontSize: 16,
+    flexShrink: 1,
+  },
+
+  closeIcon: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    zIndex: 1,
+  },
+  priorityHigh: {
+    color: 'red',
+    fontWeight: '700',
+  },
+  priorityMedium: {
+    color: 'orange',
+    fontWeight: '700',
+  },
+  priorityLow: {
+    color: 'pink',
+    fontWeight: '700',
   },
 
   locationText: {
-    color: 'white', // instead of red
+    color: 'white',
     fontSize: 14,
     fontWeight: '600',
   },
@@ -554,16 +1050,6 @@ const styles = StyleSheet.create({
   valueText: {
     color: '#008080',
     fontSize: 14,
-    fontWeight: '500',
-  },
-  badgeText: {
-    color: '#efedf4',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  viewMapText: {
-    fontSize: 14,
-    color: '#1976D2',
     fontWeight: '500',
   },
 
@@ -602,20 +1088,15 @@ const styles = StyleSheet.create({
     color: '#888',
     marginHorizontal: 10,
   },
-  badgeNew: {
-    backgroundColor: '#FF6B6B',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  addressText: {
-    fontSize: 14,
-    color: '#000',
-    paddingVertical: 2,
-    paddingHorizontal: 4,
-    flexShrink: 1,
-    textAlignVertical: 'center',
-  },
+
+  // addressText: {
+  //   fontSize: 14,
+  //   color: '#000',
+  //   paddingVertical: 2,
+  //   paddingHorizontal: 4,
+  //   flexShrink: 1,
+  //   textAlignVertical: 'center',
+  // },
 
   Texts: {
     fontSize: 13,
@@ -628,8 +1109,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     lineHeight: 10,
   },
-  section: { marginBottom: 20 },
   label: { fontSize: 16, fontWeight: 'bold', marginBottom: 8 },
+  labelss: { fontSize: 16, fontWeight: 'bold', color: '#888' },
   button: {
     backgroundColor: '#1976d2',
     padding: 10,
@@ -645,7 +1126,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   Media: {
-    backgroundColor: 'red',
+    backgroundColor: '#008000',
     borderRadius: 12,
     padding: 16,
     marginTop: 25,
@@ -691,8 +1172,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.8)',
   },
   modalImage: {
-    width: '90%',
-    height: '80%',
+    width: '60%',
+    height: '86%',
     resizeMode: 'contain',
   },
   modalVideo: {
@@ -704,17 +1185,17 @@ const styles = StyleSheet.create({
     top: 20,
     right: 20,
   },
-  ticketCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 15,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-  },
+  // ticketCard: {
+  //   backgroundColor: '#fff',
+  //   borderRadius: 12,
+  //   padding: 16,
+  //   marginBottom: 15,
+  //   elevation: 3,
+  //   shadowColor: '#000',
+  //   shadowOffset: { width: 0, height: 1 },
+  //   shadowOpacity: 0.1,
+  //   shadowRadius: 3,
+  // },
   sectionTitle: {
     fontSize: 16,
     fontWeight: 'bold',

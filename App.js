@@ -13,6 +13,7 @@ import EventsCalendar from './Calendar/Calendar';
 import MonthView from './Calendar/Monthview';
 import WeekView from './Calendar/WeekScreen';
 import EditProfile from './Profile/EditProfile';
+import TicketPage from './Tickets/TicketPage';
 import Password from './Profile/Password';
 import EditAddress from './Profile/EditAddress';
 const Stack = createStackNavigator();
@@ -24,7 +25,9 @@ const App = () => {
         initialRouteName="Login"
         screenOptions={{ headerShown: false }}
       >
+        <Stack.Screen name="TicketPage" component={TicketPage} />
         <Stack.Screen name="ProfileScreen" component={ProfileScreen} />
+
         <Stack.Screen name="EventsOverview" component={EventsOverview} />
         <Stack.Screen name="EventsCalendar" component={EventsCalendar} />
         <Stack.Screen name="Login" component={Login} />

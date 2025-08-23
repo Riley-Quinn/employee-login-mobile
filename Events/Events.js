@@ -11,19 +11,18 @@ import {
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
-import { Dropdown } from 'react-native-element-dropdown';
-import { BASE_URL } from '@env';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Modal from 'react-native-modal';
 
 const EventsOverview = () => {
   const [eventType, setEventType] = useState('Scheduled');
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState(null);
+  const [isFilterVisible, setIsFilterVisible] = useState(false); // modal state
   const navigation = useNavigation();
 
   const eventOptions = [
@@ -79,23 +78,31 @@ const EventsOverview = () => {
             <Text style={styles.serviceId}>#{item.ticket_service_id}</Text>
           </View>
           <View style={styles.infoSection}>
-            <Text style={styles.boldLabel}>
-              Category: <Text style={styles.Label}>{item.category_name}</Text>
-            </Text>
+            <View style={styles.row}>
+              <Text style={styles.label}>Category</Text>
+              <Text style={styles.colon}>:</Text>
+              <Text style={styles.value}>{item.category_name}</Text>
+            </View>
 
-            <Text style={styles.boldLabel}>
-              Address:{' '}
-              <Text style={styles.Label}>
-                {`, ${item.city_name}, ${item.region_name},`}
+            <View style={styles.row}>
+              <Text style={styles.label}>Address</Text>
+              <Text style={styles.colon}>:</Text>
+              <Text style={styles.value}>
+                {item.city_name}, {item.region_name}
               </Text>
-            </Text>
+            </View>
 
-            <Text style={styles.boldLabel}>
-              Customer: <Text style={styles.Label}>{item.customer_name}</Text>
-            </Text>
-            <Text style={styles.boldLabel}>
-              Phone: <Text style={styles.Label}>{item.customer_phone}</Text>
-            </Text>
+            <View style={styles.row}>
+              <Text style={styles.label}>Customer</Text>
+              <Text style={styles.colon}>:</Text>
+              <Text style={styles.value}>{item.customer_name}</Text>
+            </View>
+
+            <View style={styles.row}>
+              <Text style={styles.label}>Phone</Text>
+              <Text style={styles.colon}>:</Text>
+              <Text style={styles.value}>{item.customer_phone}</Text>
+            </View>
           </View>
         </View>
       </View>
@@ -112,19 +119,52 @@ const EventsOverview = () => {
 
       <View style={{ flex: 1 }}>
         <View style={styles.container}>
-          <View style={styles.dropdownContainer}>
-            <Dropdown
-              data={eventOptions}
-              labelField="label"
-              valueField="value"
-              value={eventType}
-              onChange={item => setEventType(item.value)}
-              style={styles.picker}
-              placeholder="Select Event Type"
-              placeholderStyle={{ color: '#000' }}
-              selectedTextStyle={{ color: '#000' }} // selected value text color
-              itemTextStyle={{ color: '#000' }} // items in list
-            />
+          <View style={styles.filterIconContainer}>
+            <TouchableOpacity onPress={() => setIsFilterVisible(true)}>
+              <MaterialIcons name="filter-list" size={30} color="#008080" />
+            </TouchableOpacity>
+
+            <Modal
+              isVisible={isFilterVisible}
+              onBackdropPress={() => setIsFilterVisible(false)}
+              style={{ justifyContent: 'flex-start', margin: 0 }}
+            >
+              <View
+                style={{
+                  backgroundColor: '#fff',
+                  padding: 15,
+                  marginHorizontal: 20,
+                  marginTop: 350,
+                  borderRadius: 12,
+                }}
+              >
+                {eventOptions.map(option => (
+                  <TouchableOpacity
+                    key={option.value}
+                    onPress={() => {
+                      setEventType(option.value);
+                      setIsFilterVisible(false);
+                    }}
+                    style={{
+                      paddingVertical: 10,
+                      borderBottomWidth: 0.5,
+                      borderBottomColor: '#ccc',
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 16,
+                        fontWeight:
+                          eventType === option.value ? 'bold' : 'normal',
+                        color: eventType === option.value ? '#008080' : '#000',
+                      }}
+                    >
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </Modal>
           </View>
 
           {loading ? (
@@ -186,12 +226,18 @@ const EventsOverview = () => {
 };
 
 export default EventsOverview;
+
 const styles = StyleSheet.create({
   ticketNumber: {
     fontSize: 20,
     fontWeight: 'bold',
     marginLeft: 20,
     color: '#fff',
+  },
+  filterIconContainer: {
+    alignItems: 'flex-end',
+    marginHorizontal: 15,
+    marginVertical: 10,
   },
   avatars: {
     width: 30,
@@ -207,48 +253,61 @@ const styles = StyleSheet.create({
     backgroundColor: '#f2f4f7',
     padding: 18,
   },
-
   card: {
     marginBottom: 12,
   },
   ticketCard: {
     backgroundColor: '#fff',
     borderRadius: 10,
-    padding: 16,
-    marginHorizontal: 16,
+    padding: 12,
     marginVertical: 8,
+    marginHorizontal: 10,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
-
   cards: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 4,
   },
-
   serviceId: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#008080',
   },
-  boldLabel: {
+  infoSection: {
+    marginVertical: 10,
+  },
+  row: {
+    flexDirection: 'row',
+    marginBottom: 5,
+    alignItems: 'flex-start',
+  },
+
+  label: {
     fontWeight: 'bold',
     color: '#888',
     fontSize: 14,
+    width: 100,
+    marginHorizontal: 40,
   },
-  Label: {
+
+  colon: {
+    marginHorizontal: 2,
+    fontWeight: 'bold',
+    color: '#888',
+  },
+
+  value: {
+    flex: 1,
     color: '#008080',
     fontWeight: '500',
     fontSize: 14,
+    flexWrap: 'wrap',
   },
 
-  infoSection: {
-    marginHorizontal: 40,
-  },
   field: {
     fontSize: 14,
     color: '#888',
