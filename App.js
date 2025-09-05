@@ -1,9 +1,10 @@
 import * as React from 'react';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ActivityIndicator, View } from 'react-native';
+
 import Login from './Authentication/Login';
 import Dashboard from './Tickets/Dashboard';
 import ViewTickets from './Tickets/ViewTicket';
@@ -26,30 +27,27 @@ const App = () => {
   const [initialRoute, setInitialRoute] = useState(null);
 
   useEffect(() => {
-    const checkFirstLaunch = async () => {
+    const checkRememberMe = async () => {
       try {
-        const firstLaunch = await AsyncStorage.getItem('firstLaunch');
-        if (firstLaunch === null) {
-          // First install → show Login
-          setInitialRoute('Login');
-          await AsyncStorage.setItem('firstLaunch', 'false');
-        } else {
-          // Subsequent launches → show Dashboard
+        const userId = await AsyncStorage.getItem('userId');
+        if (userId) {
           setInitialRoute('Dashboard');
+        } else {
+          setInitialRoute('Login');
         }
       } catch (error) {
-        setInitialRoute('Login'); // fallback
+        console.log('Error checking storage:', error);
+        setInitialRoute('Login');
       }
     };
 
-    checkFirstLaunch();
+    checkRememberMe();
   }, []);
 
   if (!initialRoute) {
-    // Loading indicator while checking AsyncStorage
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#f97316" />
+        <ActivityIndicator size="large" />
       </View>
     );
   }
@@ -57,7 +55,7 @@ const App = () => {
   return (
     <NavigationContainer>
       <Stack.Navigator
-        initialRouteName={initialRoute} // <-- dynamically set first-install behavior
+        initialRouteName={initialRoute}
         screenOptions={{ headerShown: false }}
       >
         <Stack.Screen name="TicketPage" component={TicketPage} />

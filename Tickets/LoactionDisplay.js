@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Text, StyleSheet, View } from 'react-native';
+import { Text } from 'react-native';
 import { reverseGeocode } from './Geocode';
 
 const LocationDisplay = ({ latitude, longitude }) => {
@@ -14,7 +14,7 @@ const LocationDisplay = ({ latitude, longitude }) => {
           if (isMounted) setLocationName(name);
         })
         .catch(() => {
-          if (isMounted) setLocationName(' unknown');
+          if (isMounted) setLocationName('Unknown');
         });
     } else {
       setLocationName('Location data not available');
@@ -25,20 +25,21 @@ const LocationDisplay = ({ latitude, longitude }) => {
     };
   }, [latitude, longitude]);
 
-  // return (
-  //   <View>
-  //     <Text style={styles.locationText}>{locationName}</Text>
-  //   </View>
-  // );
+  return (
+    <Text
+      style={{
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#000',
+        marginBottom: 4,
+        marginHorizontal: 10,
+        flexWrap: 'wrap',
+        width: '60%',
+      }}
+    >
+      {locationName}
+    </Text>
+  );
 };
-
-// const styles = StyleSheet.create({
-//   locationText: {
-//     fontSize: 14,
-//     color: '#fff',
-//     marginBottom: 20,
-//     fontWeight: 'bold',
-//   },
-// });
 
 export default LocationDisplay;

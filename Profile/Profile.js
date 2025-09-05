@@ -58,7 +58,6 @@ const ProfileScreen = ({ navigation }) => {
       Alert.alert('Error', 'Error logging out');
     }
   };
-
   const CardButton = ({ icon, title, subtitle, onPress }) => (
     <TouchableOpacity style={styles.cardButton} onPress={onPress}>
       <View style={styles.iconContainer}>

@@ -12,6 +12,8 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Dropdown } from 'react-native-element-dropdown';
+import { Dimensions } from 'react-native';
+import moment from 'moment';
 
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -19,6 +21,8 @@ import StatusTracker from './StatusTracker';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import FontAwesome6 from 'react-native-vector-icons/FontAwesome6';
+import { BarChart } from 'react-native-gifted-charts';
+const screenWidth = Dimensions.get('window').width;
 
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import { BASE_URL } from '@env';
@@ -52,6 +56,7 @@ const Dashboard = ({ navigation }) => {
   const [customServiceReason, setCustomServiceReason] = useState('');
   const [userId, setUserId] = useState(null);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [weeklyData, setWeeklyData] = useState([]);
 
   const [editStatus, setEditStatus] = useState('');
   const [editReason, setEditReason] = useState('');
@@ -122,16 +127,59 @@ const Dashboard = ({ navigation }) => {
         );
       }
 
-      let highPriorityTickets = list.filter(
+      const highPriorityTickets = list.filter(
         ticket => ticket.priority_rank === 'High',
       );
 
-      highPriorityTickets = highPriorityTickets
-        .filter(ticket => ticket.urgency != null)
-        .sort((a, b) => a.urgency - b.urgency)
+      const topTickets = highPriorityTickets
+        .sort((a, b) => b.urgency - a.urgency)
         .slice(0, 3);
 
-      setTickets(highPriorityTickets);
+      setTickets(topTickets);
+
+      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const weeklyCounts = days.map(day => ({ label: day, done: 0, todo: 0 }));
+
+      const startOfWeek = moment().startOf('week');
+      const endOfWeek = moment().endOf('week');
+
+      list.forEach(ticket => {
+        const createdDate = moment(ticket.created_at);
+        const dayIndex = createdDate.day();
+
+        if (
+          ticket.status_id === 1 ||
+          ticket.status_name?.toLowerCase() === 'todo'
+        ) {
+          if (createdDate.isBetween(startOfWeek, endOfWeek, 'day', '[]')) {
+            weeklyCounts[dayIndex].todo += 1;
+          }
+        }
+
+        if (
+          ticket.status_id === 6 ||
+          ticket.status_name?.toLowerCase() === 'done'
+        ) {
+          let doneDate = null;
+          if (Array.isArray(ticket.status_tracker)) {
+            const doneEntry = ticket.status_tracker.find(
+              entry =>
+                entry.status?.toLowerCase() === 'done' &&
+                (entry.Date || entry.updatedDate),
+            );
+            if (doneEntry)
+              doneDate = moment(doneEntry.Date || doneEntry.updatedDate);
+          }
+          if (!doneDate) doneDate = createdDate;
+
+          if (doneDate.isBetween(startOfWeek, endOfWeek, 'day', '[]')) {
+            const dayIndexDone = doneDate.day();
+            weeklyCounts[dayIndexDone].done += 1;
+          }
+        }
+      });
+
+      setWeeklyData(weeklyCounts);
     } catch (error) {
       console.error('Error fetching tickets:', error);
       setTickets([]);
@@ -158,6 +206,9 @@ const Dashboard = ({ navigation }) => {
           inProgress: counts['In-Progress']?.total_count || 0,
           pending: counts.Pending?.total_count || 0,
           done: counts.Done?.total_count || 0,
+          open: counts.Open?.total_count || 0,
+
+          onHold: counts['On-Hold']?.total_count || 0,
         });
       } catch (error) {
         console.error('❌ Error fetching ticket counts:', error);
@@ -166,7 +217,21 @@ const Dashboard = ({ navigation }) => {
 
     fetchTicketCounts();
   }, [userId, fetchTickets, statusFilter]);
-
+  const groupedBarData = [];
+  weeklyData.forEach(day => {
+    groupedBarData.push({
+      value: day.done || 0,
+      label: day.label,
+      spacing: 2,
+      labelWidth: 30,
+      labelTextStyle: { color: 'gray' },
+      frontColor: '#008080',
+    });
+    groupedBarData.push({
+      value: day.todo || 0,
+      frontColor: '#377df7',
+    });
+  });
   const handleAssignToMe = async item => {
     const userStr = await AsyncStorage.getItem('userId');
     const user = JSON.parse(userStr);
@@ -383,7 +448,6 @@ const Dashboard = ({ navigation }) => {
 
     return (
       <TouchableOpacity
-        style={styles.ticketCard}
         onPress={() => {
           if (item.status_id !== 1) {
             navigation.navigate('ViewTickets', { ticketId: item.ticket_id });
@@ -441,7 +505,6 @@ const Dashboard = ({ navigation }) => {
                 <Text style={styles.labels}>{` ${item.region_name}`}</Text>
               </Text>
             </View>
-
             <View style={styles.divider} />
           </View>
           <View
@@ -451,26 +514,9 @@ const Dashboard = ({ navigation }) => {
                 flexDirection: 'row',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                marginHorizontal: 5,
-                marginTop: -5,
               },
             ]}
           >
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <MaterialIcons
-                name="access-time"
-                size={18}
-                color="#555"
-                style={{ marginRight: 4 }}
-              />
-              <Text style={styles.boldLabel}>
-                Assigned on:{' '}
-                <Text style={styles.label}>
-                  {item.employee_arrival_date?.split('T')[0] || 'N/A'}
-                </Text>
-              </Text>
-            </View>
-
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               {item.status_id === 1 && (
                 <TouchableOpacity
@@ -482,7 +528,16 @@ const Dashboard = ({ navigation }) => {
               )}
 
               {item.status_id === 2 && (
-                <>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: item.employee_arrival_date
+                      ? 'space-between'
+                      : 'flex-end',
+                    alignItems: 'center',
+                    width: '100%',
+                  }}
+                >
                   <TouchableOpacity
                     style={styles.arrivalButton}
                     onPress={() => {
@@ -501,11 +556,18 @@ const Dashboard = ({ navigation }) => {
                       <Text style={styles.buttonText}>Start</Text>
                     </TouchableOpacity>
                   )}
-                </>
+                </View>
               )}
 
               {item.status_id === 3 && (
-                <>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    width: '100%',
+                  }}
+                >
                   <TouchableOpacity
                     style={styles.serviceButton}
                     onPress={() => {
@@ -525,7 +587,7 @@ const Dashboard = ({ navigation }) => {
                   >
                     <Text style={styles.whiteButtonText}>Edit</Text>
                   </TouchableOpacity>
-                </>
+                </View>
               )}
             </View>
           </View>
@@ -716,24 +778,99 @@ const Dashboard = ({ navigation }) => {
         </View>
       </View>
 
-      <View style={styles.filterRow}>
-        <TouchableOpacity
-          onPress={() => setShowDropdown(!showDropdown)}
-          style={styles.filterButton}
+      <View
+        style={{
+          backgroundColor: '#fff',
+          borderRadius: 12,
+          padding: 15,
+          marginVertical: 20,
+          marginHorizontal: 20,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.2,
+          shadowRadius: 4,
+          elevation: 5,
+        }}
+      >
+        <Text
+          style={{
+            fontSize: 16,
+            color: '#000',
+            fontWeight: '600',
+            marginBottom: 10,
+            marginHorizontal: 10,
+          }}
         >
-          <Text style={styles.Tickets}>TodayTickets</Text>
+          Weekly Progress
+        </Text>
 
-          <View style={{ flex: 1 }} />
+        {/* <View
+          style={{
+            flexDirection: 'row',
+            marginBottom: 10,
+            justifyContent: 'center',
+          }}
+        >
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              marginRight: 15,
+            }}
+          >
+            <View
+              style={{
+                width: 12,
+                height: 12,
+                borderRadius: 6,
+                backgroundColor: '#22c55e',
+                marginRight: 5,
+              }}
+            />
+            <Text style={{ color: '#000', fontSize: 14, fontWeight: 'bold' }}>
+              Done
+            </Text>
+          </View>
 
-          <TouchableOpacity onPress={() => navigation.navigate('TicketPage')}>
-            <Text style={styles.Ticket}>ViewAll</Text>
-          </TouchableOpacity>
-          <MaterialIcons
-            name="filter-list"
-            size={24}
-            color="#000"
-            style={{ marginLeft: 8 }}
-          />
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View
+              style={{
+                width: 12,
+                height: 12,
+                borderRadius: 6,
+                backgroundColor: '#f87171',
+                marginRight: 5,
+              }}
+            />
+            <Text style={{ color: '#000', fontSize: 14, fontWeight: 'bold' }}>
+              ToDo
+            </Text>
+          </View>
+        </View> */}
+
+        <BarChart
+          data={groupedBarData}
+          barWidth={12}
+          spacing={15}
+          // hideRules
+          // yAxisThickness={1}
+          // roundedTop
+          // roundedBottom
+          noOfSections={5}
+          maxValue={Math.max(
+            ...weeklyData.map(d => (d.done || 0) + (d.todo || 0)),
+            10,
+          )}
+        />
+      </View>
+
+      <View style={styles.filterRow}>
+        <Text style={styles.Tickets}>TodayTickets</Text>
+
+        <View style={{ flex: 1 }} />
+
+        <TouchableOpacity onPress={() => navigation.navigate('TicketPage')}>
+          <Text style={styles.Ticket}>ViewAll</Text>
         </TouchableOpacity>
       </View>
 
@@ -996,20 +1133,6 @@ const Dashboard = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  // ticketCard: {
-  //   backgroundColor: '#fff',
-  //   borderRadius: 10,
-  //   padding: 16,
-  //   marginHorizontal: 6,
-  //   marginVertical: 8,
-  //   shadowColor: '#000',
-  //   shadowOffset: { width: 0, height: 2 },
-  //   shadowOpacity: 0.1,
-  //   shadowRadius: 4,
-  //   elevation: 3,
-  //   top: -10,
-  // },
-
   headerContainer: {
     backgroundColor: '#008080',
   },
@@ -1054,7 +1177,6 @@ const styles = StyleSheet.create({
     color: '#222',
     marginLeft: 10,
   },
-
   cardContents: {
     backgroundColor: '#fff',
     borderRadius: 10,
@@ -1138,12 +1260,14 @@ const styles = StyleSheet.create({
 
   Tickets: {
     fontWeight: '600',
-    color: '#000',
+    color: '#222',
+    marginHorizontal: 30,
     fontSize: 14,
   },
   Ticket: {
     fontWeight: '600',
     color: '#222',
+    marginRight: 20,
     fontSize: 14,
   },
 
@@ -1463,7 +1587,7 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     paddingHorizontal: 10,
     borderRadius: 6,
-    marginLeft: 5,
+    textAlign: 'center',
   },
 
   startButton: {
@@ -1479,7 +1603,6 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     paddingHorizontal: 10,
     borderRadius: 6,
-    marginLeft: 5,
   },
 
   editButton: {
@@ -1487,7 +1610,6 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     paddingHorizontal: 10,
     borderRadius: 6,
-    marginLeft: 5,
   },
   Assign: {
     marginLeft: 'auto',

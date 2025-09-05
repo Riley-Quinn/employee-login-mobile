@@ -367,7 +367,7 @@ const TicketPage = ({ navigation }) => {
             style={[
               styles.headerRow,
               {
-                backgroundColor: 'green',
+                backgroundColor: '#008080',
                 padding: 10,
                 borderRadius: 8,
                 alignItems: 'center',
@@ -401,6 +401,8 @@ const TicketPage = ({ navigation }) => {
 
           <View style={styles.infoSection}>
             <View style={styles.infoRow}>
+              <Text style={styles.title}>{item.title ? item.title : '-'}</Text>
+
               <Text style={styles.label}>{item.description}</Text>
             </View>
 
@@ -418,10 +420,11 @@ const TicketPage = ({ navigation }) => {
             <View style={styles.divider} />
 
             <View
-              style={[
-                styles.infoRow,
-                { justifyContent: 'space-between', alignItems: 'center' },
-              ]}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <MaterialIcons
@@ -804,20 +807,6 @@ const TicketPage = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  // ticketCard: {
-  //   backgroundColor: '#fff',
-  //   borderRadius: 10,
-  //   padding: 16,
-  //   marginHorizontal: 6,
-  //   marginVertical: 8,
-  //   shadowColor: '#000',
-  //   shadowOffset: { width: 0, height: 2 },
-  //   shadowOpacity: 0.1,
-  //   shadowRadius: 4,
-  //   elevation: 3,
-  //   top: -10,
-  // },
-
   headerContainer: {
     backgroundColor: '#008080',
   },
@@ -869,6 +858,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     color: '#444',
+  },
+  title: {
+    fontWeight: 'bold',
+    fontSize: 14,
+    color: '#000',
   },
 
   cardContents: {
@@ -931,7 +925,7 @@ const styles = StyleSheet.create({
   },
   labels: {
     fontWeight: 'bold',
-    color: 'green',
+    color: '#008080',
     fontsize: 14,
   },
   divider: {
@@ -1258,6 +1252,8 @@ const styles = StyleSheet.create({
     marginLeft: 'auto',
     backgroundColor: '#008080',
     paddingVertical: 8,
+    marginBottom: 10,
+
     paddingHorizontal: 16,
     borderRadius: 8,
   },
@@ -1265,7 +1261,9 @@ const styles = StyleSheet.create({
   arrivalDateAlone: {
     marginLeft: 'auto',
     backgroundColor: '#008080',
+
     paddingVertical: 8,
+    marginBottom: 10,
     paddingHorizontal: 16,
     borderRadius: 8,
   },
@@ -1275,6 +1273,8 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 10,
     marginRight: 6,
+    marginBottom: 10,
+
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 3,
@@ -1289,6 +1289,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#4caf50',
     paddingVertical: 10,
     borderRadius: 10,
+    marginBottom: 10,
+
     marginLeft: 6,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1311,6 +1313,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFA726',
     paddingVertical: 10,
     borderRadius: 10,
+    marginBottom: 10,
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 3,
@@ -1325,6 +1328,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#4DB6AC',
     paddingVertical: 10,
     borderRadius: 10,
+    marginBottom: 10,
+
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 3,

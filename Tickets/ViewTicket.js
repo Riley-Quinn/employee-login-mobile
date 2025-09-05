@@ -47,10 +47,11 @@ const ViewTickets = () => {
   const ticketId = route.params?.ticketId;
   const [emailPopup, setEmailPopup] = useState(null);
   const [selectedMedia, setSelectedMedia] = useState(null);
-  const customerMedia = ticket?.customer_media || [];
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [showDropdownPost, setShowDropdownPost] = useState(false);
+
+  const [showDropdown, setShowDropdown] = useState(true);
+  const [showDropdownPost, setShowDropdownPost] = useState(true);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [visible, setVisible] = useState(false);
 
   const [locationName, setLocationName] = useState('Loading location...');
 
@@ -201,8 +202,6 @@ const ViewTickets = () => {
       );
 
       if (res.status === 200) {
-        console.log('Fetched multimedia:', res.data.list.multimedia);
-
         setTicket(res.data.list);
       } else {
         Alert.alert('Error', 'Unexpected response from server');
@@ -231,10 +230,10 @@ const ViewTickets = () => {
     }, [userId, fetchTicket]),
   );
 
-  const handleMediaOpen = fileName => {
-    const url = `https://your-cdn-domain.com/${fileName}`;
-    Linking.openURL(url);
-  };
+  // const handleMediaOpen = fileName => {
+  //   const url = `https://your-cdn-domain.com/${fileName}`;
+  //   Linking.openURL(url);
+  // };
 
   if (loading || !ticket) {
     return <ActivityIndicator size="large" style={{ flex: 1 }} />;
@@ -363,220 +362,232 @@ const ViewTickets = () => {
         )}
 
         <View style={styles.upload}>
-          <Text style={styles.uploadddddd}>Customer uploads</Text>
-          <TouchableOpacity onPress={() => setShowDropdown(!showDropdown)}>
-            <MaterialIcons name="arrow-drop-down" size={30} color="#fff" />
-          </TouchableOpacity>
+          <Text style={styles.uploadTitle}>Customer Media</Text>
         </View>
 
-        {customerMedia?.length > 0 ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={true}>
-            {customerMedia.map((media, index) => (
-              <TouchableOpacity
-                key={index}
-                onPress={() => openMediaModal(media)}
-                style={styles.mediaWrapper}
-              >
-                <Image
-                  source={{
-                    uri: `https://da5uskjymuj4t.cloudfront.net/${media.file_name}`,
-                  }}
-                  style={styles.mediaImage}
-                />
-
-                {media.latitude && media.longitude && (
-                  <View style={styles.locationOverlay}>
-                    <LocationExample
-                      latitude={parseFloat(media.latitude)}
-                      longitude={parseFloat(media.longitude)}
-                    />
-                  </View>
-                )}
-
-                {media.latitude && media.longitude && (
-                  <TouchableOpacity
-                    onPress={() =>
-                      openMap(media.address, media.city, media.state)
-                    }
-                    style={styles.mapRow}
-                  >
-                    <Text style={styles.mapText}>Google Maps</Text>
-                  </TouchableOpacity>
-                )}
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        ) : (
-          <Text style={styles.noMediaText}>No media from customer</Text>
-        )}
-
-        <View style={styles.uploadHeaders}>
-          <Text style={styles.uploadTitles}>Preupload</Text>
-          <View style={styles.iconRow}>
-            <TouchableOpacity onPress={() => handleEmployeeMediaUpload('pre')}>
-              <View
-                style={{
-                  width: 30,
-                  height: 30,
-                  borderRadius: 20,
-                  backgroundColor: '#4FB06D',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <MaterialIcons name="add" size={24} color="#fff" />
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setShowDropdown(!showDropdown)}>
-              <MaterialIcons
-                name={showDropdown ? 'arrow-drop-up' : 'arrow-drop-down'}
-                size={30}
-                color="#fff"
-              />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {showDropdown && (
-          <>
-            {preMedia?.length > 0 ? (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={true}
-                style={styles.mediaScroll}
-              >
-                {preMedia.map((media, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    onPress={() => openMediaModal(media)}
-                    style={styles.mediaWrapper}
-                  >
+        {ticket?.multimedia?.some(m => m.uploaded_by === null) ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {ticket.multimedia
+              .filter(m => m.uploaded_by === null) // Only customer media
+              .map((media, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.mediaWrapper}
+                  onPress={() => openMediaModal(media)}
+                >
+                  {media.file_type === 'Photo' ? (
                     <Image
                       source={{
-                        uri: `https://da5uskjymuj4t.cloudfront.net/${media.file_name}`,
+                        uri: `https://d3shribgms6bz4.cloudfront.net/${encodeURIComponent(
+                          media.file_name,
+                        )}`,
                       }}
                       style={styles.mediaImage}
+                      resizeMode="cover"
+                      onError={e =>
+                        console.log(
+                          'Customer image load error:',
+                          e.nativeEvent.error,
+                          media.file_name,
+                        )
+                      }
                     />
-                    {media.latitude && media.longitude && (
-                      <View style={styles.locationOverlay}>
-                        <LocationExample
-                          latitude={parseFloat(media.latitude)}
-                          longitude={parseFloat(media.longitude)}
-                        />
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            ) : (
-              <Text style={styles.noMediaText}>No Preupload media</Text>
-            )}
-
-            {preMedia?.[0]?.latitude && preMedia?.[0]?.longitude && (
-              <TouchableOpacity
-                onPress={() =>
-                  openMap(
-                    preMedia[0].address,
-                    preMedia[0].city,
-                    preMedia[0].state,
-                  )
-                }
-                style={styles.mapRow}
-              >
-                <Text style={styles.mapText}> Google Maps</Text>
-              </TouchableOpacity>
-            )}
-          </>
+                  ) : media.file_type === 'Video' ? (
+                    <Video
+                      source={{
+                        uri: `https://d3shribgms6bz4.cloudfront.net/${encodeURIComponent(
+                          media.file_name,
+                        )}`,
+                      }}
+                      style={styles.mediaImage}
+                      controls
+                      resizeMode="contain"
+                    />
+                  ) : (
+                    <Text style={{ color: 'red' }}>Unsupported type</Text>
+                  )}
+                </TouchableOpacity>
+              ))}
+          </ScrollView>
+        ) : (
+          <Text style={styles.noMediaText}>No customer media found</Text>
         )}
 
-        <View style={styles.uploadHeadersss}>
-          <Text style={styles.uploadTitlesss}>Post Upload</Text>
-          <View style={styles.iconRow}>
-            <TouchableOpacity onPress={() => handleEmployeeMediaUpload('post')}>
-              <View
-                style={{
-                  width: 30,
-                  height: 30,
-                  borderRadius: 20,
-                  backgroundColor: '#4FB06D',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
+        <View style={styles.Employee}>
+          <Text style={styles.EmployeeText}>Employee Upload</Text>
+
+          <View style={styles.uploadHeaders}>
+            <Text style={styles.uploadTitles}>Preupload</Text>
+            <View style={styles.iconRow}>
+              <TouchableOpacity
+                onPress={() => handleEmployeeMediaUpload('pre')}
               >
-                <MaterialIcons name="add" size={24} color="#fff" />
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setShowDropdownPost(!showDropdownPost)}
-            >
-              <MaterialIcons
-                name={showDropdown ? 'arrow-drop-up' : 'arrow-drop-down'}
-                size={30}
-                color="#fff"
-              />
-            </TouchableOpacity>
+                <View
+                  style={{
+                    width: 30,
+                    height: 30,
+                    borderRadius: 20,
+                    backgroundColor: '#4FB06D',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <MaterialIcons name="add" size={24} color="#fff" />
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setShowDropdown(!showDropdown)}>
+                <MaterialIcons
+                  name={showDropdown ? 'arrow-drop-up' : 'arrow-drop-down'}
+                  size={30}
+                  color="#fff"
+                />
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
 
-        {showDropdownPost && (
-          <>
-            {postMedia?.length > 0 ? (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={true}
-                style={styles.mediaScroll}
-              >
-                {postMedia.map((media, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    onPress={() => openMediaModal(media)}
-                    style={styles.mediaWrapper}
-                  >
-                    {media.file_type === 'Photo' ? (
-                      <Image
-                        source={{
-                          uri: `https://da5uskjymuj4t.cloudfront.net/${media.file_name}`,
-                        }}
-                        style={styles.mediaImage}
-                      />
-                    ) : (
-                      <View style={styles.videoContainer}>
-                        <Text style={styles.videoText}>{media.file_name}</Text>
-                      </View>
-                    )}
+          {showDropdown && (
+            <>
+              {preMedia?.length > 0 ? (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={true}
+                  style={styles.mediaScroll}
+                >
+                  {preMedia.map((media, index) => (
+                    <View key={index} style={{ marginRight: 10 }}>
+                      <TouchableOpacity
+                        onPress={() => openMediaModal(media)}
+                        style={styles.mediaWrapper}
+                      >
+                        <Image
+                          source={{
+                            uri: `https://d3shribgms6bz4.cloudfront.net/${media.file_name}`,
+                          }}
+                          style={styles.mediaImage}
+                        />
+                      </TouchableOpacity>
 
-                    {media.latitude && media.longitude && (
-                      <View style={styles.locationOverlay}>
+                      {media.latitude && media.longitude && (
                         <LocationExample
                           latitude={parseFloat(media.latitude)}
                           longitude={parseFloat(media.longitude)}
                         />
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            ) : (
-              <Text style={styles.noMediaText}>No Post Upload media</Text>
-            )}
+                      )}
+                    </View>
+                  ))}
+                </ScrollView>
+              ) : (
+                <Text style={styles.noMediaText}>No Preupload media</Text>
+              )}
 
-            {postMedia?.[0]?.latitude && postMedia?.[0]?.longitude && (
+              {preMedia?.[0]?.latitude && preMedia?.[0]?.longitude && (
+                <TouchableOpacity
+                  onPress={() =>
+                    openMap(
+                      preMedia[0].address,
+                      preMedia[0].city,
+                      preMedia[0].state,
+                    )
+                  }
+                  style={styles.mapRow}
+                >
+                  <Text style={styles.mapText}> Google Maps</Text>
+                </TouchableOpacity>
+              )}
+            </>
+          )}
+
+          <View style={styles.uploadHeadersss}>
+            <Text style={styles.uploadTitlesss}>Post Upload</Text>
+            <View style={styles.iconRow}>
               <TouchableOpacity
-                onPress={() =>
-                  openMap(
-                    postMedia[0].address,
-                    postMedia[0].city,
-                    postMedia[0].state,
-                  )
-                }
-                style={styles.mapRow}
+                onPress={() => handleEmployeeMediaUpload('post')}
               >
-                <Text style={styles.mapText}> Google Maps</Text>
+                <View
+                  style={{
+                    width: 30,
+                    height: 30,
+                    borderRadius: 20,
+                    backgroundColor: '#4FB06D',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <MaterialIcons name="add" size={24} color="#fff" />
+                </View>
               </TouchableOpacity>
-            )}
-          </>
-        )}
+              <TouchableOpacity
+                onPress={() => setShowDropdownPost(!showDropdownPost)}
+              >
+                <MaterialIcons
+                  name={showDropdown ? 'arrow-drop-up' : 'arrow-drop-down'}
+                  size={30}
+                  color="#fff"
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
 
+          {showDropdownPost && (
+            <>
+              {postMedia?.length > 0 ? (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={true}
+                  style={styles.mediaScroll}
+                >
+                  {postMedia.map((media, index) => (
+                    <View key={index} style={{ marginRight: 10 }}>
+                      <TouchableOpacity
+                        onPress={() => openMediaModal(media)}
+                        style={styles.mediaWrapper}
+                      >
+                        {media.file_type === 'Photo' ? (
+                          <Image
+                            source={{
+                              uri: `https://d3shribgms6bz4.cloudfront.net/${media.file_name}`,
+                            }}
+                            style={styles.mediaImage}
+                          />
+                        ) : (
+                          <View style={styles.videoContainer}>
+                            <Text style={styles.videoText}>
+                              {media.file_name}
+                            </Text>
+                          </View>
+                        )}
+                      </TouchableOpacity>
+
+                      {media.latitude && media.longitude && (
+                        <LocationExample
+                          latitude={parseFloat(media.latitude)}
+                          longitude={parseFloat(media.longitude)}
+                        />
+                      )}
+                    </View>
+                  ))}
+                </ScrollView>
+              ) : (
+                <Text style={styles.noMediaText}>No Post Upload media</Text>
+              )}
+
+              {postMedia?.[0]?.latitude && postMedia?.[0]?.longitude && (
+                <TouchableOpacity
+                  onPress={() =>
+                    openMap(
+                      postMedia[0].address,
+                      postMedia[0].city,
+                      postMedia[0].state,
+                    )
+                  }
+                  style={styles.mapRow}
+                >
+                  <Text style={styles.mapText}> Google Maps</Text>
+                </TouchableOpacity>
+              )}
+            </>
+          )}
+        </View>
         <View style={styles.uploadCard}>
           <Text style={styles.uploadTitle}>Upload Document</Text>
           <TextInput
@@ -602,6 +613,59 @@ const ViewTickets = () => {
             </Text>
           </TouchableOpacity>
         </View>
+        <Modal
+          visible={!!selectedMedia}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={closeModal}
+        >
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: 'rgba(0,0,0,0.9)',
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+          >
+            {selectedMedia && selectedMedia.file_type === 'Photo' && (
+              <Image
+                source={{
+                  uri: `https://d3shribgms6bz4.cloudfront.net/${selectedMedia.file_name}`,
+                }}
+                style={{
+                  width: '90%',
+                  height: '80%',
+                  resizeMode: 'contain',
+                }}
+              />
+            )}
+
+            {selectedMedia && selectedMedia.file_type === 'Video' && (
+              <Video
+                source={{
+                  uri: `https://d3shribgms6bz4.cloudfront.net/${selectedMedia.file_name}`,
+                }}
+                style={{ width: '90%', height: '80%' }}
+                controls
+                resizeMode="contain"
+              />
+            )}
+
+            <TouchableOpacity
+              onPress={closeModal}
+              style={{
+                position: 'absolute',
+                top: 40,
+                right: 20,
+                backgroundColor: '#000',
+                padding: 10,
+                borderRadius: 20,
+              }}
+            >
+              <MaterialIcons name="close" size={28} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        </Modal>
 
         <Modal
           visible={showCustomerModal}
@@ -825,7 +889,25 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  Employee: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 12,
 
+    marginVertical: 8,
+    marginHorizontal: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  EmployeeText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#008080',
+    textAlign: 'center',
+    marginBottom: 6,
+  },
   ticketId: {
     fontSize: 16,
     fontWeight: 'bold',
@@ -957,21 +1039,12 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   mediaImage: {
-    width: '100%',
-    height: '100%',
+    width: 120,
+    height: 120,
     borderRadius: 8,
     resizeMode: 'cover',
   },
-  locationOverlay: {
-    position: 'absolute',
-    top: 10,
-    left: 10,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    zIndex: 999,
-  },
+
   addressText: {
     marginTop: 6,
     fontSize: 14,
@@ -979,7 +1052,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold,',
   },
   mapRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
-  mapText: { marginLeft: 6, color: '#007bff', fontSize: 14 },
+  mapText: { marginHorizontal: 30, color: '#007bff', fontSize: 14 },
 
   modalContainer: {
     flex: 1,
@@ -1094,15 +1167,6 @@ const styles = StyleSheet.create({
     color: '#888',
     marginHorizontal: 10,
   },
-
-  // addressText: {
-  //   fontSize: 14,
-  //   color: '#000',
-  //   paddingVertical: 2,
-  //   paddingHorizontal: 4,
-  //   flexShrink: 1,
-  //   textAlignVertical: 'center',
-  // },
 
   Texts: {
     fontSize: 13,
