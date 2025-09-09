@@ -6,13 +6,13 @@ import {
   TouchableOpacity,
   StyleSheet,
   Modal,
+  ScrollView,
   TextInput,
   Alert,
   StatusBar,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Dropdown } from 'react-native-element-dropdown';
-import { Dimensions } from 'react-native';
 import moment from 'moment';
 
 import axios from 'axios';
@@ -22,7 +22,6 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import FontAwesome6 from 'react-native-vector-icons/FontAwesome6';
 import { BarChart } from 'react-native-gifted-charts';
-const screenWidth = Dimensions.get('window').width;
 
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import { BASE_URL } from '@env';
@@ -99,9 +98,9 @@ const Dashboard = ({ navigation }) => {
 
         console.log(
           '🌐 Fetching ticket statuses from:',
-          `http://10.0.2.2:5000/api/ticket-statuses`,
+          `${BASE_URL}/api/ticket-statuses`,
         );
-        const res = await axios.get(`http://10.0.2.2:5000/api/ticket-statuses`);
+        const res = await axios.get(`${BASE_URL}/api/ticket-statuses`);
         console.log('✅ Ticket statuses API response:', res?.data);
 
         setTicketStatuses(res?.data || []);
@@ -117,7 +116,7 @@ const Dashboard = ({ navigation }) => {
 
     try {
       const response = await axios.get(
-        `http://10.0.2.2:5000/api/tickets/employee/${userId}`,
+        `${BASE_URL}/api/tickets/employee/${userId}`,
       );
       let list = response?.data?.list || [];
 
@@ -194,7 +193,7 @@ const Dashboard = ({ navigation }) => {
     const fetchTicketCounts = async () => {
       try {
         const response = await axios.get(
-          `http://10.0.2.2:5000/api/tickets/employee/ticket-counts/${userId}`,
+          `${BASE_URL}/api/tickets/employee/ticket-counts/${userId}`,
         );
 
         console.log('📊 Ticket counts response:', response.data);
@@ -252,7 +251,7 @@ const Dashboard = ({ navigation }) => {
       employee_arrival_date: null,
     };
     try {
-      await axios.put(`http://10.0.2.2:5000/api/tickets/${item.ticket_id}`, {
+      await axios.put(`${BASE_URL}/api/tickets/${item.ticket_id}`, {
         ticketData,
       });
       fetchTickets();
@@ -276,7 +275,7 @@ const Dashboard = ({ navigation }) => {
     );
 
     try {
-      await axios.put(`http://10.0.2.2:5000/api/tickets/${item.ticket_id}`, {
+      await axios.put(`${BASE_URL}/api/tickets/${item.ticket_id}`, {
         ticketData: { status_id: 3, status_tracker: trackerData },
       });
       fetchTickets();
@@ -310,15 +309,12 @@ const Dashboard = ({ navigation }) => {
       selectedTicket.employee_phone,
     );
     try {
-      await axios.put(
-        `http://10.0.2.2:5000/api/tickets/${selectedTicket.ticket_id}`,
-        {
-          ticketData: {
-            employee_arrival_date: formattedDate,
-            status_tracker: trackerData,
-          },
+      await axios.put(`${BASE_URL}/api/tickets/${selectedTicket.ticket_id}`, {
+        ticketData: {
+          employee_arrival_date: formattedDate,
+          status_tracker: trackerData,
         },
-      );
+      });
       fetchTickets();
       setModalVisible(false);
       Alert.alert('Success', 'Arrival date updated');
@@ -345,12 +341,9 @@ const Dashboard = ({ navigation }) => {
     );
 
     try {
-      await axios.put(
-        `http://10.0.2.2:5000/api/tickets/${selectedTicket.ticket_id}`,
-        {
-          ticketData: { status_tracker: trackerData, status_id: 3 },
-        },
-      );
+      await axios.put(`${BASE_URL}/api/tickets/${selectedTicket.ticket_id}`, {
+        ticketData: { status_tracker: trackerData, status_id: 3 },
+      });
       fetchTickets();
       setServiceVisible(false);
       setServiceReason('');
@@ -391,12 +384,9 @@ const Dashboard = ({ navigation }) => {
     }
 
     try {
-      await axios.put(
-        `http://10.0.2.2:5000/api/tickets/${selectedTicket.ticket_id}`,
-        {
-          ticketData,
-        },
-      );
+      await axios.put(`${BASE_URL}/api/tickets/${selectedTicket.ticket_id}`, {
+        ticketData,
+      });
       fetchTickets();
       setEditVisible(false);
       setEditStatus('');
@@ -603,99 +593,98 @@ const Dashboard = ({ navigation }) => {
       <SafeAreaView style={{ backgroundColor: '#008080', flex: 0 }}>
         <Text style={styles.ticketNumber}>Dashboard</Text>
       </SafeAreaView>
-
-      <View style={styles.statusGrid}>
-        <View
-          style={[
-            styles.statusCard,
-            {
-              backgroundColor: '#ffdcaf',
-              borderColor: '#ffdcaf',
-              borderWidth: 2,
-            },
-          ]}
-        >
+      <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
+        <View style={styles.statusGrid}>
           <View
             style={[
-              styles.cardContent,
+              styles.statusCard,
               {
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                alignItems: 'center',
+                backgroundColor: '#ffdcaf',
+                borderColor: '#ffdcaf',
+                borderWidth: 2,
               },
             ]}
           >
-            <View style={styles.textBlock}>
-              <Text style={styles.statusTitle}>ToDo</Text>
-              <Text style={styles.statusNumber}>{statusCounts.todo}</Text>
-            </View>
-
             <View
-              style={{
-                width: 50,
-                height: 50,
-                borderRadius: 10,
-                backgroundColor: '#d8b487',
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}
+              style={[
+                styles.cardContent,
+                {
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                },
+              ]}
             >
-              <FontAwesome6
-                name="triangle-exclamation"
-                size={24}
-                color="#fff"
-              />
+              <View style={styles.textBlock}>
+                <Text style={styles.statusTitle}>ToDo</Text>
+                <Text style={styles.statusNumber}>{statusCounts.todo}</Text>
+              </View>
+
+              <View
+                style={{
+                  width: 50,
+                  height: 50,
+                  borderRadius: 10,
+                  backgroundColor: '#d8b487',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}
+              >
+                <FontAwesome6
+                  name="triangle-exclamation"
+                  size={24}
+                  color="#fff"
+                />
+              </View>
             </View>
           </View>
-        </View>
 
-        <View
-          style={[
-            styles.statusCard,
-            {
-              backgroundColor: '#A6C8FF',
-              borderColor: '#A6C8FF',
-              borderWidth: 2,
-            },
-          ]}
-        >
           <View
             style={[
-              styles.cardContent,
+              styles.statusCard,
               {
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                alignItems: 'center',
+                backgroundColor: '#A6C8FF',
+                borderColor: '#A6C8FF',
+                borderWidth: 2,
               },
             ]}
           >
-            <View style={styles.textBlock}>
-              <Text style={styles.statusTitle}>In Progress</Text>
-              <Text style={styles.statusNumber}>{statusCounts.inProgress}</Text>
-            </View>
-
             <View
-              style={{
-                backgroundColor: '#81b4f5',
-                width: 50,
-                height: 50,
-                borderRadius: 10,
-                justifyContent: 'center',
-
-                alignItems: 'center',
-              }}
+              style={[
+                styles.cardContent,
+                {
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  // flexDirection: 'row',
+                  // justifyContent: 'space-between',
+                  // alignItems: 'center',
+                },
+              ]}
             >
-              <Ionicons name="shield-outline" size={24} color="#fff" />
+              <View style={styles.textBlock}>
+                <Text style={styles.statusTitle}>In Progress</Text>
+                <Text style={styles.statusNumber}>
+                  {statusCounts.inProgress}
+                </Text>
+              </View>
+
+              <View
+                style={{
+                  backgroundColor: '#81b4f5',
+                  width: 50,
+                  height: 50,
+                  borderRadius: 10,
+                  justifyContent: 'center',
+                  marginLeft: 'auto', // pushes icon to the right
+
+                  alignItems: 'center',
+                }}
+              >
+                <Ionicons name="shield-outline" size={24} color="#fff" />
+              </View>
             </View>
           </View>
-        </View>
 
-        <View
-          style={[
-            styles.row,
-            { justifyContent: 'space-between', marginTop: 10 },
-          ]}
-        >
           <View
             style={[
               styles.statusCard,
@@ -776,155 +765,104 @@ const Dashboard = ({ navigation }) => {
             </View>
           </View>
         </View>
-      </View>
 
-      <View
-        style={{
-          backgroundColor: '#fff',
-          borderRadius: 12,
-          padding: 15,
-          marginVertical: 20,
-          marginHorizontal: 20,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.2,
-          shadowRadius: 4,
-          elevation: 5,
-        }}
-      >
-        <Text
+        <View
           style={{
-            fontSize: 16,
-            color: '#000',
-            fontWeight: '600',
-            marginBottom: 10,
-            marginHorizontal: 10,
+            backgroundColor: '#fff',
+            borderRadius: 12,
+            padding: 15,
+            marginVertical: 20,
+            marginHorizontal: 20,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.2,
+            shadowRadius: 4,
+            elevation: 5,
           }}
         >
-          Weekly Progress
-        </Text>
-
-        {/* <View
-          style={{
-            flexDirection: 'row',
-            marginBottom: 10,
-            justifyContent: 'center',
-          }}
-        >
-          <View
+          <Text
             style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              marginRight: 15,
+              fontSize: 16,
+              color: '#000',
+              fontWeight: '600',
+              marginBottom: 10,
+              marginHorizontal: 10,
             }}
           >
-            <View
-              style={{
-                width: 12,
-                height: 12,
-                borderRadius: 6,
-                backgroundColor: '#22c55e',
-                marginRight: 5,
-              }}
-            />
-            <Text style={{ color: '#000', fontSize: 14, fontWeight: 'bold' }}>
-              Done
-            </Text>
-          </View>
+            Weekly Progress
+          </Text>
 
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <View
-              style={{
-                width: 12,
-                height: 12,
-                borderRadius: 6,
-                backgroundColor: '#f87171',
-                marginRight: 5,
-              }}
-            />
-            <Text style={{ color: '#000', fontSize: 14, fontWeight: 'bold' }}>
-              ToDo
-            </Text>
-          </View>
-        </View> */}
-
-        <BarChart
-          data={groupedBarData}
-          barWidth={12}
-          spacing={15}
-          // hideRules
-          // yAxisThickness={1}
-          // roundedTop
-          // roundedBottom
-          noOfSections={5}
-          maxValue={Math.max(
-            ...weeklyData.map(d => (d.done || 0) + (d.todo || 0)),
-            10,
-          )}
-        />
-      </View>
-
-      <View style={styles.filterRow}>
-        <Text style={styles.Tickets}>TodayTickets</Text>
-
-        <View style={{ flex: 1 }} />
-
-        <TouchableOpacity onPress={() => navigation.navigate('TicketPage')}>
-          <Text style={styles.Ticket}>ViewAll</Text>
-        </TouchableOpacity>
-      </View>
-
-      <Modal visible={showDropdown} transparent animationType="slide">
-        <View style={styles.modalWrapper}>
-          <View style={styles.modalContent}>
-            <TouchableOpacity
-              style={{ alignSelf: 'flex-end' }}
-              onPress={() => setShowDropdown(false)}
-            >
-              <MaterialIcons name="close" size={20} color="#000" />
-            </TouchableOpacity>
-
-            <Text style={styles.modalTitle}>Filter by Status</Text>
-
-            <Dropdown
-              data={[
-                { label: 'All', value: 'all' },
-                ...ticketStatuses.map(s => ({
-                  label: s.status_name,
-                  value: s.status_id.toString(),
-                })),
-              ]}
-              labelField="label"
-              valueField="value"
-              placeholder="Select Status"
-              placeholderTextColor="#000"
-              placeholderStyle={{ color: '#000' }}
-              selectedTextStyle={{ color: '#000', fontSize: 16 }}
-              itemTextStyle={{ color: '#000', fontSize: 16 }}
-              style={styles.input}
-              value={statusFilter}
-              onChange={item => {
-                setStatusFilter(item.value);
-                setShowDropdown(false);
-              }}
-            />
-
-            <TouchableOpacity
-              style={styles.modalCancelButton}
-              onPress={() => setShowDropdown(false)}
-            >
-              <Text style={styles.modalButtonText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
+          <BarChart
+            data={groupedBarData}
+            barWidth={12}
+            spacing={15}
+            noOfSections={5}
+            maxValue={Math.max(
+              ...weeklyData.map(d => (d.done || 0) + (d.todo || 0)),
+              10,
+            )}
+          />
         </View>
-      </Modal>
 
-      <View style={styles.container}>
+        <View style={styles.filterRow}>
+          <Text style={styles.Tickets}>TodayTickets</Text>
+
+          <View style={{ flex: 1 }} />
+
+          <TouchableOpacity onPress={() => navigation.navigate('TicketPage')}>
+            <Text style={styles.Ticket}>ViewAll</Text>
+          </TouchableOpacity>
+        </View>
         <FlatList
           data={tickets}
           keyExtractor={item => item.ticket_id.toString()}
           renderItem={renderItem}
         />
+        <Modal visible={showDropdown} transparent animationType="slide">
+          <View style={styles.modalWrapper}>
+            <View style={styles.modalContent}>
+              <TouchableOpacity
+                style={{ alignSelf: 'flex-end' }}
+                onPress={() => setShowDropdown(false)}
+              >
+                <MaterialIcons name="close" size={20} color="#000" />
+              </TouchableOpacity>
+
+              <Text style={styles.modalTitle}>Filter by Status</Text>
+
+              <Dropdown
+                data={[
+                  { label: 'All', value: 'all' },
+                  ...ticketStatuses.map(s => ({
+                    label: s.status_name,
+                    value: s.status_id.toString(),
+                  })),
+                ]}
+                labelField="label"
+                valueField="value"
+                placeholder="Select Status"
+                placeholderTextColor="#000"
+                placeholderStyle={{ color: '#000' }}
+                selectedTextStyle={{ color: '#000', fontSize: 16 }}
+                itemTextStyle={{ color: '#000', fontSize: 16 }}
+                style={styles.input}
+                value={statusFilter}
+                onChange={item => {
+                  setStatusFilter(item.value);
+                  setShowDropdown(false);
+                }}
+              />
+
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => setShowDropdown(false)}
+              >
+                <Text style={styles.modalButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
         <Modal visible={editVisible} transparent animationType="slide">
           <View style={styles.modalWrapper}>
             <View style={styles.modalContent}>
@@ -1094,7 +1032,7 @@ const Dashboard = ({ navigation }) => {
             }}
           />
         )}
-      </View>
+      </ScrollView>
 
       <View style={styles.bottomBar}>
         <TouchableOpacity
@@ -1144,7 +1082,19 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   textBlock: {
-    alignItems: 'flex-start',
+    marginLeft: -20,
+  },
+  statusTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000',
+  },
+
+  statusNumber: {
+    fontSize: 22,
+    fontWeight: '500',
+    marginVertical: 12,
+    color: '#222',
   },
 
   statusGrid: {
@@ -1165,30 +1115,18 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  statusTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
-  },
-  statusNumber: {
-    fontSize: 22,
-    fontWeight: '500',
-    marginVertical: 12,
-    color: '#222',
-    marginLeft: 10,
-  },
+
   cardContents: {
     backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 16,
-    marginHorizontal: 6,
-    marginVertical: 8,
+    borderRadius: 12,
+    padding: 15,
+    marginVertical: 20,
+    marginHorizontal: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.2,
     shadowRadius: 4,
-    elevation: 3,
-    top: -5,
+    elevation: 5,
   },
   headerRow: {
     flexDirection: 'row',
@@ -1526,10 +1464,6 @@ const styles = StyleSheet.create({
     color: '#888',
     fontWeight: 'bold',
     marginTop: 4,
-  },
-  container: {
-    flex: 1,
-    padding: 20,
   },
 
   actionButton: {

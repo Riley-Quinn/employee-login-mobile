@@ -45,7 +45,7 @@ const OTPScreen = ({ route, navigation }) => {
 
     try {
       const response = await axios.post(
-        `http://10.0.2.2:5000/api/send-otp`,
+        `${BASE_URL}/api/send-otp`,
         {
           email: email,
           otp: otpValue,

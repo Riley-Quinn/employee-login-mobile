@@ -67,7 +67,7 @@ const EditTicket = ({ onClose, employeeTicketData, fetchData, userId }) => {
 
         try {
           const response = await axios.put(
-            `http://10.0.2.2:5000api/tickets/${employeeTicketData.ticket_id}`,
+            `${BASE_URL}api/tickets/${employeeTicketData.ticket_id}`,
             { ticketData },
           );
           fetchData();

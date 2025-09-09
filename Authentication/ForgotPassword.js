@@ -21,7 +21,7 @@ const ForgotPassword = ({ navigation }) => {
 
     try {
       const response = await axios.post(
-        `http://10.0.2.2:5000/api/auth/forgot-password`,
+        `${BASE_URL}/api/auth/forgot-password`,
         { email },
       );
       if (response.status === 200) {

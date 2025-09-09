@@ -129,7 +129,7 @@ const ViewTickets = () => {
         console.log(`${key}:`, value);
       }
 
-      const uploadUrl = `http://10.0.2.2:5000/api/employee-uploads`;
+      const uploadUrl = `${BASE_URL}/api/employee-uploads`;
 
       const response = await axios.post(uploadUrl, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -196,10 +196,9 @@ const ViewTickets = () => {
     }
 
     try {
-      const res = await axios.get(
-        `http://10.0.2.2:5000/api/tickets/${ticketId}`,
-        { params: { userId } },
-      );
+      const res = await axios.get(`${BASE_URL}/api/tickets/${ticketId}`, {
+        params: { userId },
+      });
 
       if (res.status === 200) {
         setTicket(res.data.list);
@@ -309,9 +308,9 @@ const ViewTickets = () => {
             <MaterialIcons name="person-outline" size={20} color="#555" />
 
             <Text style={styles.infoLabel2}>Customer</Text>
-            <Text style={styles.colon}>:</Text>
+            <Text style={styles.colon2}>:</Text>
 
-            <Text style={styles.infoValue}>{ticket.customer_name}</Text>
+            <Text style={styles.infoValue2}>{ticket.customer_name}</Text>
             <TouchableOpacity onPress={() => setShowCustomerModal(true)}>
               <Text style={styles.detailsBtn}>Details</Text>
             </TouchableOpacity>
@@ -378,7 +377,7 @@ const ViewTickets = () => {
                   {media.file_type === 'Photo' ? (
                     <Image
                       source={{
-                        uri: `https://d3shribgms6bz4.cloudfront.net/${encodeURIComponent(
+                        uri: `https://d2plv0g319oam3.cloudfront.net/${encodeURIComponent(
                           media.file_name,
                         )}`,
                       }}
@@ -395,7 +394,7 @@ const ViewTickets = () => {
                   ) : media.file_type === 'Video' ? (
                     <Video
                       source={{
-                        uri: `https://d3shribgms6bz4.cloudfront.net/${encodeURIComponent(
+                        uri: `https://d2plv0g319oam3.cloudfront.net/${encodeURIComponent(
                           media.file_name,
                         )}`,
                       }}
@@ -461,7 +460,7 @@ const ViewTickets = () => {
                       >
                         <Image
                           source={{
-                            uri: `https://d3shribgms6bz4.cloudfront.net/${media.file_name}`,
+                            uri: `https://d2plv0g319oam3.cloudfront.net/${media.file_name}`,
                           }}
                           style={styles.mediaImage}
                         />
@@ -545,7 +544,7 @@ const ViewTickets = () => {
                         {media.file_type === 'Photo' ? (
                           <Image
                             source={{
-                              uri: `https://d3shribgms6bz4.cloudfront.net/${media.file_name}`,
+                              uri: `https://d2plv0g319oam3.cloudfront.net/${media.file_name}`,
                             }}
                             style={styles.mediaImage}
                           />
@@ -588,31 +587,7 @@ const ViewTickets = () => {
             </>
           )}
         </View>
-        <View style={styles.uploadCard}>
-          <Text style={styles.uploadTitle}>Upload Document</Text>
-          <TextInput
-            placeholder="Enter document URL"
-            value={docUrl}
-            onChangeText={setDocUrl}
-            style={styles.input}
-            placeholderTextColor="#fff"
-          />
-          <TouchableOpacity
-            onPress={handleDocumentUpload}
-            style={{
-              backgroundColor: docUrl ? '#007AFF' : '#ccc',
-              padding: 10,
-              borderRadius: 8,
-              marginTop: 8,
-              alignItems: 'center',
-            }}
-            disabled={!docUrl}
-          >
-            <Text style={{ color: '#fff', fontSize: 14, fontWeight: 'bold' }}>
-              Upload Document
-            </Text>
-          </TouchableOpacity>
-        </View>
+
         <Modal
           visible={!!selectedMedia}
           transparent={true}
@@ -630,7 +605,7 @@ const ViewTickets = () => {
             {selectedMedia && selectedMedia.file_type === 'Photo' && (
               <Image
                 source={{
-                  uri: `https://d3shribgms6bz4.cloudfront.net/${selectedMedia.file_name}`,
+                  uri: `https://d2plv0g319oam3.cloudfront.net/${selectedMedia.file_name}`,
                 }}
                 style={{
                   width: '90%',
@@ -643,7 +618,7 @@ const ViewTickets = () => {
             {selectedMedia && selectedMedia.file_type === 'Video' && (
               <Video
                 source={{
-                  uri: `https://d3shribgms6bz4.cloudfront.net/${selectedMedia.file_name}`,
+                  uri: `https://d2plv0g319oam3.cloudfront.net/${selectedMedia.file_name}`,
                 }}
                 style={{ width: '90%', height: '80%' }}
                 controls
@@ -935,6 +910,22 @@ const styles = StyleSheet.create({
     color: '#333',
     marginLeft: 6,
   },
+  infoValue2: {
+    flex: 2,
+    marginLeft: 5,
+    fontSize: 14,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    color: '#555',
+    fontWeight: '600',
+  },
+  colon2: {
+    marginLeft: 40,
+    textAlign: 'center',
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
   colon: {
     width: 12,
     textAlign: 'center',
@@ -959,6 +950,7 @@ const styles = StyleSheet.create({
   detailsBtn: {
     color: '#007BFF',
     fontWeight: '600',
+    marginRight: 40,
   },
   infoValues: {
     flex: 2,
@@ -1281,13 +1273,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   media: {
-    width: 120, // a bit bigger to match Android density
+    width: 120,
     height: 120,
     marginRight: 10,
     borderRadius: 10,
-    backgroundColor: '#f0f0f0', // fallback color so empty space is visible while loading
-    resizeMode: 'cover', // ensures image fills without distortion
-    overflow: 'hidden', // prevents corners from showing background
+    backgroundColor: '#f0f0f0',
+    resizeMode: 'cover',
+    overflow: 'hidden',
   },
 
   video: {

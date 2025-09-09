@@ -16,7 +16,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Modal from 'react-native-modal';
-
+import { BASE_URL } from '@env';
 const EventsOverview = () => {
   const [eventType, setEventType] = useState('Scheduled');
   const [rows, setRows] = useState([]);
@@ -43,7 +43,7 @@ const EventsOverview = () => {
     try {
       setLoading(true);
       const response = await axios.get(
-        `http://10.0.2.2:5000/api/tickets/employee/${userId}`,
+        `${BASE_URL}/api/tickets/employee/${userId}`,
         { params: { status_id: 2 } },
       );
       const tickets = response.data?.list || [];
@@ -175,7 +175,9 @@ const EventsOverview = () => {
             />
           ) : rows.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No tickets found.</Text>
+              <Text style={styles.emptyText}>
+                No tickets are Scheduled Today.
+              </Text>
             </View>
           ) : (
             <FlatList

@@ -13,6 +13,7 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import Feather from 'react-native-vector-icons/Feather';
 import EvilIcons from 'react-native-vector-icons/EvilIcons';
+import { BASE_URL } from '@env';
 
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -47,7 +48,7 @@ const Password = ({ navigation }) => {
       }
 
       const res = await axios.put(
-        `http://10.0.2.2:5000/api/employee/password/${userId}`,
+        `${BASE_URL}/api/employee/password/${userId}`,
         {
           password: values.currentPassword,
           newPassword: values.newPassword,
@@ -275,6 +276,8 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingHorizontal: 12,
     marginBottom: 15,
+    width: '110%',
+    alignSelf: 'center',
   },
 
   inputWrapper: {

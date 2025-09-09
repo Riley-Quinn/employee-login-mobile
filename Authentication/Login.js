@@ -15,64 +15,19 @@ import { Formik } from 'formik';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import * as Yup from 'yup';
-import CheckBox from '@react-native-community/checkbox';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-
 import { BASE_URL } from '@env';
 
 const Login = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const [secureText, setSecureText] = useState(true);
-  const [rememberMe, setRememberMe] = useState(false);
-  // const handleLogin = async values => {
-  //   setLoading(true);
-  //   try {
-  //     const res = await axios.post(
-  //       `http://10.0.2.2:5000/api/auth/admin/login`,
-  //       {
-  //         email: values.email,
-  //         password: values.password,
-  //         rememberMe: rememberMe,
-  //       },
-  //     );
-  //     const userData = res.data.empData;
-
-  //     console.log('Logged in user roleId:', userData.roleId);
-  //     console.log('Full user data:', userData);
-
-  //     if (userData.roleId !== 4) {
-  //       Alert.alert(
-  //         'Access Denied',
-  //         "You don't have permission to access this app",
-  //       );
-  //       setLoading(false);
-  //       return;
-  //     }
-
-  //     if (res.status === 200) {
-  //       await AsyncStorage.setItem('userId', userData.userId.toString());
-  //       await AsyncStorage.setItem('name', userData.name);
-  //       await AsyncStorage.setItem('Role', userData.Role.toString());
-  //       await AsyncStorage.setItem('clientId', userData.client_id.toString());
-  //       Alert.alert('Success', res?.data?.message);
-  //       navigation.navigate('Dashboard');
-  //     }
-  //   } catch (error) {
-  //     Alert.alert('Error', error.response?.data?.error || 'Login failed');
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
   const handleLogin = async (values, { setSubmitting }) => {
     try {
-      const response = await axios.post(
-        'http://10.0.2.2:5000/api/auth/admin/login',
-        {
-          email: values.email,
-          password: values.password,
-          rememberMe: true,
-        },
-      );
+      const response = await axios.post(`${BASE_URL}/api/auth/admin/login`, {
+        email: values.email,
+        password: values.password,
+        rememberMe: true,
+      });
 
       const userData = response.data.empData;
 
@@ -196,15 +151,6 @@ const Login = ({ navigation }) => {
                   <TouchableOpacity onPress={handleForgotPassword}>
                     <Text style={styles.forgotText}>Forgot Password ?</Text>
                   </TouchableOpacity>
-
-                  {/* <View style={styles.checkboxContainer}>
-                    <CheckBox
-                      value={rememberMe}
-                      onValueChange={setRememberMe}
-                      tintColors={{ true: '#fff', false: '#fff' }}
-                    />
-                    <Text style={styles.rememberMe}>Remember Me</Text>
-                  </View> */}
                 </View>
               </>
             )}
@@ -284,7 +230,7 @@ const styles = StyleSheet.create({
   },
   options: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     alignItems: 'center',
     marginTop: 20,
     paddingHorizontal: 20,
@@ -296,19 +242,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
 
     fontSize: 14,
-  },
-  checkboxContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  checkboxWrapper: {
-    transform: [{ scaleX: 0.6 }, { scaleY: 0.6 }],
-    marginRight: 8,
-  },
-  rememberMe: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
   },
 
   error: {
