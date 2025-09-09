@@ -4,44 +4,93 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  Image,
   ImageBackground,
   StyleSheet,
   Alert,
+  ActivityIndicator,
+  ScrollView,
 } from 'react-native';
 import { Formik } from 'formik';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import * as Yup from 'yup';
+import CheckBox from '@react-native-community/checkbox';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+
 import { BASE_URL } from '@env';
-import { ActivityIndicator } from 'react-native';
 
 const Login = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
+  const [secureText, setSecureText] = useState(true);
+  const [rememberMe, setRememberMe] = useState(false);
+  // const handleLogin = async values => {
+  //   setLoading(true);
+  //   try {
+  //     const res = await axios.post(
+  //       `${BASE_URL}/api/auth/admin/login`,
+  //       {
+  //         email: values.email,
+  //         password: values.password,
+  //         rememberMe: rememberMe,
+  //       },
+  //     );
+  //     const userData = res.data.empData;
 
-  const handleLogin = async values => {
-    setLoading(true);
+  //     console.log('Logged in user roleId:', userData.roleId);
+  //     console.log('Full user data:', userData);
+
+  //     if (userData.roleId !== 4) {
+  //       Alert.alert(
+  //         'Access Denied',
+  //         "You don't have permission to access this app",
+  //       );
+  //       setLoading(false);
+  //       return;
+  //     }
+
+  //     if (res.status === 200) {
+  //       await AsyncStorage.setItem('userId', userData.userId.toString());
+  //       await AsyncStorage.setItem('name', userData.name);
+  //       await AsyncStorage.setItem('Role', userData.Role.toString());
+  //       await AsyncStorage.setItem('clientId', userData.client_id.toString());
+  //       Alert.alert('Success', res?.data?.message);
+  //       navigation.navigate('Dashboard');
+  //     }
+  //   } catch (error) {
+  //     Alert.alert('Error', error.response?.data?.error || 'Login failed');
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+  const handleLogin = async (values, { setSubmitting }) => {
     try {
-      const res = await axios.post(`${BASE_URL}/api/auth/admin/login`, {
+      const response = await axios.post('${BASE_URL}/api/auth/admin/login', {
         email: values.email,
         password: values.password,
-        rememberMe: false,
+        rememberMe: true,
       });
-      const userData = res.data.empData;
 
-      if (res.status === 200) {
-        await AsyncStorage.setItem('userId', userData.userId.toString());
-        await AsyncStorage.setItem('name', userData.name);
-        await AsyncStorage.setItem('Role', userData.Role.toString());
-        await AsyncStorage.setItem('clientId', userData.client_id.toString());
-        Alert.alert('Success', res?.data?.message);
-        navigation.navigate('Dashboard');
-      }
+      const userData = response.data.empData;
+
+      await AsyncStorage.setItem('userId', userData.userId.toString());
+      await AsyncStorage.setItem('userName', userData.name);
+      await AsyncStorage.setItem('roleId', userData.roleId.toString());
+      await AsyncStorage.setItem('clientId', userData.client_id.toString());
+
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Dashboard' }],
+      });
     } catch (error) {
-      Alert.alert('Error', error.response.data.error);
+      const errorMessage =
+        error.response?.data?.error || error.message || 'Login failed';
+      Alert.alert('Login Failed', errorMessage);
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
+
   const handleForgotPassword = () => {
     navigation.navigate('ForgotPassword');
   };
@@ -57,85 +106,99 @@ const Login = ({ navigation }) => {
 
   return (
     <ImageBackground
-      source={require('../Assets/bg-mobile.png')}
-      style={styles.backgroundImage}
+      source={require('../Assets/black-bg.png')}
+      style={styles.background}
     >
-      <View style={styles.container}>
-        <Text style={styles.title}>Welcome</Text>
+      <ScrollView>
+        <View style={styles.container}>
+          <Image
+            source={require('../Assets/Pastedimage.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
 
-        <Formik
-          initialValues={{
-            email: '',
-            password: '',
-          }}
-          validationSchema={Validation}
-          onSubmit={handleLogin}
-        >
-          {({
-            handleChange,
-            handleBlur,
-            handleSubmit,
-            values,
-            errors,
-            touched,
-          }) => (
-            <>
-              <Text style={styles.label}>Email</Text>
-              <TextInput
-                style={[styles.input]}
-                placeholder="Email"
-                placeholderTextColor="gray"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                onChangeText={handleChange('email')}
-                onBlur={handleBlur('email')}
-                value={values.email}
-                name="email"
-              />
-              {touched.email && errors.email && (
-                <Text style={styles.error}>{errors.email}</Text>
-              )}
+          <Text style={styles.welcome}>WELCOME BACK</Text>
 
-              <Text style={styles.label}>Password</Text>
-              <TextInput
-                style={[styles.input]}
-                placeholder="Password"
-                placeholderTextColor="gray"
-                secureTextEntry
-                autoCapitalize="none"
-                onChangeText={handleChange('password')}
-                onBlur={handleBlur('password')}
-                value={values.password}
-                name="password"
-              />
-              {touched.password && errors.password && (
-                <Text style={styles.error}>{errors.password}</Text>
-              )}
-              <TouchableOpacity
-                style={styles.forgotBtn}
-                onPress={handleForgotPassword}
-              >
-                <Text style={styles.forgotText}>Forgot Password?</Text>
-              </TouchableOpacity>
+          <Formik
+            initialValues={{
+              email: '',
+              password: '',
+            }}
+            validationSchema={Validation}
+            onSubmit={handleLogin}
+          >
+            {({
+              handleChange,
+              handleBlur,
+              handleSubmit,
+              values,
+              errors,
+              touched,
+            }) => (
+              <>
+                <View style={[styles.inputWrapper, { marginTop: 50 }]}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter your email ID"
+                    placeholderTextColor="#000"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    onChangeText={handleChange('email')}
+                    onBlur={handleBlur('email')}
+                    value={values.email}
+                  />
+                </View>
+                {touched.email && errors.email && (
+                  <Text style={styles.error}>{errors.email}</Text>
+                )}
+                <View style={styles.inputWrapper}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Password"
+                    placeholderTextColor="#000"
+                    secureTextEntry={secureText}
+                    autoCapitalize="none"
+                    onChangeText={handleChange('password')}
+                    onBlur={handleBlur('password')}
+                    value={values.password}
+                  />
+                  <TouchableOpacity
+                    style={styles.iconContainer}
+                    onPress={() => setSecureText(!secureText)}
+                  >
+                    <Icon
+                      name={secureText ? 'eye-off' : 'eye'}
+                      size={24}
+                      color="#009688"
+                    />
+                  </TouchableOpacity>
+                </View>
+                {touched.password && errors.password && (
+                  <Text style={styles.error}>{errors.password}</Text>
+                )}
 
-              {loading ? (
-                <ActivityIndicator
-                  size="large"
-                  color="#007AFF"
-                  style={{ marginTop: 20 }}
-                />
-              ) : (
-                <TouchableOpacity
-                  style={styles.loginBtn}
-                  onPress={handleSubmit}
-                >
-                  <Text style={styles.loginText}>Login</Text>
-                </TouchableOpacity>
-              )}
-            </>
-          )}
-        </Formik>
-      </View>
+                {/* Login Button */}
+                {loading ? (
+                  <ActivityIndicator size="large" color="#f97316" />
+                ) : (
+                  <TouchableOpacity
+                    style={styles.loginBtn}
+                    onPress={handleSubmit}
+                  >
+                    <Text style={styles.loginText}>LOGIN</Text>
+                  </TouchableOpacity>
+                )}
+
+                <View style={styles.options}>
+                  <TouchableOpacity onPress={handleForgotPassword}>
+                    <Text style={styles.forgotText}>Forgot Password ?</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </Formik>
+        </View>
+      </ScrollView>
     </ImageBackground>
   );
 };
@@ -143,64 +206,91 @@ const Login = ({ navigation }) => {
 export default Login;
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 20,
-    paddingBottom: 100,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: 'black',
-    marginBottom: 7,
-    marginLeft: 8,
-  },
-  backgroundImage: {
+  background: {
     flex: 1,
-    opacity: 1.4,
     resizeMode: 'cover',
     justifyContent: 'center',
+    paddingHorizontal: 20,
   },
-  forgotBtn: {
-    marginLeft: 'auto',
-    marginBottom: 20,
+  container: {
+    justifyContent: 'flex-start',
+    flex: 1,
+    paddingTop: 50,
   },
-  forgotText: {
-    fontWeight: 'bold',
-    fontSize: 16,
-    color: '#007AFF',
+
+  logo: {
+    width: 180,
+    height: 180,
+    alignSelf: 'center',
+    marginBottom: 10,
   },
-  title: {
-    fontSize: 18,
-    marginBottom: 30,
+
+  welcome: {
+    color: 'white',
+    fontSize: 24,
+    fontWeight: '600',
     textAlign: 'center',
-    fontWeight: 'bold',
-    color: '#000',
   },
-  input: {
-    padding: 14,
-    borderColor: 'gray',
-    borderWidth: 1,
-    fontSize: 12,
-    fontWeight: 'bold',
-    backgroundColor: 'white',
-    borderRadius: 10,
-    marginBottom: 15,
-    color: '#000',
+
+  inputWrapper: {
+    backgroundColor: '#d4f3ef',
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    marginBottom: 40,
+    height: 50,
+    width: '100%',
+    alignSelf: 'center',
   },
+
   loginBtn: {
-    backgroundColor: '#069b7c',
-    padding: 15,
-    borderRadius: 30,
+    backgroundColor: '#f97316',
+    borderRadius: 40,
+    paddingVertical: 15,
+    alignItems: 'center',
+    marginBottom: 10,
+    width: '100%',
+    alignSelf: 'center',
   },
+
+  input: {
+    flex: 1,
+
+    fontSize: 16,
+    color: '#000',
+    fontWeight: '600',
+  },
+  iconContainer: {
+    paddingLeft: 10,
+  },
+
   loginText: {
     color: '#fff',
     fontSize: 20,
-    borderRadius: 10,
-    textAlign: 'center',
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
+  options: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    marginTop: 20,
+    paddingHorizontal: 20,
+    width: '100%',
+  },
+
+  forgotText: {
+    color: '#fff',
+    fontWeight: '600',
+
+    fontSize: 14,
+  },
+
   error: {
     color: 'red',
-    paddingBottom: 5,
+    fontSize: 12,
+    marginLeft: 5,
+    marginTop: -30,
+    marginBottom: 2,
   },
 });

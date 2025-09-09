@@ -6,25 +6,18 @@ import {
   TouchableOpacity,
   StyleSheet,
   Modal,
-  ScrollView,
   TextInput,
   Alert,
   StatusBar,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Dropdown } from 'react-native-element-dropdown';
-import { Dimensions } from 'react-native';
-import moment from 'moment';
 
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import StatusTracker from './StatusTracker';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import FontAwesome6 from 'react-native-vector-icons/FontAwesome6';
-import { BarChart } from 'react-native-gifted-charts';
-const screenWidth = Dimensions.get('window').width;
-
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import { BASE_URL } from '@env';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -42,7 +35,7 @@ const serviceReasons = [
   'Other',
 ];
 
-const Dashboard = ({ navigation }) => {
+const TicketPage = ({ navigation }) => {
   const [tickets, setTickets] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [editVisible, setEditVisible] = useState(false);
@@ -57,7 +50,6 @@ const Dashboard = ({ navigation }) => {
   const [customServiceReason, setCustomServiceReason] = useState('');
   const [userId, setUserId] = useState(null);
   const [showDropdown, setShowDropdown] = useState(false);
-  const [weeklyData, setWeeklyData] = useState([]);
 
   const [editStatus, setEditStatus] = useState('');
   const [editReason, setEditReason] = useState('');
@@ -67,27 +59,13 @@ const Dashboard = ({ navigation }) => {
     todo: 0,
     inProgress: 0,
     pending: 0,
-    onHold: 0,
+    done: 0,
   });
   const totalTickets =
     statusCounts.todo +
     statusCounts.inProgress +
     statusCounts.pending +
-    statusCounts.onHold;
-  const getPriorityTicket = ticketsArray => {
-    const high = ticketsArray.find(t => t.priority_rank === 'High');
-    if (high) return high;
-
-    const medium = ticketsArray.find(t => t.priority_rank === 'Medium');
-    if (medium) return medium;
-
-    const low = ticketsArray.find(t => t.priority_rank === 'Low');
-    if (low) return low;
-
-    return null;
-  };
-
-  const ticketToDisplay = getPriorityTicket(tickets);
+    statusCounts.done;
 
   useEffect(() => {
     const init = async () => {
@@ -128,59 +106,7 @@ const Dashboard = ({ navigation }) => {
         );
       }
 
-      const highPriorityTickets = list.filter(
-        ticket => ticket.priority_rank === 'High',
-      );
-
-      const topTickets = highPriorityTickets
-        .sort((a, b) => b.urgency - a.urgency)
-        .slice(0, 3);
-
-      setTickets(topTickets);
-
-      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-      const weeklyCounts = days.map(day => ({ label: day, done: 0, todo: 0 }));
-
-      const startOfWeek = moment().startOf('week');
-      const endOfWeek = moment().endOf('week');
-
-      list.forEach(ticket => {
-        const createdDate = moment(ticket.created_at);
-        const dayIndex = createdDate.day();
-
-        if (
-          ticket.status_id === 1 ||
-          ticket.status_name?.toLowerCase() === 'todo'
-        ) {
-          if (createdDate.isBetween(startOfWeek, endOfWeek, 'day', '[]')) {
-            weeklyCounts[dayIndex].todo += 1;
-          }
-        }
-
-        if (
-          ticket.status_id === 6 ||
-          ticket.status_name?.toLowerCase() === 'done'
-        ) {
-          let doneDate = null;
-          if (Array.isArray(ticket.status_tracker)) {
-            const doneEntry = ticket.status_tracker.find(
-              entry =>
-                entry.status?.toLowerCase() === 'done' &&
-                (entry.Date || entry.updatedDate),
-            );
-            if (doneEntry)
-              doneDate = moment(doneEntry.Date || doneEntry.updatedDate);
-          }
-          if (!doneDate) doneDate = createdDate;
-
-          if (doneDate.isBetween(startOfWeek, endOfWeek, 'day', '[]')) {
-            const dayIndexDone = doneDate.day();
-            weeklyCounts[dayIndexDone].done += 1;
-          }
-        }
-      });
-
-      setWeeklyData(weeklyCounts);
+      setTickets(list);
     } catch (error) {
       console.error('Error fetching tickets:', error);
       setTickets([]);
@@ -207,9 +133,6 @@ const Dashboard = ({ navigation }) => {
           inProgress: counts['In-Progress']?.total_count || 0,
           pending: counts.Pending?.total_count || 0,
           done: counts.Done?.total_count || 0,
-          open: counts.Open?.total_count || 0,
-
-          onHold: counts['On-Hold']?.total_count || 0,
         });
       } catch (error) {
         console.error('❌ Error fetching ticket counts:', error);
@@ -218,21 +141,7 @@ const Dashboard = ({ navigation }) => {
 
     fetchTicketCounts();
   }, [userId, fetchTickets, statusFilter]);
-  const groupedBarData = [];
-  weeklyData.forEach(day => {
-    groupedBarData.push({
-      value: day.done || 0,
-      label: day.label,
-      spacing: 2,
-      labelWidth: 30,
-      labelTextStyle: { color: 'gray' },
-      frontColor: '#008080',
-    });
-    groupedBarData.push({
-      value: day.todo || 0,
-      frontColor: '#377df7',
-    });
-  });
+
   const handleAssignToMe = async item => {
     const userStr = await AsyncStorage.getItem('userId');
     const user = JSON.parse(userStr);
@@ -408,12 +317,12 @@ const Dashboard = ({ navigation }) => {
         };
       case 'todo':
         return {
-          backgroundColor: '#d8b487',
+          backgroundColor: '#FF6B6B',
           color: '#FFFFFF',
         };
       case 'in-progress':
         return {
-          backgroundColor: '#A6C8FF',
+          backgroundColor: '#ff954d',
           color: '#FFFFFF',
         };
       case 'pending':
@@ -429,17 +338,15 @@ const Dashboard = ({ navigation }) => {
         };
       default:
         return {
-          backgroundColor: '#cf82ac',
+          backgroundColor: '#008080',
           color: '#FFFFFF',
         };
     }
   };
-
   const renderItem = ({ item }) => {
-    const isPriority = ticketToDisplay?.ticket_id === item.ticket_id;
-
     return (
       <TouchableOpacity
+        style={styles.ticketCard}
         onPress={() => {
           if (item.status_id !== 1) {
             navigation.navigate('ViewTickets', { ticketId: item.ticket_id });
@@ -467,7 +374,9 @@ const Dashboard = ({ navigation }) => {
                   <View
                     style={[
                       styles.statusChip,
-                      { backgroundColor: chipStyle.backgroundColor },
+                      {
+                        backgroundColor: chipStyle.backgroundColor,
+                      },
                     ]}
                   >
                     <Text
@@ -482,56 +391,60 @@ const Dashboard = ({ navigation }) => {
           </View>
 
           <View style={styles.infoSection}>
-            <View style={styles.infoRows}>
+            <View style={styles.infoRow}>
               <Text style={styles.title}>{item.title ? item.title : '-'}</Text>
+            </View>
+            <View style={styles.infoRow}>
               <Text style={styles.label}>{item.description}</Text>
             </View>
-
             <View style={[styles.infoRow, { justifyContent: 'space-between' }]}>
-              <Text style={styles.boldLabels}>
+              <Text style={styles.boldLabel}>
                 Category:{' '}
                 <Text style={styles.labels}>{item.category_name}</Text>
               </Text>
-              <Text style={styles.boldLabels}>
-                Region:{' '}
+              <Text style={styles.boldLabel}>
+                Address:{' '}
                 <Text style={styles.labels}>{` ${item.region_name}`}</Text>
               </Text>
             </View>
+
             <View style={styles.divider} />
-          </View>
-          <View
-            style={[
-              styles.infoRow,
-              {
+
+            <View
+              style={{
                 flexDirection: 'row',
-                justifyContent: 'space-between',
                 alignItems: 'center',
-              },
-            ]}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              {item.status_id === 1 && (
-                <TouchableOpacity
-                  style={styles.assignButton}
-                  onPress={() => handleAssignToMe(item)}
-                >
-                  <Text style={styles.buttonText}>Assign to Me</Text>
-                </TouchableOpacity>
-              )}
+                justifyContent: 'space-between',
+              }}
+            >
+              <View
+                style={{ flex: 2, flexDirection: 'row', alignItems: 'center' }}
+              >
+                <MaterialIcons
+                  name="person-outline"
+                  size={18}
+                  color="#555"
+                  style={{ marginRight: 4 }}
+                />
+                <Text style={styles.boldLabel}>
+                  Customer:{' '}
+                  <Text style={styles.label}>{item.customer_name}</Text>
+                </Text>
+              </View>
 
               {item.status_id === 2 && (
                 <View
                   style={{
                     flexDirection: 'row',
-                    justifyContent: item.employee_arrival_date
-                      ? 'space-between'
-                      : 'flex-end',
-                    alignItems: 'center',
-                    width: '100%',
+                    flex: 1,
+                    justifyContent: 'flex-end',
                   }}
                 >
                   <TouchableOpacity
-                    style={styles.arrivalButton}
+                    style={[
+                      styles.arrivalButton,
+                      { flex: 0, paddingVertical: 6, paddingHorizontal: 10 },
+                    ]}
                     onPress={() => {
                       setSelectedTicket(item);
                       setModalVisible(true);
@@ -542,7 +455,15 @@ const Dashboard = ({ navigation }) => {
 
                   {item.employee_arrival_date && (
                     <TouchableOpacity
-                      style={styles.startButton}
+                      style={[
+                        styles.startButton,
+                        {
+                          flex: 0,
+                          paddingVertical: 6,
+                          paddingHorizontal: 10,
+                          marginLeft: 4,
+                        },
+                      ]}
                       onPress={() => handleStartWork(item)}
                     >
                       <Text style={styles.buttonText}>Start</Text>
@@ -553,12 +474,10 @@ const Dashboard = ({ navigation }) => {
 
               {item.status_id === 3 && (
                 <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    width: '100%',
-                  }}
+                  style={[
+                    styles.inProgressActionRow,
+                    { flexDirection: 'row', justifyContent: 'flex-end' },
+                  ]}
                 >
                   <TouchableOpacity
                     style={styles.serviceButton}
@@ -595,280 +514,76 @@ const Dashboard = ({ navigation }) => {
       <SafeAreaView style={{ backgroundColor: '#008080', flex: 0 }}>
         <Text style={styles.ticketNumber}>Dashboard</Text>
       </SafeAreaView>
-      <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
-        <View style={styles.statusGrid}>
-          <View
-            style={[
-              styles.statusCard,
-              {
-                backgroundColor: '#ffdcaf',
-                borderColor: '#ffdcaf',
-                borderWidth: 2,
-              },
-            ]}
-          >
-            <View
-              style={[
-                styles.cardContent,
-                {
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                },
-              ]}
-            >
-              <View style={styles.textBlock}>
-                <Text style={styles.statusTitle}>ToDo</Text>
-                <Text style={styles.statusNumber}>{statusCounts.todo}</Text>
-              </View>
 
-              <View
-                style={{
-                  width: 50,
-                  height: 50,
-                  borderRadius: 10,
-                  backgroundColor: '#d8b487',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}
-              >
-                <FontAwesome6
-                  name="triangle-exclamation"
-                  size={24}
-                  color="#fff"
-                />
-              </View>
-            </View>
-          </View>
-
-          <View
-            style={[
-              styles.statusCard,
-              {
-                backgroundColor: '#A6C8FF',
-                borderColor: '#A6C8FF',
-                borderWidth: 2,
-              },
-            ]}
-          >
-            <View
-              style={[
-                styles.cardContent,
-                {
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  // flexDirection: 'row',
-                  // justifyContent: 'space-between',
-                  // alignItems: 'center',
-                },
-              ]}
-            >
-              <View style={styles.textBlock}>
-                <Text style={styles.statusTitle}>In Progress</Text>
-                <Text style={styles.statusNumber}>
-                  {statusCounts.inProgress}
-                </Text>
-              </View>
-
-              <View
-                style={{
-                  backgroundColor: '#81b4f5',
-                  width: 50,
-                  height: 50,
-                  borderRadius: 10,
-                  justifyContent: 'center',
-                  marginLeft: 'auto', // pushes icon to the right
-
-                  alignItems: 'center',
-                }}
-              >
-                <Ionicons name="shield-outline" size={24} color="#fff" />
-              </View>
-            </View>
-          </View>
-
-          <View
-            style={[
-              styles.statusCard,
-              {
-                backgroundColor: '#dbbeff',
-                borderColor: '#dbbeff',
-                borderWidth: 2,
-              },
-            ]}
-          >
-            <View
-              style={[
-                styles.cardContent,
-                {
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                },
-              ]}
-            >
-              <View style={styles.textBlock}>
-                <Text style={styles.statusTitle}>Pending</Text>
-                <Text style={styles.statusNumber}>{statusCounts.pending}</Text>
-              </View>
-
-              <View
-                style={{
-                  backgroundColor: '#9d76cd',
-                  width: 50,
-                  height: 50,
-                  borderRadius: 10,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}
-              >
-                <Ionicons name="time-outline" size={24} color="#fff" />
-              </View>
-            </View>
-          </View>
-
-          <View
-            style={[
-              styles.statusCard,
-              {
-                backgroundColor: '#ffc5e5',
-                borderColor: '#ffc5e5',
-                borderWidth: 2,
-              },
-            ]}
-          >
-            <View
-              style={[
-                styles.cardContent,
-                {
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                },
-              ]}
-            >
-              <View style={styles.textBlock}>
-                <Text style={styles.statusTitle}>On-hold</Text>
-                <Text style={styles.statusNumber}>{statusCounts.onHold}</Text>
-              </View>
-
-              <View
-                style={{
-                  backgroundColor: '#cf82ac',
-                  width: 50,
-                  height: 50,
-                  borderRadius: 10,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}
-              >
-                <Ionicons name="time-outline" size={24} color="#fff" />
-              </View>
-            </View>
-          </View>
-        </View>
-
-        <View
-          style={{
-            backgroundColor: '#fff',
-            borderRadius: 12,
-            padding: 15,
-            marginVertical: 20,
-            marginHorizontal: 20,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.2,
-            shadowRadius: 4,
-            elevation: 5,
-          }}
+      <View style={styles.filterRow}>
+        <TouchableOpacity
+          onPress={() => setShowDropdown(!showDropdown)}
+          style={styles.filterButton}
         >
-          <Text
+          <View
             style={{
-              fontSize: 16,
-              color: '#000',
-              fontWeight: '600',
-              marginBottom: 10,
-              marginHorizontal: 10,
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
             }}
           >
-            Weekly Progress
-          </Text>
+            <Text style={styles.Tickets}>Tickets</Text>
+            <MaterialIcons name="filter-list" size={20} color="#000" />
+          </View>
+        </TouchableOpacity>
+      </View>
 
-          <BarChart
-            data={groupedBarData}
-            barWidth={12}
-            spacing={15}
-            // hideRules
-            // yAxisThickness={1}
-            // roundedTop
-            // roundedBottom
-            noOfSections={5}
-            maxValue={Math.max(
-              ...weeklyData.map(d => (d.done || 0) + (d.todo || 0)),
-              10,
-            )}
-          />
+      <Modal visible={showDropdown} transparent animationType="slide">
+        <View style={styles.modalWrapper}>
+          <View style={styles.modalContent}>
+            <TouchableOpacity
+              style={{ alignSelf: 'flex-end' }}
+              onPress={() => setShowDropdown(false)}
+            >
+              <MaterialIcons name="close" size={20} color="#000" />
+            </TouchableOpacity>
+
+            <Text style={styles.modalTitle}>Filter by Status</Text>
+
+            <Dropdown
+              data={[
+                { label: 'All', value: 'all' },
+                ...ticketStatuses.map(s => ({
+                  label: s.status_name,
+                  value: s.status_id.toString(),
+                })),
+              ]}
+              labelField="label"
+              valueField="value"
+              placeholder="Select Status"
+              placeholderTextColor="#000"
+              placeholderStyle={{ color: '#000' }}
+              selectedTextStyle={{ color: '#000', fontSize: 16 }}
+              itemTextStyle={{ color: '#000', fontSize: 16 }}
+              style={styles.input}
+              value={statusFilter}
+              onChange={item => {
+                setStatusFilter(item.value);
+                setShowDropdown(false);
+              }}
+            />
+
+            <TouchableOpacity
+              style={styles.modalCancelButton}
+              onPress={() => setShowDropdown(false)}
+            >
+              <Text style={styles.modalButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
         </View>
+      </Modal>
 
-        <View style={styles.filterRow}>
-          <Text style={styles.Tickets}>TodayTickets</Text>
-
-          <View style={{ flex: 1 }} />
-
-          <TouchableOpacity onPress={() => navigation.navigate('TicketPage')}>
-            <Text style={styles.Ticket}>ViewAll</Text>
-          </TouchableOpacity>
-        </View>
+      <View style={styles.container}>
         <FlatList
           data={tickets}
           keyExtractor={item => item.ticket_id.toString()}
           renderItem={renderItem}
         />
-        <Modal visible={showDropdown} transparent animationType="slide">
-          <View style={styles.modalWrapper}>
-            <View style={styles.modalContent}>
-              <TouchableOpacity
-                style={{ alignSelf: 'flex-end' }}
-                onPress={() => setShowDropdown(false)}
-              >
-                <MaterialIcons name="close" size={20} color="#000" />
-              </TouchableOpacity>
-
-              <Text style={styles.modalTitle}>Filter by Status</Text>
-
-              <Dropdown
-                data={[
-                  { label: 'All', value: 'all' },
-                  ...ticketStatuses.map(s => ({
-                    label: s.status_name,
-                    value: s.status_id.toString(),
-                  })),
-                ]}
-                labelField="label"
-                valueField="value"
-                placeholder="Select Status"
-                placeholderTextColor="#000"
-                placeholderStyle={{ color: '#000' }}
-                selectedTextStyle={{ color: '#000', fontSize: 16 }}
-                itemTextStyle={{ color: '#000', fontSize: 16 }}
-                style={styles.input}
-                value={statusFilter}
-                onChange={item => {
-                  setStatusFilter(item.value);
-                  setShowDropdown(false);
-                }}
-              />
-
-              <TouchableOpacity
-                style={styles.modalCancelButton}
-                onPress={() => setShowDropdown(false)}
-              >
-                <Text style={styles.modalButtonText}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
-
         <Modal visible={editVisible} transparent animationType="slide">
           <View style={styles.modalWrapper}>
             <View style={styles.modalContent}>
@@ -1038,7 +753,7 @@ const Dashboard = ({ navigation }) => {
             }}
           />
         )}
-      </ScrollView>
+      </View>
 
       <View style={styles.bottomBar}>
         <TouchableOpacity
@@ -1088,19 +803,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   textBlock: {
-    marginLeft: -20,
-  },
-  statusTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
-  },
-
-  statusNumber: {
-    fontSize: 22,
-    fontWeight: '500',
-    marginVertical: 12,
-    color: '#222',
+    alignItems: 'flex-start',
   },
 
   statusGrid: {
@@ -1113,7 +816,6 @@ const styles = StyleSheet.create({
     width: '48%',
     borderRadius: 12,
     padding: 16,
-
     marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -1121,19 +823,47 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  statusTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  statusNumber: {
+    fontSize: 22,
+    fontWeight: '700',
+    marginVertical: 6,
+    color: '#000',
+  },
+  statusFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  statusPercent: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#444',
+  },
+  title: {
+    fontWeight: 'bold',
+    fontSize: 14,
+    color: '#000',
+  },
 
   cardContents: {
     backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 15,
-    marginVertical: 20,
-    marginHorizontal: 20,
+    borderRadius: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    marginHorizontal: 6,
+    marginVertical: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 5,
+    elevation: 3,
   },
+
   headerRow: {
     flexDirection: 'row',
     marginVertical: 6,
@@ -1152,6 +882,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
   },
+  iconCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#2196F3',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
 
   infoSection: {
     padding: 10,
@@ -1160,31 +899,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginVertical: 4,
   },
-  infoRows: {
-    flexDirection: 'column',
-  },
   boldLabel: {
     fontWeight: 'bold',
-    fontSize: 14,
+    fontSize: 12,
     color: '#555',
   },
-  boldLabels: {
-    fontWeight: 'bold',
-    fontSize: 14,
-    marginTop: 5,
-    color: '#555',
-  },
-  title: {
-    fontWeight: 'bold',
-    fontSize: 14,
-    color: '#000',
-  },
-
   label: {
     fontWeight: 'bold',
     color: '#555',
-    fontSize: 14,
-    marginTop: 10,
+    fontSize: 12,
   },
   labels: {
     fontWeight: 'bold',
@@ -1194,24 +917,15 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     backgroundColor: '#ddd',
-    marginVertical: 10,
-    borderRadius: 1,
+    marginVertical: 8,
   },
-
   infoIcon: {
     marginRight: 6,
   },
 
-  Tickets: {
-    fontWeight: '600',
-    color: '#222',
-    marginHorizontal: 30,
-    fontSize: 14,
-  },
   Ticket: {
     fontWeight: '600',
     color: '#222',
-    marginRight: 20,
     fontSize: 14,
   },
 
@@ -1222,18 +936,19 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 12,
   },
-  filterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 5,
-    // marginVertical: 8,
-  },
   filterButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 10,
+    width: '100%',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
   },
-
+  // filterRow: {
+  //   marginVertical: 10,
+  // },
+  Tickets: {
+    fontWeight: '600',
+    color: '#000',
+    fontSize: 14,
+  },
   dropdownWrapper: {
     paddingHorizontal: 20,
     paddingTop: 10,
@@ -1471,6 +1186,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginTop: 4,
   },
+  container: {
+    flex: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 2,
+  },
 
   actionButton: {
     flex: 1,
@@ -1514,47 +1234,13 @@ const styles = StyleSheet.create({
     marginTop: 12,
     gap: 10,
   },
-  assignButton: {
-    backgroundColor: '#008080',
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 6,
-    marginLeft: 5,
-  },
 
-  arrivalButton: {
-    backgroundColor: '#ff6f00',
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 6,
-    textAlign: 'center',
-  },
-
-  startButton: {
-    backgroundColor: '#ff6f00',
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 6,
-    marginLeft: 5,
-  },
-
-  serviceButton: {
-    backgroundColor: '#28a745',
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 6,
-  },
-
-  editButton: {
-    backgroundColor: '#6c757d',
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 6,
-  },
   Assign: {
     marginLeft: 'auto',
     backgroundColor: '#008080',
     paddingVertical: 8,
+    marginBottom: 10,
+
     paddingHorizontal: 16,
     borderRadius: 8,
   },
@@ -1562,9 +1248,39 @@ const styles = StyleSheet.create({
   arrivalDateAlone: {
     marginLeft: 'auto',
     backgroundColor: '#008080',
+
     paddingVertical: 8,
+    marginBottom: 10,
     paddingHorizontal: 16,
     borderRadius: 8,
+  },
+  arrivalButton: {
+    backgroundColor: '#ff9800',
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+  },
+
+  startButton: {
+    backgroundColor: '#4caf50',
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    marginLeft: 4,
   },
 
   inProgressActionRow: {
@@ -1572,6 +1288,34 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: 12,
     gap: 10,
+  },
+
+  serviceButton: {
+    backgroundColor: '#FFA726',
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+  },
+
+  editButton: {
+    backgroundColor: '#4DB6AC',
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
   },
 
   buttonText: {
@@ -1589,4 +1333,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default Dashboard;
+export default TicketPage;

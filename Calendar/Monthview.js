@@ -76,7 +76,7 @@ const MonthView = () => {
     marks[currentDate] = {
       ...(marks[currentDate] || {}),
       selected: true,
-      selectedColor: '#069b7c',
+      selectedColor: '#008080',
       selectedTextColor: '#ffffff',
     };
 
@@ -115,12 +115,12 @@ const MonthView = () => {
         hideExtraDays={true}
         theme={{
           calendarBackground: '#ffffff',
-          selectedDayBackgroundColor: '#069b7c',
+          selectedDayBackgroundColor: '#008080',
           selectedDayTextColor: '#ffffff',
           todayTextColor: 'black',
           dayTextColor: '#000000',
           monthTextColor: '#000000',
-          arrowColor: '#069b7c',
+          arrowColor: '#008080',
           textDayFontWeight: '',
           textMonthFontWeight: 'bold',
           textDayHeaderFontWeight: 'bold',

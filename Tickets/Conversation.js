@@ -11,6 +11,8 @@ import {
 } from 'react-native';
 import { Formik } from 'formik';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+
 import axios from 'axios';
 import io from 'socket.io-client';
 import DateFormat from './DateFormat';
@@ -46,17 +48,32 @@ const AddConversation = ({ data, user, customerComments, fetchData }) => {
   useEffect(() => {
     try {
       const parsed = JSON.parse(customerComments || '[]');
-      const validMessages = parsed
-        .map(item => item?.message)
-        .filter(m => m && m.text);
-      setConversationData(validMessages);
+
+      // Flatten all messages into one array
+      const allMessages = parsed.flatMap(item => {
+        if (Array.isArray(item.message)) {
+          // If message is an array, keep all
+          return item.message.filter(m => m && m.text);
+        } else if (item.message && item.message.text) {
+          // Single message object
+          return [item.message];
+        }
+        return [];
+      });
+
+      // Append only new messages by id
+      setConversationData(prev => {
+        const existingIds = new Set(prev.map(m => m.id));
+        const newMessages = allMessages.filter(m => !existingIds.has(m.id));
+        return [...prev, ...newMessages];
+      });
     } catch (err) {
       console.log('Failed to parse conversation', err);
-      setConversationData([]);
     }
   }, [customerComments]);
+
   const setupSocketIO = useCallback(() => {
-    const socketUrl = `${BASE_URL}`;
+    const socketUrl = `http://10.0.2.2:5000`;
     socket.current = io(socketUrl, {
       transports: ['websocket'],
     });
@@ -105,7 +122,7 @@ const AddConversation = ({ data, user, customerComments, fetchData }) => {
         ),
       };
 
-      await axios.put(`${BASE_URL}/api/tickets/${data?.ticket_id}`, {
+      await axios.put(`http://10.0.2.2:5000/api/tickets/${data?.ticket_id}`, {
         ticketData,
       });
 
@@ -157,20 +174,40 @@ const AddConversation = ({ data, user, customerComments, fetchData }) => {
           <View style={styles.formContainer}>
             <TextInput
               placeholder="Type a message"
+              placeholderTextColor="#888"
               style={styles.input}
               value={values.customer_comments}
               onChangeText={handleChange('customer_comments')}
               multiline
             />
+            {/* <TouchableOpacity
+              onPress={() => console.log('Attach file clicked')}
+              style={{
+                width: 30,
+                height: 30,
+                borderRadius: 20,
+                backgroundColor: '#888',
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginRight: 8,
+              }}
+            >
+              <MaterialIcons name="attach-file" size={24} color="#fff" />
+            </TouchableOpacity> */}
+
             <TouchableOpacity
-              style={[
-                styles.button,
-                !values.customer_comments && styles.disabledButton,
-              ]}
               onPress={handleSubmit}
               disabled={!values.customer_comments}
+              style={{
+                backgroundColor: !values.customer_comments ? '#ccc' : '#007AFF',
+                paddingHorizontal: 15,
+                paddingVertical: 10,
+                borderRadius: 25,
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
             >
-              <Text style={styles.buttonText}>Send</Text>
+              <Text style={{ color: '#fff', fontWeight: 'bold' }}>Send</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -241,7 +278,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   button: {
-    backgroundColor: '#069b7c',
+    backgroundColor: '#008080',
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,

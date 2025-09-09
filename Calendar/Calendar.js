@@ -33,7 +33,7 @@ const EventsCalendar = () => {
         setLoading(true);
         const userId = await AsyncStorage.getItem('userId');
         const response = await axios.get(
-          `${BASE_URL}/api/tickets/employee/${userId}`,
+          `http://10.0.2.2:5000/api/tickets/employee/${userId}`,
         );
         const tickets = response.data?.list || [];
 
@@ -111,14 +111,10 @@ const EventsCalendar = () => {
 
   return (
     <>
-      <StatusBar barStyle="light-content" backgroundColor="#069b7c" />
-      <SafeAreaView
-        style={{ backgroundColor: '#069b7c', flex: 0, padding: 15 }}
-      />
-      <View style={styles.topHeader}>
-        <Text style={styles.headerTitle}> Calendar</Text>
-      </View>
-
+      <StatusBar barStyle="light-content" backgroundColor="#008080" />
+      <SafeAreaView style={{ backgroundColor: '#008080', flex: 0 }}>
+        <Text style={styles.headerTitle}>Calendar</Text>
+      </SafeAreaView>
       <GestureHandlerRootView style={styles.wrapper}>
         <View style={styles.header}>
           <View style={styles.navRow}>
@@ -162,7 +158,7 @@ const EventsCalendar = () => {
 
         {loading ? (
           <View style={styles.loader}>
-            <ActivityIndicator size="large" color="#069b7c" />
+            <ActivityIndicator size="large" color="#008080" />
           </View>
         ) : mode === 'agenda' ? (
           <ScrollView>
@@ -202,13 +198,30 @@ const EventsCalendar = () => {
             onPressEvent={handleEventPress}
             swipeEnabled
             maxVisibleEventCount={9999}
-            eventCellStyle={{
-              backgroundColor: '#069b7c',
-              borderRadius: 6,
-              padding: 2,
-              minHeight: 22,
-              justifyContent: 'center',
-            }}
+            renderEvent={(event, touchableProps) => (
+              <TouchableOpacity
+                {...touchableProps}
+                style={{
+                  backgroundColor: '#008080',
+                  borderRadius: 3,
+                  padding: 1,
+                  minHeight: 16,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}
+                onPress={() => handleEventPress(event)}
+              >
+                <Text
+                  style={{
+                    color: '#fff',
+                    fontSize: 10,
+                    fontWeight: 'bold',
+                  }}
+                >
+                  Ticket #{event.ticket.ticket_id}
+                </Text>
+              </TouchableOpacity>
+            )}
             calendarCellStyle={{
               borderWidth: 0.1,
               borderColor: '#ccc',
@@ -254,7 +267,7 @@ const EventsCalendar = () => {
           style={styles.navItem}
           onPress={() => navigation.navigate('EventsCalendar')}
         >
-          <Ionicons name="calendar" size={30} color="#069b7c" />
+          <Ionicons name="calendar" size={30} color="#008080" />
           <Text style={styles.navTexts}>Calendar</Text>
         </TouchableOpacity>
 
@@ -287,16 +300,16 @@ const styles = StyleSheet.create({
   },
 
   topHeader: {
-    backgroundColor: '#069b7c',
+    backgroundColor: '#008080',
     justifyContent: 'center',
     elevation: 4,
     paddingHorizontal: 16,
   },
   headerTitle: {
-    color: '#fff',
     fontSize: 20,
     fontWeight: 'bold',
-    marginTop: -40,
+    marginLeft: 20,
+    color: '#fff',
   },
   header: {
     backgroundColor: '#fff',
@@ -319,13 +332,13 @@ const styles = StyleSheet.create({
   },
   navText: {
     fontSize: 18,
-    color: '#069b7c',
+    color: '#008080',
     fontWeight: 'bold',
   },
   todayButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: '#069b7c',
+    backgroundColor: '#008080',
     borderRadius: 6,
   },
   todayText: {
@@ -354,7 +367,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#eee',
   },
   viewButtonActive: {
-    backgroundColor: '#069b7c',
+    backgroundColor: '#008080',
   },
   viewText: {
     fontSize: 14,
@@ -384,9 +397,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     padding: 12,
     borderRadius: 10,
+    marginTop: 10,
     marginBottom: 10,
     elevation: 4,
   },
+
   agendaTime: {
     fontSize: 14,
     color: '#888',

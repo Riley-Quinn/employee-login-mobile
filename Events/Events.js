@@ -11,19 +11,19 @@ import {
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
-import { Dropdown } from 'react-native-element-dropdown';
-import { BASE_URL } from '@env';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Modal from 'react-native-modal';
+import { BASE_URL } from '@env';
 
 const EventsOverview = () => {
   const [eventType, setEventType] = useState('Scheduled');
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState(null);
+  const [isFilterVisible, setIsFilterVisible] = useState(false);
   const navigation = useNavigation();
 
   const eventOptions = [
@@ -70,21 +70,41 @@ const EventsOverview = () => {
     const address = `${item.address}, ${item.state_name}`;
 
     return (
-      <View style={styles.card}>
-        <View style={styles.cards}>
-          <Text style={styles.serviceId}>#{item.ticket_service_id}</Text>
-          <Text style={styles.field}>{address}</Text>
-          <Text style={styles.field}>
-            {item.customer_name}
-            {'   '}
-            {item.customer_phone}
-          </Text>
+      <View style={styles.ticketCard}>
+        <View style={styles.card}>
+          <View style={styles.cards}>
+            <View style={styles.avatars}>
+              <FontAwesome name="ticket" size={24} color="#fff" />
+            </View>
+            <Text style={styles.serviceId}>#{item.ticket_service_id}</Text>
+          </View>
+          <View style={styles.infoSection}>
+            <View style={styles.row}>
+              <Text style={styles.label}>Category</Text>
+              <Text style={styles.colon}>:</Text>
+              <Text style={styles.value}>{item.category_name}</Text>
+            </View>
 
-          <Text style={styles.field}>
-            {item.category_name}
-            {'   '}
-            {item.description}
-          </Text>
+            <View style={styles.row}>
+              <Text style={styles.label}>Address</Text>
+              <Text style={styles.colon}>:</Text>
+              <Text style={styles.value}>
+                {item.city_name}, {item.region_name}
+              </Text>
+            </View>
+
+            <View style={styles.row}>
+              <Text style={styles.label}>Customer</Text>
+              <Text style={styles.colon}>:</Text>
+              <Text style={styles.value}>{item.customer_name}</Text>
+            </View>
+
+            <View style={styles.row}>
+              <Text style={styles.label}>Phone</Text>
+              <Text style={styles.colon}>:</Text>
+              <Text style={styles.value}>{item.customer_phone}</Text>
+            </View>
+          </View>
         </View>
       </View>
     );
@@ -92,27 +112,60 @@ const EventsOverview = () => {
 
   return (
     <>
-      <StatusBar barStyle="light-content" backgroundColor="#069b7c" />
+      <StatusBar barStyle="light-content" backgroundColor="#008080" />
 
-      <SafeAreaView style={{ backgroundColor: '#069b7c', flex: 0 }}>
+      <SafeAreaView style={{ backgroundColor: '#008080', flex: 0 }}>
         <Text style={styles.ticketNumber}>Events</Text>
       </SafeAreaView>
 
       <View style={{ flex: 1 }}>
         <View style={styles.container}>
-          <View style={styles.dropdownContainer}>
-            <Dropdown
-              data={eventOptions}
-              labelField="label"
-              valueField="value"
-              value={eventType}
-              onChange={item => setEventType(item.value)}
-              style={styles.picker}
-              placeholder="Select Event Type"
-              placeholderStyle={{ color: '#000' }}
-              selectedTextStyle={{ color: '#000' }} // selected value text color
-              itemTextStyle={{ color: '#000' }} // items in list
-            />
+          <View style={styles.filterIconContainer}>
+            <TouchableOpacity onPress={() => setIsFilterVisible(true)}>
+              <MaterialIcons name="filter-list" size={30} color="#008080" />
+            </TouchableOpacity>
+
+            <Modal
+              isVisible={isFilterVisible}
+              onBackdropPress={() => setIsFilterVisible(false)}
+              style={{ justifyContent: 'flex-start', margin: 0 }}
+            >
+              <View
+                style={{
+                  backgroundColor: '#fff',
+                  padding: 15,
+                  marginHorizontal: 20,
+                  marginTop: 350,
+                  borderRadius: 12,
+                }}
+              >
+                {eventOptions.map(option => (
+                  <TouchableOpacity
+                    key={option.value}
+                    onPress={() => {
+                      setEventType(option.value);
+                      setIsFilterVisible(false);
+                    }}
+                    style={{
+                      paddingVertical: 10,
+                      borderBottomWidth: 0.5,
+                      borderBottomColor: '#ccc',
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 16,
+                        fontWeight:
+                          eventType === option.value ? 'bold' : 'normal',
+                        color: eventType === option.value ? '#008080' : '#000',
+                      }}
+                    >
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </Modal>
           </View>
 
           {loading ? (
@@ -123,7 +176,9 @@ const EventsOverview = () => {
             />
           ) : rows.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No tickets found.</Text>
+              <Text style={styles.emptyText}>
+                No Ticket are scheduled today.
+              </Text>
             </View>
           ) : (
             <FlatList
@@ -157,7 +212,7 @@ const EventsOverview = () => {
           style={styles.navItem}
           onPress={() => navigation.navigate('EventsOverview')}
         >
-          <MaterialIcons name="event" size={30} color="#069b7c" />
+          <MaterialIcons name="event" size={30} color="#008080" />
           <Text style={styles.navText}>Events</Text>
         </TouchableOpacity>
 
@@ -174,6 +229,7 @@ const EventsOverview = () => {
 };
 
 export default EventsOverview;
+
 const styles = StyleSheet.create({
   ticketNumber: {
     fontSize: 20,
@@ -181,34 +237,81 @@ const styles = StyleSheet.create({
     marginLeft: 20,
     color: '#fff',
   },
-
+  filterIconContainer: {
+    alignItems: 'flex-end',
+    marginHorizontal: 15,
+    marginVertical: 10,
+  },
+  avatars: {
+    width: 30,
+    height: 30,
+    borderRadius: 20,
+    backgroundColor: '#008080',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
   container: {
     flex: 1,
     backgroundColor: '#f2f4f7',
     padding: 18,
   },
-
   card: {
+    marginBottom: -10,
+  },
+  ticketCard: {
     backgroundColor: '#fff',
-    marginBottom: 30,
-    padding: 16,
-    borderRadius: 12,
-    elevation: 4,
+    borderRadius: 10,
+    padding: 12,
+    marginVertical: 8,
+    marginHorizontal: 10,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 1.41,
-    borderWidth: 1,
-    borderColor: '#bbb',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   cards: {
-    gap: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
   },
   serviceId: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#222',
+    color: '#008080',
   },
+  infoSection: {
+    marginVertical: 10,
+  },
+  row: {
+    flexDirection: 'row',
+    marginBottom: 5,
+    alignItems: 'flex-start',
+  },
+
+  label: {
+    fontWeight: 'bold',
+    color: '#888',
+    fontSize: 14,
+    width: 100,
+    marginRight: 30,
+    textAlign: 'right',
+  },
+
+  colon: {
+    marginHorizontal: 2,
+    fontWeight: 'bold',
+    color: '#888',
+  },
+
+  value: {
+    flex: 1,
+    color: '#008080',
+    fontWeight: '500',
+    fontSize: 14,
+    flexWrap: 'wrap',
+  },
+
   field: {
     fontSize: 14,
     color: '#888',

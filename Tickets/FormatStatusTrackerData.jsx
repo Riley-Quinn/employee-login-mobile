@@ -13,61 +13,158 @@ const FormatStatusTrackerData = ({ trackingData }) => {
   }
 
   return (
-    <View style={styles.container}>
-      {parsed.map((item, index) => (
-        <View key={index} style={styles.entry}>
-          <View style={styles.line}>
-            <Text style={styles.bullet}>•</Text>
-            <Text style={styles.message}>{item.message}</Text>
-          </View>
-          <Text style={styles.timestamp}>
-            {new Date(item.timestamp).toLocaleString()}
-          </Text>
+    <>
+      <View style={styles.container}>
+        <View style={styles.historyHeader}>
+          <Text style={styles.historyText}>History</Text>
         </View>
-      ))}
-    </View>
+
+        {parsed.map((item, index) => {
+          const rawTimestamp =
+            item.timestamp ||
+            item.Date ||
+            item.updatedDate ||
+            item.created_at ||
+            item.updated_at;
+
+          const timestamp = new Date(rawTimestamp);
+          const isValidDate = !isNaN(timestamp.getTime());
+
+          return (
+            <View key={index} style={styles.entry}>
+              <View style={styles.bulletRow}>
+                <Text style={styles.bullet}>{'\u2022'}</Text>
+                <View style={styles.messageBlock}>
+                  <Text style={styles.message}>{item.message}</Text>
+                  {item.changedBy && (
+                    <Text style={styles.subText}>
+                      {item.changedBy} {item.employeePhone}
+                    </Text>
+                  )}
+
+                  {item.statusName === 'Engineer Assigned' &&
+                    console.log(
+                      ' Data:',
+                      item,
+                    )(item.employeeName || item.employeePhone) && (
+                      <Text style={styles.subText}>
+                        {item.employeeName} {item.employeePhone}
+                      </Text>
+                    )}
+
+                  {item.arrivalDate && (
+                    <Text style={styles.subText}>
+                      Arrival:{' '}
+                      {new Date(item.arrivalDate).toLocaleString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true,
+                      })}
+                    </Text>
+                  )}
+
+                  {/* {rawTimestamp && (
+                  <Text style={styles.timestamp}>
+                    {isValidDate
+                      ? `${timestamp.toLocaleString('en-US', {
+                          month: 'short',
+                        })} ${timestamp.getDate()} ${timestamp.getFullYear()} ${timestamp.toLocaleTimeString(
+                          'en-US',
+                          {
+                            hour: 'numeric',
+                            minute: '2-digit',
+                            hour12: true,
+                          },
+                        )}`
+                      : String(rawTimestamp)}
+                  </Text>
+                )} */}
+                  {item.message !== 'Ticket created' && rawTimestamp && (
+                    <Text style={styles.timestamp}>
+                      {isValidDate
+                        ? `${timestamp.toLocaleString('en-US', {
+                            month: 'short',
+                          })} ${timestamp.getDate()} ${timestamp.getFullYear()} ${timestamp.toLocaleTimeString(
+                            'en-US',
+                            {
+                              hour: 'numeric',
+                              minute: '2-digit',
+                              hour12: true,
+                            },
+                          )}`
+                        : String(rawTimestamp)}
+                    </Text>
+                  )}
+                </View>
+              </View>
+            </View>
+          );
+        })}
+      </View>
+    </>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    // marginHorizontal: 12,
-    marginVertical: 10,
-    backgroundColor: '#fdfdfd',
-    padding: 16,
+    marginTop: 30,
+    backgroundColor: '#fff',
     borderRadius: 12,
+    padding: 16,
+    marginBottom: 15,
     elevation: 3,
     shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 3,
+  },
+  historyHeader: {
+    backgroundColor: '#008080',
+    padding: 8,
+    borderRadius: 6,
+    marginBottom: 12,
+  },
+  historyText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
   entry: {
-    marginBottom: 14,
+    marginBottom: 12,
   },
-  line: {
+  bulletRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    flexWrap: 'wrap',
   },
   bullet: {
-    fontSize: 20,
-    color: '#069b7c',
-    marginRight: 6,
-    marginTop: -1,
+    fontSize: 25,
+    lineHeight: 22,
+    color: '#008080',
+
+    marginRight: 15,
+  },
+  messageBlock: {
+    flex: 1,
   },
   message: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: 'bold',
     color: '#222',
-    flexShrink: 1,
-    lineHeight: 20,
+  },
+  subText: {
+    fontSize: 14,
+    color: '#888',
+    fontWeight: 'bold',
+    marginTop: 4,
   },
   timestamp: {
-    fontSize: 13,
-    color: '#666',
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#888',
     marginTop: 4,
-    marginLeft: 20,
   },
 });
 
