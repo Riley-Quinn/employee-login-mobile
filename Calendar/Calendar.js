@@ -198,13 +198,30 @@ const EventsCalendar = () => {
             onPressEvent={handleEventPress}
             swipeEnabled
             maxVisibleEventCount={9999}
-            eventCellStyle={{
-              backgroundColor: '#008080',
-              borderRadius: 6,
-              padding: 2,
-              minHeight: 22,
-              justifyContent: 'center',
-            }}
+            renderEvent={(event, touchableProps) => (
+              <TouchableOpacity
+                {...touchableProps}
+                style={{
+                  backgroundColor: '#008080',
+                  borderRadius: 3,
+                  padding: 1,
+                  minHeight: 16,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}
+                onPress={() => handleEventPress(event)}
+              >
+                <Text
+                  style={{
+                    color: '#fff',
+                    fontSize: 10,
+                    fontWeight: 'bold',
+                  }}
+                >
+                  Ticket #{event.ticket.ticket_id}
+                </Text>
+              </TouchableOpacity>
+            )}
             calendarCellStyle={{
               borderWidth: 0.1,
               borderColor: '#ccc',
@@ -380,9 +397,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     padding: 12,
     borderRadius: 10,
+    marginTop: 10,
     marginBottom: 10,
     elevation: 4,
   },
+
   agendaTime: {
     fontSize: 14,
     color: '#888',
