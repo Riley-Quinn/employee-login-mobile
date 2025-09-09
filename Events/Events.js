@@ -17,13 +17,12 @@ import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Modal from 'react-native-modal';
 import { BASE_URL } from '@env';
-
 const EventsOverview = () => {
   const [eventType, setEventType] = useState('Scheduled');
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState(null);
-  const [isFilterVisible, setIsFilterVisible] = useState(false);
+  const [isFilterVisible, setIsFilterVisible] = useState(false); // modal state
   const navigation = useNavigation();
 
   const eventOptions = [
@@ -177,7 +176,7 @@ const EventsOverview = () => {
           ) : rows.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>
-                No Ticket are scheduled today.
+                No tickets are Scheduled Today.
               </Text>
             </View>
           ) : (
@@ -257,7 +256,7 @@ const styles = StyleSheet.create({
     padding: 18,
   },
   card: {
-    marginBottom: -10,
+    marginBottom: 12,
   },
   ticketCard: {
     backgroundColor: '#fff',
@@ -294,8 +293,7 @@ const styles = StyleSheet.create({
     color: '#888',
     fontSize: 14,
     width: 100,
-    marginRight: 30,
-    textAlign: 'right',
+    marginHorizontal: 40,
   },
 
   colon: {

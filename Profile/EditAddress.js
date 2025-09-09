@@ -40,8 +40,8 @@ export default function EditAddress() {
         if (!userId) return Alert.alert('Error', 'User ID not found');
 
         const [userRes, stateRes] = await Promise.all([
-          axios.get(`http://10.0.2.2:5000/api/employee/${JSON.parse(userId)}`),
-          axios.get(`http://10.0.2.2:5000/api/states`),
+          axios.get(`${BASE_URL}/api/employee/${JSON.parse(userId)}`),
+          axios.get(`${BASE_URL}/api/states`),
         ]);
 
         const user = userRes.data;
@@ -64,7 +64,7 @@ export default function EditAddress() {
 
   const fetchCities = async stateId => {
     try {
-      const res = await axios.get(`http://10.0.2.2:5000/api/cities/${stateId}`);
+      const res = await axios.get(`${BASE_URL}/api/cities/${stateId}`);
       setCities(Array.isArray(res.data) ? res.data : []);
     } catch (error) {
       console.error('Error fetching cities:', error);
@@ -73,7 +73,7 @@ export default function EditAddress() {
 
   const fetchRegions = async cityId => {
     try {
-      const res = await axios.get(`http://10.0.2.2:5000/api/regions/${cityId}`);
+      const res = await axios.get(`${BASE_URL}/api/regions/${cityId}`);
       setRegions(Array.isArray(res.data) ? res.data : []);
     } catch (error) {
       console.error('Error fetching regions:', error);
@@ -82,16 +82,13 @@ export default function EditAddress() {
 
   const handleUpdate = async values => {
     try {
-      await axios.put(
-        `http://10.0.2.2:5000/api/employee/${userData.employee_id}`,
-        {
-          state_id: values.state_id,
-          city_id: values.city_id,
-          region_id: values.region_id,
-          address: values.address,
-          email: userData.email,
-        },
-      );
+      await axios.put(`${BASE_URL}/api/employee/${userData.employee_id}`, {
+        state_id: values.state_id,
+        city_id: values.city_id,
+        region_id: values.region_id,
+        address: values.address,
+        email: userData.email,
+      });
       Alert.alert('Success', 'Address updated successfully');
     } catch (err) {
       Alert.alert('Error', err.response?.data?.error || 'Failed to update');

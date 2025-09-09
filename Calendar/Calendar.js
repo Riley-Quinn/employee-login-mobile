@@ -33,7 +33,7 @@ const EventsCalendar = () => {
         setLoading(true);
         const userId = await AsyncStorage.getItem('userId');
         const response = await axios.get(
-          `http://10.0.2.2:5000/api/tickets/employee/${userId}`,
+          `${BASE_URL}/api/tickets/employee/${userId}`,
         );
         const tickets = response.data?.list || [];
 

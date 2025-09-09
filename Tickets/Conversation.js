@@ -73,7 +73,7 @@ const AddConversation = ({ data, user, customerComments, fetchData }) => {
   }, [customerComments]);
 
   const setupSocketIO = useCallback(() => {
-    const socketUrl = `http://10.0.2.2:5000`;
+    const socketUrl = `${BASE_URL}`;
     socket.current = io(socketUrl, {
       transports: ['websocket'],
     });
@@ -122,7 +122,7 @@ const AddConversation = ({ data, user, customerComments, fetchData }) => {
         ),
       };
 
-      await axios.put(`http://10.0.2.2:5000/api/tickets/${data?.ticket_id}`, {
+      await axios.put(`${BASE_URL}/api/tickets/${data?.ticket_id}`, {
         ticketData,
       });
 

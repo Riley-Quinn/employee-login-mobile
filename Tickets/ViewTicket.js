@@ -377,7 +377,7 @@ const ViewTickets = () => {
                   {media.file_type === 'Photo' ? (
                     <Image
                       source={{
-                        uri: `https://d3shribgms6bz4.cloudfront.net/${encodeURIComponent(
+                        uri: `https://d2plv0g319oam3.cloudfront.net/${encodeURIComponent(
                           media.file_name,
                         )}`,
                       }}
@@ -394,7 +394,7 @@ const ViewTickets = () => {
                   ) : media.file_type === 'Video' ? (
                     <Video
                       source={{
-                        uri: `https://d3shribgms6bz4.cloudfront.net/${encodeURIComponent(
+                        uri: `https://d2plv0g319oam3.cloudfront.net/${encodeURIComponent(
                           media.file_name,
                         )}`,
                       }}
@@ -460,7 +460,7 @@ const ViewTickets = () => {
                       >
                         <Image
                           source={{
-                            uri: `https://d3shribgms6bz4.cloudfront.net/${media.file_name}`,
+                            uri: `https://d2plv0g319oam3.cloudfront.net/${media.file_name}`,
                           }}
                           style={styles.mediaImage}
                         />
@@ -544,7 +544,7 @@ const ViewTickets = () => {
                         {media.file_type === 'Photo' ? (
                           <Image
                             source={{
-                              uri: `https://d3shribgms6bz4.cloudfront.net/${media.file_name}`,
+                              uri: `https://d2plv0g319oam3.cloudfront.net/${media.file_name}`,
                             }}
                             style={styles.mediaImage}
                           />
@@ -605,7 +605,7 @@ const ViewTickets = () => {
             {selectedMedia && selectedMedia.file_type === 'Photo' && (
               <Image
                 source={{
-                  uri: `https://d3shribgms6bz4.cloudfront.net/${selectedMedia.file_name}`,
+                  uri: `https://d2plv0g319oam3.cloudfront.net/${selectedMedia.file_name}`,
                 }}
                 style={{
                   width: '90%',
@@ -618,7 +618,7 @@ const ViewTickets = () => {
             {selectedMedia && selectedMedia.file_type === 'Video' && (
               <Video
                 source={{
-                  uri: `https://d3shribgms6bz4.cloudfront.net/${selectedMedia.file_name}`,
+                  uri: `https://d2plv0g319oam3.cloudfront.net/${selectedMedia.file_name}`,
                 }}
                 style={{ width: '90%', height: '80%' }}
                 controls

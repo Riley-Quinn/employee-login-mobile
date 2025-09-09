@@ -13,7 +13,6 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Dropdown } from 'react-native-element-dropdown';
-import { Dimensions } from 'react-native';
 import moment from 'moment';
 
 import axios from 'axios';
@@ -23,7 +22,6 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import FontAwesome6 from 'react-native-vector-icons/FontAwesome6';
 import { BarChart } from 'react-native-gifted-charts';
-const screenWidth = Dimensions.get('window').width;
 
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import { BASE_URL } from '@env';
@@ -798,10 +796,6 @@ const Dashboard = ({ navigation }) => {
             data={groupedBarData}
             barWidth={12}
             spacing={15}
-            // hideRules
-            // yAxisThickness={1}
-            // roundedTop
-            // roundedBottom
             noOfSections={5}
             maxValue={Math.max(
               ...weeklyData.map(d => (d.done || 0) + (d.todo || 0)),
