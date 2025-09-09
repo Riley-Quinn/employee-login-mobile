@@ -28,7 +28,7 @@ const Login = ({ navigation }) => {
   //   setLoading(true);
   //   try {
   //     const res = await axios.post(
-  //       `http://10.0.2.2:5000/api/auth/admin/login`,
+  //       `${BASE_URL}/api/auth/admin/login`,
   //       {
   //         email: values.email,
   //         password: values.password,
@@ -65,14 +65,11 @@ const Login = ({ navigation }) => {
   // };
   const handleLogin = async (values, { setSubmitting }) => {
     try {
-      const response = await axios.post(
-        'http://10.0.2.2:5000/api/auth/admin/login',
-        {
-          email: values.email,
-          password: values.password,
-          rememberMe: true,
-        },
-      );
+      const response = await axios.post('${BASE_URL}/api/auth/admin/login', {
+        email: values.email,
+        password: values.password,
+        rememberMe: true,
+      });
 
       const userData = response.data.empData;
 
@@ -196,15 +193,6 @@ const Login = ({ navigation }) => {
                   <TouchableOpacity onPress={handleForgotPassword}>
                     <Text style={styles.forgotText}>Forgot Password ?</Text>
                   </TouchableOpacity>
-
-                  {/* <View style={styles.checkboxContainer}>
-                    <CheckBox
-                      value={rememberMe}
-                      onValueChange={setRememberMe}
-                      tintColors={{ true: '#fff', false: '#fff' }}
-                    />
-                    <Text style={styles.rememberMe}>Remember Me</Text>
-                  </View> */}
                 </View>
               </>
             )}
@@ -284,7 +272,7 @@ const styles = StyleSheet.create({
   },
   options: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     alignItems: 'center',
     marginTop: 20,
     paddingHorizontal: 20,
@@ -296,19 +284,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
 
     fontSize: 14,
-  },
-  checkboxContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  checkboxWrapper: {
-    transform: [{ scaleX: 0.6 }, { scaleY: 0.6 }],
-    marginRight: 8,
-  },
-  rememberMe: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
   },
 
   error: {

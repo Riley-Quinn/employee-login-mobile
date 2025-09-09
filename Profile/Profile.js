@@ -37,9 +37,7 @@ const ProfileScreen = ({ navigation }) => {
     if (userId) {
       const fetchProfile = async () => {
         try {
-          const res = await axios.get(
-            `http://10.0.2.2:5000/api/employee/${userId}`,
-          );
+          const res = await axios.get(`${BASE_URL}/api/employee/${userId}`);
           setProfile(res.data);
         } catch (error) {
           console.error(error.message);
@@ -156,7 +154,7 @@ const styles = StyleSheet.create({
   header: {
     paddingVertical: 40,
     alignItems: 'center',
-    backgroundColor: '#4ac7b7',
+    backgroundColor: '#008080',
   },
   headerTitle: {
     color: '#fff',
@@ -169,7 +167,7 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 55,
-    backgroundColor: '#008080',
+    backgroundColor: '#4ac7b7',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 10,
@@ -213,7 +211,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 10,
-    backgroundColor: '#4ac7b7',
+    backgroundColor: '#008080',
     justifyContent: 'center',
     alignItems: 'center',
   },

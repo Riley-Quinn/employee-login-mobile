@@ -16,13 +16,14 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Modal from 'react-native-modal';
+import { BASE_URL } from '@env';
 
 const EventsOverview = () => {
   const [eventType, setEventType] = useState('Scheduled');
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState(null);
-  const [isFilterVisible, setIsFilterVisible] = useState(false); // modal state
+  const [isFilterVisible, setIsFilterVisible] = useState(false);
   const navigation = useNavigation();
 
   const eventOptions = [
@@ -43,7 +44,7 @@ const EventsOverview = () => {
     try {
       setLoading(true);
       const response = await axios.get(
-        `http://10.0.2.2:5000/api/tickets/employee/${userId}`,
+        `${BASE_URL}/api/tickets/employee/${userId}`,
         { params: { status_id: 2 } },
       );
       const tickets = response.data?.list || [];
@@ -175,7 +176,9 @@ const EventsOverview = () => {
             />
           ) : rows.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No tickets found.</Text>
+              <Text style={styles.emptyText}>
+                No Ticket are scheduled today.
+              </Text>
             </View>
           ) : (
             <FlatList
@@ -254,7 +257,7 @@ const styles = StyleSheet.create({
     padding: 18,
   },
   card: {
-    marginBottom: 12,
+    marginBottom: -10,
   },
   ticketCard: {
     backgroundColor: '#fff',
@@ -291,7 +294,8 @@ const styles = StyleSheet.create({
     color: '#888',
     fontSize: 14,
     width: 100,
-    marginHorizontal: 40,
+    marginRight: 30,
+    textAlign: 'right',
   },
 
   colon: {

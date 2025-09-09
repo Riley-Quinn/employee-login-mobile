@@ -41,14 +41,11 @@ const EditProfile = ({ navigation }) => {
         const userId = await AsyncStorage.getItem('userId');
 
         const clientId = await AsyncStorage.getItem('clientId');
-        const res = await axios.get(
-          `http://10.0.2.2:5000/api/employee/${userId}`,
-          {
-            headers: {
-              'x-client-id': clientId,
-            },
+        const res = await axios.get(`${BASE_URL}/api/employee/${userId}`, {
+          headers: {
+            'x-client-id': clientId,
           },
-        );
+        });
         const data = res.data;
         setInitialValues({
           name: data?.name || '',
@@ -66,7 +63,7 @@ const EditProfile = ({ navigation }) => {
   const handleSave = async values => {
     try {
       const userId = await AsyncStorage.getItem('userId');
-      await axios.put(`http://10.0.2.2:5000/api/employee/${userId}`, values);
+      await axios.put(`${BASE_URL}/api/employee/${userId}`, values);
       navigation.navigate('ProfileScreen');
       Alert.alert('Success', 'Profile updated successfully!');
     } catch (error) {
@@ -278,6 +275,8 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingHorizontal: 12,
     marginBottom: 15,
+    width: '110%',
+    alignSelf: 'center',
   },
 
   input: {

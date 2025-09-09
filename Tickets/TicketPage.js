@@ -78,9 +78,9 @@ const TicketPage = ({ navigation }) => {
 
         console.log(
           '🌐 Fetching ticket statuses from:',
-          `http://10.0.2.2:5000/api/ticket-statuses`,
+          `${BASE_URL}/api/ticket-statuses`,
         );
-        const res = await axios.get(`http://10.0.2.2:5000/api/ticket-statuses`);
+        const res = await axios.get(`${BASE_URL}/api/ticket-statuses`);
         console.log('✅ Ticket statuses API response:', res?.data);
 
         setTicketStatuses(res?.data || []);
@@ -96,7 +96,7 @@ const TicketPage = ({ navigation }) => {
 
     try {
       const response = await axios.get(
-        `http://10.0.2.2:5000/api/tickets/employee/${userId}`,
+        `${BASE_URL}/api/tickets/employee/${userId}`,
       );
       let list = response?.data?.list || [];
 
@@ -121,7 +121,7 @@ const TicketPage = ({ navigation }) => {
     const fetchTicketCounts = async () => {
       try {
         const response = await axios.get(
-          `http://10.0.2.2:5000/api/tickets/employee/ticket-counts/${userId}`,
+          `${BASE_URL}/api/tickets/employee/ticket-counts/${userId}`,
         );
 
         console.log('📊 Ticket counts response:', response.data);
@@ -162,7 +162,7 @@ const TicketPage = ({ navigation }) => {
       employee_arrival_date: null,
     };
     try {
-      await axios.put(`http://10.0.2.2:5000/api/tickets/${item.ticket_id}`, {
+      await axios.put(`${BASE_URL}/api/tickets/${item.ticket_id}`, {
         ticketData,
       });
       fetchTickets();
@@ -186,7 +186,7 @@ const TicketPage = ({ navigation }) => {
     );
 
     try {
-      await axios.put(`http://10.0.2.2:5000/api/tickets/${item.ticket_id}`, {
+      await axios.put(`${BASE_URL}/api/tickets/${item.ticket_id}`, {
         ticketData: { status_id: 3, status_tracker: trackerData },
       });
       fetchTickets();
@@ -220,15 +220,12 @@ const TicketPage = ({ navigation }) => {
       selectedTicket.employee_phone,
     );
     try {
-      await axios.put(
-        `http://10.0.2.2:5000/api/tickets/${selectedTicket.ticket_id}`,
-        {
-          ticketData: {
-            employee_arrival_date: formattedDate,
-            status_tracker: trackerData,
-          },
+      await axios.put(`${BASE_URL}/api/tickets/${selectedTicket.ticket_id}`, {
+        ticketData: {
+          employee_arrival_date: formattedDate,
+          status_tracker: trackerData,
         },
-      );
+      });
       fetchTickets();
       setModalVisible(false);
       Alert.alert('Success', 'Arrival date updated');
@@ -255,12 +252,9 @@ const TicketPage = ({ navigation }) => {
     );
 
     try {
-      await axios.put(
-        `http://10.0.2.2:5000/api/tickets/${selectedTicket.ticket_id}`,
-        {
-          ticketData: { status_tracker: trackerData, status_id: 3 },
-        },
-      );
+      await axios.put(`${BASE_URL}/api/tickets/${selectedTicket.ticket_id}`, {
+        ticketData: { status_tracker: trackerData, status_id: 3 },
+      });
       fetchTickets();
       setServiceVisible(false);
       setServiceReason('');
@@ -301,12 +295,9 @@ const TicketPage = ({ navigation }) => {
     }
 
     try {
-      await axios.put(
-        `http://10.0.2.2:5000/api/tickets/${selectedTicket.ticket_id}`,
-        {
-          ticketData,
-        },
-      );
+      await axios.put(`${BASE_URL}/api/tickets/${selectedTicket.ticket_id}`, {
+        ticketData,
+      });
       fetchTickets();
       setEditVisible(false);
       setEditStatus('');
@@ -402,10 +393,10 @@ const TicketPage = ({ navigation }) => {
           <View style={styles.infoSection}>
             <View style={styles.infoRow}>
               <Text style={styles.title}>{item.title ? item.title : '-'}</Text>
-
+            </View>
+            <View style={styles.infoRow}>
               <Text style={styles.label}>{item.description}</Text>
             </View>
-
             <View style={[styles.infoRow, { justifyContent: 'space-between' }]}>
               <Text style={styles.boldLabel}>
                 Category:{' '}
@@ -426,7 +417,9 @@ const TicketPage = ({ navigation }) => {
                 justifyContent: 'space-between',
               }}
             >
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View
+                style={{ flex: 2, flexDirection: 'row', alignItems: 'center' }}
+              >
                 <MaterialIcons
                   name="person-outline"
                   size={18}
@@ -439,85 +432,77 @@ const TicketPage = ({ navigation }) => {
                 </Text>
               </View>
 
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <MaterialIcons
-                  name="access-time"
-                  size={18}
-                  color="#555"
-                  style={{ marginRight: 4 }}
-                />
-                <Text style={styles.boldLabel}>
-                  Created On:{' '}
-                  <Text style={styles.label}>
-                    {item.created_at?.split('T')[0]}
-                  </Text>
-                </Text>
-              </View>
+              {item.status_id === 2 && (
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    flex: 1,
+                    justifyContent: 'flex-end',
+                  }}
+                >
+                  <TouchableOpacity
+                    style={[
+                      styles.arrivalButton,
+                      { flex: 0, paddingVertical: 6, paddingHorizontal: 10 },
+                    ]}
+                    onPress={() => {
+                      setSelectedTicket(item);
+                      setModalVisible(true);
+                    }}
+                  >
+                    <Text style={styles.buttonText}>Arrival Date</Text>
+                  </TouchableOpacity>
+
+                  {item.employee_arrival_date && (
+                    <TouchableOpacity
+                      style={[
+                        styles.startButton,
+                        {
+                          flex: 0,
+                          paddingVertical: 6,
+                          paddingHorizontal: 10,
+                          marginLeft: 4,
+                        },
+                      ]}
+                      onPress={() => handleStartWork(item)}
+                    >
+                      <Text style={styles.buttonText}>Start</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
+
+              {item.status_id === 3 && (
+                <View
+                  style={[
+                    styles.inProgressActionRow,
+                    { flexDirection: 'row', justifyContent: 'flex-end' },
+                  ]}
+                >
+                  <TouchableOpacity
+                    style={styles.serviceButton}
+                    onPress={() => {
+                      setSelectedTicket(item);
+                      setServiceVisible(true);
+                    }}
+                  >
+                    <Text style={styles.whiteButtonText}>Service Update</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.editButton}
+                    onPress={() => {
+                      setSelectedTicket(item);
+                      setEditVisible(true);
+                    }}
+                  >
+                    <Text style={styles.whiteButtonText}>Edit</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
           </View>
         </View>
-
-        {item.status_id === 1 && (
-          <View style={styles.singleButtonWrapper}>
-            <TouchableOpacity
-              style={styles.Assign}
-              onPress={() => handleAssignToMe(item)}
-            >
-              <Text style={styles.buttonText}>Assign to Me</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {item.status_id === 2 && (
-          <View style={styles.buttonRow}>
-            <TouchableOpacity
-              style={
-                item.employee_arrival_date
-                  ? styles.arrivalButton
-                  : styles.arrivalDateAlone
-              }
-              onPress={() => {
-                setSelectedTicket(item);
-                setModalVisible(true);
-              }}
-            >
-              <Text style={styles.buttonText}>Arrival Date</Text>
-            </TouchableOpacity>
-
-            {item.employee_arrival_date && (
-              <TouchableOpacity
-                style={styles.startButton}
-                onPress={() => handleStartWork(item)}
-              >
-                <Text style={styles.buttonText}>Start</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        )}
-
-        {item.status_id === 3 && (
-          <View style={styles.inProgressActionRow}>
-            <TouchableOpacity
-              style={styles.serviceButton}
-              onPress={() => {
-                setSelectedTicket(item);
-                setServiceVisible(true);
-              }}
-            >
-              <Text style={styles.whiteButtonText}>Service Update</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.editButton}
-              onPress={() => {
-                setSelectedTicket(item);
-                setEditVisible(true);
-              }}
-            >
-              <Text style={styles.whiteButtonText}>Edit</Text>
-            </TouchableOpacity>
-          </View>
-        )}
       </TouchableOpacity>
     );
   };
@@ -543,7 +528,7 @@ const TicketPage = ({ navigation }) => {
             }}
           >
             <Text style={styles.Tickets}>Tickets</Text>
-            <MaterialIcons name="filter-list" size={24} color="#000" />
+            <MaterialIcons name="filter-list" size={20} color="#000" />
           </View>
         </TouchableOpacity>
       </View>
@@ -868,7 +853,8 @@ const styles = StyleSheet.create({
   cardContents: {
     backgroundColor: '#fff',
     borderRadius: 10,
-    padding: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     marginHorizontal: 6,
     marginVertical: 8,
     shadowColor: '#000',
@@ -876,8 +862,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
-    top: -5,
   },
+
   headerRow: {
     flexDirection: 'row',
     marginVertical: 6,
@@ -885,7 +871,7 @@ const styles = StyleSheet.create({
   ticketId: {
     fontWeight: 'bold',
     fontSize: 16,
-    color: '#333',
+    color: '#fff',
   },
   statusChip: {
     paddingHorizontal: 8,
@@ -915,13 +901,13 @@ const styles = StyleSheet.create({
   },
   boldLabel: {
     fontWeight: 'bold',
-    fontSize: 14,
+    fontSize: 12,
     color: '#555',
   },
   label: {
     fontWeight: 'bold',
     color: '#555',
-    fontSize: 14,
+    fontSize: 12,
   },
   labels: {
     fontWeight: 'bold',
@@ -955,9 +941,9 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 12,
   },
-  filterRow: {
-    marginVertical: 10,
-  },
+  // filterRow: {
+  //   marginVertical: 10,
+  // },
   Tickets: {
     fontWeight: '600',
     color: '#000',
@@ -1202,7 +1188,8 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    padding: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 2,
   },
 
   actionButton: {
@@ -1268,13 +1255,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   arrivalButton: {
-    flex: 1,
     backgroundColor: '#ff9800',
-    paddingVertical: 10,
     borderRadius: 10,
-    marginRight: 6,
-    marginBottom: 10,
-
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 3,
@@ -1282,16 +1264,13 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
     shadowRadius: 2,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
   },
 
   startButton: {
-    flex: 1,
     backgroundColor: '#4caf50',
-    paddingVertical: 10,
     borderRadius: 10,
-    marginBottom: 10,
-
-    marginLeft: 6,
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 3,
@@ -1299,6 +1278,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
     shadowRadius: 2,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    marginLeft: 4,
   },
 
   inProgressActionRow: {
@@ -1309,11 +1291,8 @@ const styles = StyleSheet.create({
   },
 
   serviceButton: {
-    flex: 1,
     backgroundColor: '#FFA726',
-    paddingVertical: 10,
     borderRadius: 10,
-    marginBottom: 10,
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 3,
@@ -1321,15 +1300,13 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
     shadowRadius: 2,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
   },
 
   editButton: {
-    flex: 1,
     backgroundColor: '#4DB6AC',
-    paddingVertical: 10,
     borderRadius: 10,
-    marginBottom: 10,
-
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 3,
@@ -1337,6 +1314,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
     shadowRadius: 2,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
   },
 
   buttonText: {
