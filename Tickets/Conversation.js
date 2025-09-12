@@ -149,7 +149,6 @@ const AddConversation = ({ data, user, customerComments, fetchData }) => {
   return (
     <ScrollView>
       <View style={styles.messagesContainer}>
-        <Text style={styles.title}>Customer</Text>
         {conversationData.length === 0 ? (
           <Text style={styles.noData}>No conversation yet.</Text>
         ) : (
@@ -171,38 +170,32 @@ const AddConversation = ({ data, user, customerComments, fetchData }) => {
         }
       >
         {({ values, handleChange, handleSubmit }) => (
-          <View style={styles.formContainer}>
-            <TextInput
-              placeholder="Type a message"
-              placeholderTextColor="#888"
-              style={styles.input}
-              value={values.customer_comments}
-              onChangeText={handleChange('customer_comments')}
-              multiline
-            />
-            {/* <TouchableOpacity
-              onPress={() => console.log('Attach file clicked')}
-              style={{
-                width: 30,
-                height: 30,
-                borderRadius: 20,
-                backgroundColor: '#888',
-                justifyContent: 'center',
-                alignItems: 'center',
-                marginRight: 8,
-              }}
-            >
-              <MaterialIcons name="attach-file" size={24} color="#fff" />
-            </TouchableOpacity> */}
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+            }}
+          >
+            <View style={[styles.formContainer, { flex: 1 }]}>
+              <TextInput
+                placeholder="Type a message"
+                placeholderTextColor="#888"
+                style={styles.input}
+                value={values.customer_comments}
+                onChangeText={handleChange('customer_comments')}
+                multiline
+              />
+            </View>
 
             <TouchableOpacity
               onPress={handleSubmit}
               disabled={!values.customer_comments}
               style={{
+                marginLeft: 8,
                 backgroundColor: !values.customer_comments ? '#ccc' : '#007AFF',
-                paddingHorizontal: 15,
-                paddingVertical: 10,
-                borderRadius: 25,
+                paddingHorizontal: 8,
+                paddingVertical: 8,
+                borderRadius: 15,
                 justifyContent: 'center',
                 alignItems: 'center',
               }}
@@ -262,19 +255,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fff',
-    borderRadius: 30,
-    marginHorizontal: 10,
-    marginVertical: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    borderRadius: 10,
+
     elevation: 2,
   },
+
   input: {
     flex: 1,
     fontSize: 14,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+    paddingVertical: 2,
+    paddingHorizontal: 2,
     color: '#888',
+    marginHorizontal: 10,
     fontWeight: 'bold',
   },
   button: {

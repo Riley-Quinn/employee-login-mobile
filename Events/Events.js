@@ -263,7 +263,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 12,
     marginVertical: 8,
-    marginHorizontal: 10,
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -281,6 +280,7 @@ const styles = StyleSheet.create({
   },
   infoSection: {
     marginVertical: 10,
+    marginLeft: 40,
   },
   row: {
     flexDirection: 'row',
@@ -292,12 +292,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#888',
     fontSize: 14,
-    width: 100,
-    marginHorizontal: 40,
+    width: 90,
   },
 
   colon: {
-    marginHorizontal: 2,
+    marginHorizontal: 4,
     fontWeight: 'bold',
     color: '#888',
   },

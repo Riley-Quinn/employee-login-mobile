@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { Animated } from 'react-native';
 import {
   View,
   Text,
@@ -14,6 +15,7 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Dropdown } from 'react-native-element-dropdown';
 import moment from 'moment';
+import dayjs from 'dayjs';
 
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -56,9 +58,11 @@ const Dashboard = ({ navigation }) => {
   const [userId, setUserId] = useState(null);
   const [showDropdown, setShowDropdown] = useState(false);
   const [weeklyData, setWeeklyData] = useState([]);
-
   const [editStatus, setEditStatus] = useState('');
   const [editReason, setEditReason] = useState('');
+  const [popupVisible, setPopupVisible] = useState(false);
+  const [popupData, setPopupData] = useState(null);
+
   const [statusFilter, setStatusFilter] = useState(null);
   const [ticketStatuses, setTicketStatuses] = useState([]);
   const [statusCounts, setStatusCounts] = useState({
@@ -118,48 +122,79 @@ const Dashboard = ({ navigation }) => {
       const response = await axios.get(
         `${BASE_URL}/api/tickets/employee/${userId}`,
       );
-      let list = response?.data?.list || [];
 
+      const allTickets = response?.data?.list || [];
+
+      let filteredTickets = allTickets;
       if (statusFilter && statusFilter !== 'all') {
-        list = list.filter(
+        filteredTickets = allTickets.filter(
           ticket => ticket.status_id.toString() === statusFilter,
         );
       }
 
-      const highPriorityTickets = list.filter(
-        ticket => ticket.priority_rank === 'High',
-      );
+      const today = moment().format('YYYY-MM-DD');
 
-      const topTickets = highPriorityTickets
-        .sort((a, b) => b.urgency - a.urgency)
-        .slice(0, 3);
+      const todayTickets = filteredTickets.filter(ticket => {
+        const isToday =
+          ticket.employee_arrival_date &&
+          moment(ticket.employee_arrival_date).format('YYYY-MM-DD') === today;
 
-      setTickets(topTickets);
+        const isNotDone =
+          ticket.status_id !== 6 &&
+          ticket.status_name?.toLowerCase() !== 'done';
 
+        return isToday && isNotDone;
+      });
+
+      const sortedTodayTickets = todayTickets.sort((a, b) => {
+        const timeA = a.employee_arrival_time || '00:00:00';
+        const timeB = b.employee_arrival_time || '00:00:00';
+        return moment(timeA, 'HH:mm:ss') - moment(timeB, 'HH:mm:ss');
+      });
+
+      let finalTickets = [];
+
+      if (sortedTodayTickets.length > 0) {
+        const highPriorityToday = sortedTodayTickets.filter(
+          ticket => ticket.priority_rank === 'High',
+        );
+        finalTickets = highPriorityToday
+          .sort((a, b) => b.urgency - a.urgency)
+          .slice(0, 3);
+      } else {
+        const highPriorityTodo = filteredTickets.filter(
+          ticket =>
+            ticket.priority_rank === 'High' &&
+            (ticket.status_id === 2 ||
+              ticket.status_name?.toLowerCase() === 'todo'),
+        );
+
+        finalTickets = highPriorityTodo
+          .sort((a, b) => b.urgency - a.urgency)
+          .slice(0, 3);
+      }
+
+      setTickets(finalTickets);
       const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       const weeklyCounts = days.map(day => ({ label: day, done: 0, todo: 0 }));
 
-      const startOfWeek = moment().startOf('week');
-      const endOfWeek = moment().endOf('week');
-
-      list.forEach(ticket => {
+      allTickets.forEach(ticket => {
         const createdDate = moment(ticket.created_at);
         const dayIndex = createdDate.day();
 
         if (
-          ticket.status_id === 1 ||
+          ticket.status_id === 2 ||
           ticket.status_name?.toLowerCase() === 'todo'
         ) {
-          if (createdDate.isBetween(startOfWeek, endOfWeek, 'day', '[]')) {
-            weeklyCounts[dayIndex].todo += 1;
-          }
+          weeklyCounts[dayIndex].todo += 1;
         }
 
         if (
           ticket.status_id === 6 ||
           ticket.status_name?.toLowerCase() === 'done'
         ) {
-          let doneDate = null;
+          let doneDate = createdDate;
+
           if (Array.isArray(ticket.status_tracker)) {
             const doneEntry = ticket.status_tracker.find(
               entry =>
@@ -169,12 +204,9 @@ const Dashboard = ({ navigation }) => {
             if (doneEntry)
               doneDate = moment(doneEntry.Date || doneEntry.updatedDate);
           }
-          if (!doneDate) doneDate = createdDate;
 
-          if (doneDate.isBetween(startOfWeek, endOfWeek, 'day', '[]')) {
-            const dayIndexDone = doneDate.day();
-            weeklyCounts[dayIndexDone].done += 1;
-          }
+          const dayIndexDone = doneDate.day();
+          weeklyCounts[dayIndexDone].done += 1;
         }
       });
 
@@ -182,9 +214,35 @@ const Dashboard = ({ navigation }) => {
     } catch (error) {
       console.error('Error fetching tickets:', error);
       setTickets([]);
+      setWeeklyData([]);
     }
   }, [userId, statusFilter]);
+  const BlinkingText = ({ children, style, duration = 500 }) => {
+    const opacity = useRef(new Animated.Value(1)).current;
 
+    useEffect(() => {
+      const blink = Animated.loop(
+        Animated.sequence([
+          Animated.timing(opacity, {
+            toValue: 0,
+            duration,
+            useNativeDriver: true,
+          }),
+          Animated.timing(opacity, {
+            toValue: 1,
+            duration,
+            useNativeDriver: true,
+          }),
+        ]),
+      );
+      blink.start();
+      return () => blink.stop();
+    }, [opacity, duration]);
+
+    return (
+      <Animated.Text style={[style, { opacity }]}>{children}</Animated.Text>
+    );
+  };
   useEffect(() => {
     if (!userId) return;
 
@@ -219,47 +277,31 @@ const Dashboard = ({ navigation }) => {
   const groupedBarData = [];
   weeklyData.forEach(day => {
     groupedBarData.push({
-      value: day.done || 0,
+      value: day.done,
       label: day.label,
       spacing: 2,
       labelWidth: 30,
       labelTextStyle: { color: 'gray' },
       frontColor: '#008080',
+      onPress: () => {
+        setPopupData({
+          label: day.label,
+          done: day.done ?? 0,
+          todo: day.todo ?? 0,
+        });
+        setPopupVisible(true);
+      },
     });
     groupedBarData.push({
-      value: day.todo || 0,
+      value: day.todo,
       frontColor: '#377df7',
+      onPress: () => {
+        console.log('Clicked day:', day);
+        setPopupData(day);
+        setPopupVisible(true);
+      },
     });
   });
-  const handleAssignToMe = async item => {
-    const userStr = await AsyncStorage.getItem('userId');
-    const user = JSON.parse(userStr);
-    const trackerData = StatusTracker(
-      item.status_tracker,
-      'Engineer is Assigned',
-      'In-Progress',
-      2,
-      user.name,
-      user.name,
-      user.phone || '',
-    );
-    const ticketData = {
-      assigned_employee_id: userId,
-      status_id: 2,
-      priority_rank: 'High',
-      status_tracker: trackerData,
-      employee_arrival_date: null,
-    };
-    try {
-      await axios.put(`${BASE_URL}/api/tickets/${item.ticket_id}`, {
-        ticketData,
-      });
-      fetchTickets();
-      Alert.alert('Success', 'Ticket assigned successfully');
-    } catch {
-      Alert.alert('Error', 'Failed to assign ticket');
-    }
-  };
 
   const handleStartWork = async item => {
     const userStr = await AsyncStorage.getItem('userId');
@@ -444,19 +486,16 @@ const Dashboard = ({ navigation }) => {
           }
         }}
       >
-        <View style={styles.cardContents}>
-          <View
-            style={[
-              styles.headerRow,
-              {
-                backgroundColor: '#008080',
-                padding: 10,
-                borderRadius: 8,
-                alignItems: 'center',
-              },
-            ]}
-          >
-            <Text style={styles.ticketId}>#{item.ticket_service_id}</Text>
+        <View style={styles.cardWrapper}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.ticketId}>#{item.ticket_id}</Text>
+            <BlinkingText style={styles.employeee}>
+              {item.employee_arrival_time
+                ? dayjs(`1970-01-01T${item.employee_arrival_time}`).format(
+                    'h:mm A',
+                  )
+                : ''}
+            </BlinkingText>
 
             <View style={{ marginLeft: 'auto' }}>
               {(() => {
@@ -479,44 +518,30 @@ const Dashboard = ({ navigation }) => {
             </View>
           </View>
 
-          <View style={styles.infoSection}>
-            <View style={styles.infoRows}>
-              <Text style={styles.title}>{item.title ? item.title : '-'}</Text>
-              <Text style={styles.label}>{item.description}</Text>
+          <View style={styles.cardBody}>
+            <View style={styles.infoSection}>
+              <View style={styles.infoRows}>
+                <Text style={styles.title}>
+                  {item.title ? item.title : '-'}
+                </Text>
+                <Text style={styles.label}>{item.description}</Text>
+              </View>
+              <View
+                style={[styles.infoRow, { justifyContent: 'space-between' }]}
+              >
+                <Text style={styles.boldLabels}>
+                  Category:{' '}
+                  <Text style={styles.labels}>{item.category_name}</Text>
+                </Text>
+                <Text style={styles.boldLabels}>
+                  Location:{' '}
+                  <Text style={styles.labels}>{` ${item.region_name}`}</Text>
+                </Text>
+              </View>
+              {item.status_id !== 6 && <View style={styles.divider} />}
             </View>
 
-            <View style={[styles.infoRow, { justifyContent: 'space-between' }]}>
-              <Text style={styles.boldLabels}>
-                Category:{' '}
-                <Text style={styles.labels}>{item.category_name}</Text>
-              </Text>
-              <Text style={styles.boldLabels}>
-                Region:{' '}
-                <Text style={styles.labels}>{` ${item.region_name}`}</Text>
-              </Text>
-            </View>
-            <View style={styles.divider} />
-          </View>
-          <View
-            style={[
-              styles.infoRow,
-              {
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              },
-            ]}
-          >
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              {item.status_id === 1 && (
-                <TouchableOpacity
-                  style={styles.assignButton}
-                  onPress={() => handleAssignToMe(item)}
-                >
-                  <Text style={styles.buttonText}>Assign to Me</Text>
-                </TouchableOpacity>
-              )}
-
               {item.status_id === 2 && (
                 <View
                   style={{
@@ -593,7 +618,7 @@ const Dashboard = ({ navigation }) => {
       <SafeAreaView style={{ backgroundColor: '#008080', flex: 0 }}>
         <Text style={styles.ticketNumber}>Dashboard</Text>
       </SafeAreaView>
-      <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
+      <ScrollView>
         <View style={styles.statusGrid}>
           <View
             style={[
@@ -622,17 +647,20 @@ const Dashboard = ({ navigation }) => {
 
               <View
                 style={{
-                  width: 50,
-                  height: 50,
-                  borderRadius: 10,
                   backgroundColor: '#d8b487',
+                  width: 35,
+                  height: 35,
+                  borderRadius: 10,
                   justifyContent: 'center',
                   alignItems: 'center',
+                  position: 'absolute',
+                  top: -20,
+                  right: 5,
                 }}
               >
                 <FontAwesome6
                   name="triangle-exclamation"
-                  size={24}
+                  size={15}
                   color="#fff"
                 />
               </View>
@@ -655,9 +683,6 @@ const Dashboard = ({ navigation }) => {
                 {
                   flexDirection: 'row',
                   alignItems: 'center',
-                  // flexDirection: 'row',
-                  // justifyContent: 'space-between',
-                  // alignItems: 'center',
                 },
               ]}
             >
@@ -671,16 +696,17 @@ const Dashboard = ({ navigation }) => {
               <View
                 style={{
                   backgroundColor: '#81b4f5',
-                  width: 50,
-                  height: 50,
+                  width: 35,
+                  height: 35,
                   borderRadius: 10,
                   justifyContent: 'center',
-                  marginLeft: 'auto', // pushes icon to the right
-
                   alignItems: 'center',
+                  position: 'absolute',
+                  top: -20,
+                  right: 5,
                 }}
               >
-                <Ionicons name="shield-outline" size={24} color="#fff" />
+                <Ionicons name="shield-outline" size={15} color="#fff" />
               </View>
             </View>
           </View>
@@ -713,14 +739,17 @@ const Dashboard = ({ navigation }) => {
               <View
                 style={{
                   backgroundColor: '#9d76cd',
-                  width: 50,
-                  height: 50,
+                  width: 35,
+                  height: 35,
                   borderRadius: 10,
                   justifyContent: 'center',
                   alignItems: 'center',
+                  position: 'absolute',
+                  top: -20,
+                  right: 5,
                 }}
               >
-                <Ionicons name="time-outline" size={24} color="#fff" />
+                <Ionicons name="time-outline" size={15} color="#fff" />
               </View>
             </View>
           </View>
@@ -753,40 +782,29 @@ const Dashboard = ({ navigation }) => {
               <View
                 style={{
                   backgroundColor: '#cf82ac',
-                  width: 50,
-                  height: 50,
+                  width: 35,
+                  height: 35,
                   borderRadius: 10,
                   justifyContent: 'center',
                   alignItems: 'center',
+                  position: 'absolute',
+                  top: -20,
+                  right: 5,
                 }}
               >
-                <Ionicons name="time-outline" size={24} color="#fff" />
+                <Ionicons name="time-outline" size={15} color="#fff" />
               </View>
             </View>
           </View>
         </View>
-
-        <View
-          style={{
-            backgroundColor: '#fff',
-            borderRadius: 12,
-            padding: 15,
-            marginVertical: 20,
-            marginHorizontal: 20,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.2,
-            shadowRadius: 4,
-            elevation: 5,
-          }}
-        >
+        <View style={styles.graph}>
           <Text
             style={{
               fontSize: 16,
               color: '#000',
               fontWeight: '600',
               marginBottom: 10,
-              marginHorizontal: 10,
+              marginHorizontal: -2,
             }}
           >
             Weekly Progress
@@ -796,21 +814,138 @@ const Dashboard = ({ navigation }) => {
             data={groupedBarData}
             barWidth={12}
             spacing={15}
-            noOfSections={5}
-            maxValue={Math.max(
-              ...weeklyData.map(d => (d.done || 0) + (d.todo || 0)),
-              10,
-            )}
+            maxValue={12}
+            yAxisLabelTexts={['0', '2', '4', '6', '8', '10', '12']}
+            yAxisTextStyle={{ color: 'gray', fontSize: 12, fontWeight: 'bold' }}
+            noOfSections={6}
+            xAxisTextStyle={{
+              color: 'black',
+              fontSize: 12,
+              fontWeight: 'bold',
+            }}
           />
+          <Modal visible={popupVisible} transparent animationType="fade">
+            <View
+              style={{
+                flex: 1,
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginBottom: 350,
+              }}
+            >
+              <View
+                style={{
+                  width: 150,
+                  padding: 15,
+                  borderRadius: 10,
+                  backgroundColor: '#fff',
+                  alignItems: 'center',
+                  position: 'relative',
+                  elevation: 5,
+                }}
+              >
+                <TouchableOpacity
+                  onPress={() => setPopupVisible(false)}
+                  style={{
+                    position: 'absolute',
+                    top: 5,
+                    right: 5,
+                    zIndex: 10,
+                  }}
+                >
+                  <Ionicons name="close-circle" size={25} color="#888" />
+                </TouchableOpacity>
+
+                {popupData && (
+                  <>
+                    <Text
+                      style={{
+                        fontSize: 18,
+                        fontWeight: '600',
+                        marginBottom: 10,
+                        color: '#000',
+                      }}
+                    >
+                      {popupData.label}
+                    </Text>
+
+                    <Text
+                      style={{ fontSize: 16, marginBottom: 5, color: '#000' }}
+                    >
+                      Done: {popupData.done ?? 0}
+                    </Text>
+                    <Text style={{ fontSize: 16, color: '#000' }}>
+                      ToDo: {popupData.todo ?? 0}
+                    </Text>
+                  </>
+                )}
+              </View>
+            </View>
+          </Modal>
+
+          <View
+            style={{
+              flexDirection: 'row',
+              marginTop: 5,
+              justifyContent: 'center',
+            }}
+          >
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                marginRight: 15,
+              }}
+            >
+              <View
+                style={{
+                  width: 12,
+                  height: 12,
+                  borderRadius: 6,
+                  backgroundColor: '#008080',
+                  marginRight: 5,
+                }}
+              />
+              <Text style={{ color: '#000', fontSize: 14, fontWeight: 'bold' }}>
+                Done
+              </Text>
+            </View>
+
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View
+                style={{
+                  width: 12,
+                  height: 12,
+                  borderRadius: 6,
+                  backgroundColor: '#377df7',
+                  marginRight: 5,
+                }}
+              />
+              <Text style={{ color: '#000', fontSize: 14, fontWeight: 'bold' }}>
+                ToDo
+              </Text>
+            </View>
+          </View>
         </View>
 
         <View style={styles.filterRow}>
-          <Text style={styles.Tickets}>TodayTickets</Text>
+          <TouchableOpacity
+            onPress={() => setShowDropdown(!showDropdown)}
+            style={styles.filterButton}
+          >
+            <Text style={styles.Tickets}>TodayTickets</Text>
 
-          <View style={{ flex: 1 }} />
+            <View style={{ flex: 1 }} />
 
-          <TouchableOpacity onPress={() => navigation.navigate('TicketPage')}>
-            <Text style={styles.Ticket}>ViewAll</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('TicketPage')}>
+              <Text style={styles.Ticket}>ViewAll</Text>
+            </TouchableOpacity>
+            <MaterialIcons
+              name="filter-list"
+              size={24}
+              color="#000"
+              style={{ marginLeft: 8 }}
+            />
           </TouchableOpacity>
         </View>
         <FlatList
@@ -913,7 +1048,6 @@ const Dashboard = ({ navigation }) => {
             </View>
           </View>
         </Modal>
-        {/* Edit Modal */}
         <Modal visible={modalVisible} transparent animationType="slide">
           <View style={styles.modalWrapper}>
             <View style={styles.modalContent}>
@@ -964,7 +1098,6 @@ const Dashboard = ({ navigation }) => {
             </View>
           </View>
         </Modal>
-        {/* Service Update Modal */}
         <Modal visible={serviceVisible} transparent animationType="slide">
           <View style={styles.modalWrapper}>
             <View style={styles.modalContent}>
@@ -1081,19 +1214,64 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginTop: 8,
   },
+  graph: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    marginTop: -5,
+    paddingLeft: 20,
+    paddingBottom: 20,
+    paddingTop: 20,
+    marginBottom: 50,
+    marginHorizontal: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+
+  cardWrapper: {
+    marginBottom: 12,
+    marginHorizontal: 13,
+    borderRadius: 8,
+    borderWidth: 0.5,
+    borderColor: '#d3d3d3',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
+    elevation: 4,
+    backgroundColor: '#fff',
+  },
+
+  cardHeader: {
+    backgroundColor: '#008080',
+    padding: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  cardBody: {
+    backgroundColor: '#fff',
+    padding: 10,
+  },
+
   textBlock: {
-    marginLeft: -20,
+    marginLeft: -10,
+    marginTop: -20,
   },
   statusTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
+    fontWeight: 'bold',
+    color: '#888',
   },
 
   statusNumber: {
-    fontSize: 22,
-    fontWeight: '500',
-    marginVertical: 12,
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginLeft: 2,
+    marginTop: 10,
     color: '#222',
   },
 
@@ -1101,47 +1279,47 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    margin: 12,
+    margin: 15,
   },
   statusCard: {
     width: '48%',
-    borderRadius: 12,
-    padding: 16,
 
-    marginBottom: 12,
+    borderRadius: 8,
+    paddingTop: 25,
+    paddingBottom: 15,
+    paddingLeft: 10,
+    marginBottom: 8,
+    marginTop: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    backgroundColor: '#fff',
   },
 
-  cardContents: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 15,
-    marginVertical: 20,
-    marginHorizontal: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
-  },
   headerRow: {
     flexDirection: 'row',
     marginVertical: 6,
   },
   ticketId: {
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 14,
     color: '#fff',
+    marginLeft: 10,
+  },
+  employeee: {
+    fontWeight: 'bold',
+    fontSize: 14,
+    color: '#fff',
+    marginLeft: 260,
   },
   statusChip: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 1,
+    borderRadius: 10,
   },
+
   statusText: {
     fontSize: 12,
     fontWeight: 'bold',
@@ -1152,7 +1330,7 @@ const styles = StyleSheet.create({
   },
   infoRow: {
     flexDirection: 'row',
-    marginVertical: 4,
+    marginLeft: -3,
   },
   infoRows: {
     flexDirection: 'column',
@@ -1172,13 +1350,17 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 14,
     color: '#000',
+    marginLeft: -3,
+
+    marginTop: -10,
   },
 
   label: {
     fontWeight: 'bold',
     color: '#555',
     fontSize: 14,
-    marginTop: 10,
+    marginLeft: -3,
+    marginTop: 5,
   },
   labels: {
     fontWeight: 'bold',
@@ -1188,8 +1370,8 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     backgroundColor: '#ddd',
-    marginVertical: 10,
-    borderRadius: 1,
+    marginTop: 6,
+    marginBottom: -7,
   },
 
   infoIcon: {
@@ -1197,15 +1379,14 @@ const styles = StyleSheet.create({
   },
 
   Tickets: {
-    fontWeight: '600',
-    color: '#222',
-    marginHorizontal: 30,
+    fontWeight: 'bold',
+    color: '#000',
     fontSize: 14,
   },
   Ticket: {
     fontWeight: '600',
     color: '#222',
-    marginRight: 20,
+    marginRight: -3,
     fontSize: 14,
   },
 
@@ -1215,30 +1396,6 @@ const styles = StyleSheet.create({
     color: '#efedf4',
     flex: 1,
     marginLeft: 12,
-  },
-  filterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 5,
-    // marginVertical: 8,
-  },
-  filterButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 10,
-  },
-
-  dropdownWrapper: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    backgroundColor: '#fff',
-  },
-
-  picker: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    paddingHorizontal: 10,
   },
 
   cardLabel: {
@@ -1341,6 +1498,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     textAlignVertical: 'center',
   },
+  ticketNumber: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginLeft: 10,
+    color: '#fff',
+  },
 
   priorityText: {
     fontSize: 14,
@@ -1365,7 +1528,18 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginTop: 8,
   },
+  dropdownWrapper: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    backgroundColor: '#fff',
+  },
 
+  picker: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+  },
   modalWrapper: {
     flex: 1,
     justifyContent: 'center',
@@ -1408,13 +1582,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 10,
-  },
-
-  ticketNumber: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginLeft: 10,
-    color: '#fff',
   },
 
   modalButton: {
@@ -1494,7 +1661,17 @@ const styles = StyleSheet.create({
     color: 'black',
     marginBottom: 6,
   },
-
+  filterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 5,
+    marginTop: -50,
+  },
+  filterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+  },
   pickerWrapper: {
     borderColor: '#000',
     borderWidth: 0.5,
@@ -1508,64 +1685,57 @@ const styles = StyleSheet.create({
     marginTop: 12,
     gap: 10,
   },
-  assignButton: {
-    backgroundColor: '#008080',
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 6,
-    marginLeft: 5,
-  },
 
   arrivalButton: {
-    backgroundColor: '#ff6f00',
-    paddingVertical: 5,
-    paddingHorizontal: 10,
+    backgroundColor: '#008080',
+    paddingVertical: 3,
+    paddingHorizontal: 12,
     borderRadius: 6,
+    marginTop: 5,
+
     textAlign: 'center',
+    marginLeft: 10,
+    marginRight: 10,
   },
 
   startButton: {
-    backgroundColor: '#ff6f00',
-    paddingVertical: 5,
-    paddingHorizontal: 10,
+    backgroundColor: '#008080',
+    paddingVertical: 3,
+    marginTop: 5,
+
+    paddingHorizontal: 12,
     borderRadius: 6,
     marginLeft: 5,
   },
 
   serviceButton: {
-    backgroundColor: '#28a745',
-    paddingVertical: 5,
-    paddingHorizontal: 10,
+    backgroundColor: '#008080',
+    paddingVertical: 3,
+    marginTop: 5,
+    paddingHorizontal: 12,
     borderRadius: 6,
+    textAlign: 'center',
+    marginLeft: 10,
+    marginRight: 10,
   },
 
   editButton: {
-    backgroundColor: '#6c757d',
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 6,
-  },
-  Assign: {
-    marginLeft: 'auto',
     backgroundColor: '#008080',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    paddingVertical: 3,
+    marginTop: 5,
+
+    paddingHorizontal: 12,
+    borderRadius: 6,
   },
 
   arrivalDateAlone: {
     marginLeft: 'auto',
     backgroundColor: '#008080',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-  },
+    paddingVertical: 3,
+    marginTop: 5,
 
-  inProgressActionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 12,
-    gap: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
   },
 
   buttonText: {
