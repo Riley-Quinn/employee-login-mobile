@@ -251,7 +251,7 @@ const Password = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
-    paddingVertical: 40,
+    paddingVertical: 100,
     backgroundColor: '#F0F9F8',
     paddingHorizontal: 40,
   },
@@ -294,7 +294,7 @@ const styles = StyleSheet.create({
 
   saveButton: {
     backgroundColor: '#00BFA6',
-    width: '100%',
+    width: '110%',
     borderRadius: 15,
     alignItems: 'center',
     marginTop: 30,
@@ -368,7 +368,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#008080',
     fontWeight: 'bold',
-    marginBottom: 45,
+    marginBottom: 15,
   },
   eyeIconRight: {
     position: 'absolute',

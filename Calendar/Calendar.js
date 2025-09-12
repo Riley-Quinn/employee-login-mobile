@@ -1,32 +1,48 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  ActivityIndicator,
-  TouchableOpacity,
   ScrollView,
+  TouchableOpacity,
+  FlatList,
   StatusBar,
+  ActivityIndicator,
+  Dimensions,
 } from 'react-native';
 import axios from 'axios';
-import { Calendar as BigCalendar } from 'react-native-big-calendar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import dayjs from 'dayjs';
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import Ionicons from 'react-native-vector-icons/Ionicons';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
-import { BASE_URL } from '@env';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+
+const screenWidth = Dimensions.get('window').width;
 
 const EventsCalendar = () => {
   const [events, setEvents] = useState([]);
-  const [mode, setMode] = useState('month');
-  const [date, setDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(
+    dayjs().format('YYYY-MM-DD'),
+  );
+  const [activeTab, setActiveTab] = useState('agenda');
   const [loading, setLoading] = useState(false);
+  const [dates, setDates] = useState([]);
+  const [currentMonth, setCurrentMonth] = useState(dayjs().format('MMMM YYYY'));
+
   const navigation = useNavigation();
 
+  // For FlatList month header update
+  const viewabilityConfig = { itemVisiblePercentThreshold: 10 };
+  const onViewableItemsChanged = useRef(({ viewableItems }) => {
+    if (viewableItems && viewableItems.length > 0) {
+      const firstVisible = viewableItems[0].item;
+      const newMonth = dayjs(firstVisible).format('MMMM YYYY');
+      setCurrentMonth(newMonth);
+    }
+  }).current;
+
+  // Fetch tickets
   useEffect(() => {
     const fetchEvents = async () => {
       try {
@@ -36,25 +52,20 @@ const EventsCalendar = () => {
           `${BASE_URL}/api/tickets/employee/${userId}`,
         );
         const tickets = response.data?.list || [];
-
         const mapped = tickets
           .filter(t => t.employee_arrival_date)
           .map(ticket => {
-            const start = new Date(
-              dayjs(ticket.employee_arrival_date).startOf('day').toISOString(),
-            );
-            const end = new Date(
-              dayjs(ticket.employee_arrival_date).endOf('day').toISOString(),
-            );
+            // Keep all dates in local timezone
+            const dateObj = dayjs(ticket.employee_arrival_date);
             return {
-              start,
-              end,
-              title: `Ticket #${ticket.ticket_id}`,
+              date: dateObj.format('YYYY-MM-DD'),
+              title: `${ticket.ticket_id}`,
+              Title: `${ticket.title}`,
+
+              time: dateObj.format('h:mm A'),
               ticket,
-              ticket_id: ticket.ticket_id,
             };
           });
-
         setEvents(mapped);
       } catch (err) {
         console.error('Failed to fetch events', err);
@@ -62,197 +73,296 @@ const EventsCalendar = () => {
         setLoading(false);
       }
     };
-
     fetchEvents();
-  }, [mode]);
+  }, []);
 
-  const handleEventPress = event => {
-    navigation.navigate('ViewTickets', { ticketId: event.ticket_id });
-  };
-
-  const goToToday = () => setDate(new Date());
-
-  const goToPrevious = () => {
-    const newDate =
-      mode === 'month'
-        ? dayjs(date).subtract(1, 'month')
-        : mode === 'week'
-        ? dayjs(date).subtract(1, 'week')
-        : dayjs(date).subtract(1, 'day');
-    setDate(newDate.toDate());
-  };
-
-  const goToNext = () => {
-    const newDate =
-      mode === 'month'
-        ? dayjs(date).add(1, 'month')
-        : mode === 'week'
-        ? dayjs(date).add(1, 'week')
-        : dayjs(date).add(1, 'day');
-    setDate(newDate.toDate());
-  };
-
-  const formatDateHeader = () => {
-    if (mode === 'month') return dayjs(date).format('MMMM YYYY');
-    if (mode === 'week') {
-      const start = dayjs(date).startOf('week');
-      const end = dayjs(date).endOf('week');
-      return `${start.format('MMM D')} - ${end.format('MMM D, YYYY')}`;
+  // Generate dates for FlatList
+  useEffect(() => {
+    const start = dayjs().subtract(365, 'day');
+    const end = dayjs().add(365, 'day');
+    const temp = [];
+    let curr = start.clone();
+    while (curr.isBefore(end) || curr.isSame(end, 'day')) {
+      temp.push(curr.clone());
+      curr = curr.add(1, 'day');
     }
-    return dayjs(date).format('dddd, MMMM D, YYYY');
-  };
+    setDates(temp);
+  }, []);
 
+  // Group events by date
   const groupedEvents = events.reduce((acc, evt) => {
-    const dateKey = dayjs(evt.start).format('YYYY-MM-DD');
-    if (!acc[dateKey]) acc[dateKey] = [];
-    acc[dateKey].push(evt);
+    if (!acc[evt.date]) acc[evt.date] = [];
+    acc[evt.date].push(evt);
     return acc;
   }, {});
 
+  const handleEventPress = evt => {
+    navigation.navigate('ViewTickets', { ticketId: evt.ticket.ticket_id });
+  };
+
+  const renderDayItem = ({ item }) => {
+    const isSelected = item.isSame(dayjs(selectedDate), 'day');
+    return (
+      <TouchableOpacity
+        onPress={() => setSelectedDate(item.format('YYYY-MM-DD'))}
+        style={styles.dayContainer}
+      >
+        <Text style={styles.dayName}>{item.format('ddd')}</Text>
+        <Text style={isSelected ? styles.selectedDayNumber : styles.dayNumber}>
+          {item.format('D')}
+        </Text>
+        {events.find(e => e.date === item.format('YYYY-MM-DD')) && (
+          <View style={styles.eventDot} />
+        )}
+      </TouchableOpacity>
+    );
+  };
+
   return (
-    <>
+    <View style={{ flex: 1, backgroundColor: '#f2f4f7' }}>
       <StatusBar barStyle="light-content" backgroundColor="#008080" />
-      <SafeAreaView style={{ backgroundColor: '#008080', flex: 0 }}>
+      <View style={styles.headerWrapper}>
         <Text style={styles.headerTitle}>Calendar</Text>
-      </SafeAreaView>
-      <GestureHandlerRootView style={styles.wrapper}>
-        <View style={styles.header}>
-          <View style={styles.navRow}>
-            <TouchableOpacity onPress={goToPrevious} style={styles.navButton}>
-              <Text style={styles.navText}>◀</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={goToToday} style={styles.todayButton}>
-              <Text style={styles.todayText}>Today</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={goToNext} style={styles.navButton}>
-              <Text style={styles.navText}>▶</Text>
-            </TouchableOpacity>
-          </View>
+      </View>
 
-          <View style={styles.titleRow}>
-            <Text style={styles.dateText}>{formatDateHeader()}</Text>
-          </View>
+      {loading && (
+        <ActivityIndicator
+          size="large"
+          color="#008080"
+          style={{ marginTop: 20 }}
+        />
+      )}
 
-          <View style={styles.modeRow}>
-            {['month', 'week', 'day', 'agenda'].map(view => (
-              <TouchableOpacity
-                key={view}
-                style={[
-                  styles.viewButton,
-                  mode === view && styles.viewButtonActive,
-                ]}
-                onPress={() => setMode(view)}
-              >
-                <Text
-                  style={[
-                    styles.viewText,
-                    mode === view && styles.viewTextActive,
-                  ]}
-                >
-                  {view.charAt(0).toUpperCase() + view.slice(1)}
+      <View style={styles.monthContainer}>
+        <Text style={styles.monthText}>{currentMonth}</Text>
+      </View>
+
+      {/* Tabs */}
+      <View style={styles.tabRow}>
+        <TouchableOpacity
+          style={[styles.tabButton, activeTab === 'agenda' && styles.activeTab]}
+          onPress={() => setActiveTab('agenda')}
+        >
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === 'agenda' && styles.activeText,
+            ]}
+          >
+            Agenda
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tabButton, activeTab === 'day' && styles.activeTab]}
+          onPress={() => setActiveTab('day')}
+        >
+          <Text
+            style={[styles.tabText, activeTab === 'day' && styles.activeText]}
+          >
+            Day
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Horizontal days FlatList */}
+      <FlatList
+        data={dates}
+        renderItem={renderDayItem}
+        keyExtractor={item => item.format('YYYY-MM-DD')}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingVertical: 10 }}
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={viewabilityConfig}
+        extraData={currentMonth}
+        initialScrollIndex={dates.findIndex(d => d.isSame(dayjs(), 'day'))}
+        getItemLayout={(data, index) => ({
+          length: 68,
+          offset: 68 * index,
+          index,
+        })}
+      />
+
+      {activeTab === 'agenda' && (
+        <ScrollView style={{ flex: 1, marginTop: -800 }}>
+          {dates.map(date => {
+            const dateStr = date.format('YYYY-MM-DD');
+            return (
+              <View key={dateStr} style={styles.agendaSection}>
+                <Text style={styles.agendaDate}>
+                  {date.isSame(dayjs(), 'day')
+                    ? `${date.format('MMM D')} Today`
+                    : date.format('ddd, MMM D')}
                 </Text>
+
+                {groupedEvents[dateStr]?.length > 0 ? (
+                  groupedEvents[dateStr].map((e, idx) => (
+                    <TouchableOpacity
+                      key={idx}
+                      style={styles.agendaCard}
+                      onPress={() => handleEventPress(e)}
+                    >
+                      <Text style={styles.agendaTime}>{e.time}</Text>
+                      <Text style={styles.agendaTitle}>{e.title}</Text>
+                    </TouchableOpacity>
+                  ))
+                ) : (
+                  <Text style={styles.noEvents}>No events</Text>
+                )}
+              </View>
+            );
+          })}
+        </ScrollView>
+      )}
+
+      {/* {activeTab === 'agenda' && (
+        <ScrollView style={{ flex: 1, marginTop: -600 }}>
+          <View style={styles.agendaSection}>
+            <Text style={styles.agendaDate}>
+              {dayjs(selectedDate).isSame(dayjs(), 'day')
+                ? `${dayjs(selectedDate).format('MMM D')} Today`
+                : dayjs(selectedDate).format('ddd, MMM D')}
+            </Text>
+
+            {(groupedEvents[selectedDate]?.length > 0
+              ? groupedEvents[selectedDate]
+              : []
+            ).map((e, idx) => (
+              <TouchableOpacity
+                key={idx}
+                style={[
+                  styles.agendaCard,
+                  { flexDirection: 'row', alignItems: 'flex-start' },
+                ]}
+                onPress={() => handleEventPress(e)}
+              >
+                <View
+                  style={{ width: 70, alignItems: 'flex-end', paddingRight: 8 }}
+                >
+                  <Text style={styles.agendaTime}>{e.time}</Text>
+                </View>
+
+                <View
+                  style={{
+                    width: 1,
+                    backgroundColor: '#888',
+                    marginRight: 8,
+                    height: '100%',
+                  }}
+                />
+
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.agendaTitle}>{e.Title}</Text>
+                  <Text style={{ fontSize: 13, color: '#000' }}>{e.title}</Text>
+                </View>
               </TouchableOpacity>
             ))}
-          </View>
-        </View>
 
-        {loading ? (
-          <View style={styles.loader}>
-            <ActivityIndicator size="large" color="#008080" />
+            {(!groupedEvents[selectedDate] ||
+              groupedEvents[selectedDate].length === 0) && (
+              <Text style={styles.noEvents}>No events</Text>
+            )}
           </View>
-        ) : mode === 'agenda' ? (
-          <ScrollView>
-            {Object.keys(groupedEvents)
-              .sort()
-              .map(date => (
-                <View key={date} style={styles.agendaSection}>
-                  <Text style={styles.agendaDate}>
-                    {dayjs(date).format('dddd, MMMM D, YYYY')}
-                  </Text>
-                  {groupedEvents[date].map((evt, index) => (
-                    <TouchableOpacity
-                      key={index}
-                      style={styles.agendaCard}
-                      onPress={() => handleEventPress(evt)}
-                    >
-                      <Text style={styles.agendaTime}>
-                        {dayjs(evt.start).format('h:mm A')}
-                      </Text>
-                      <Text style={styles.agendaTitle}>
-                        Ticket #{evt.ticket.ticket_id}
-                      </Text>
-                      <Text style={styles.agendaLocation}>
-                        {evt.ticket.address}, {evt.ticket.city_name}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              ))}
-          </ScrollView>
-        ) : (
-          <BigCalendar
-            events={events}
-            height={680}
-            mode={mode}
-            date={date}
-            onPressEvent={handleEventPress}
-            swipeEnabled
-            maxVisibleEventCount={9999}
-            renderEvent={(event, touchableProps) => (
-              <TouchableOpacity
-                {...touchableProps}
-                style={{
-                  backgroundColor: '#008080',
-                  borderRadius: 3,
-                  padding: 1,
-                  minHeight: 16,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}
-                onPress={() => handleEventPress(event)}
-              >
-                <Text
+        </ScrollView>
+      )} */}
+
+      {activeTab === 'day' && (
+        <ScrollView
+          style={{ flex: 1, marginTop: -720 }}
+          contentContainerStyle={{ paddingBottom: 100 }}
+        >
+          <View style={{ flex: 1, paddingLeft: 0, position: 'relative' }}>
+            <View
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 60,
+                width: 1,
+                height: '100%',
+                backgroundColor: '#bbb',
+                zIndex: 0,
+              }}
+            />
+
+            {Array.from({ length: 24 }).map((_, hour) => {
+              const hourLabel = dayjs(selectedDate)
+                .hour(hour)
+                .minute(0)
+                .format('h A');
+
+              const hourEvents = (groupedEvents[selectedDate] || []).filter(
+                evt => {
+                  const evtHour = parseInt(
+                    dayjs(evt.ticket.employee_arrival_date).format('H'),
+                  );
+                  return evtHour === hour;
+                },
+              );
+
+              const rowHeight = 60 + hourEvents.length * 50;
+
+              return (
+                <View
+                  key={hour}
                   style={{
-                    color: '#fff',
-                    fontSize: 10,
-                    fontWeight: 'bold',
+                    flexDirection: 'row',
+                    height: rowHeight,
+                    alignItems: 'flex-start',
+                    marginBottom: 2,
+                    borderBottomWidth: 1,
+                    borderBottomColor: '#ddd',
                   }}
                 >
-                  Ticket #{event.ticket.ticket_id}
-                </Text>
-              </TouchableOpacity>
-            )}
-            calendarCellStyle={{
-              borderWidth: 0.1,
-              borderColor: '#ccc',
-              backgroundColor: '#f8f9fa',
-            }}
-            calendarCellTextStyle={{
-              color: '#000',
-              marginTop: 10,
-              fontSize: 14,
-              fontWeight: 'bold',
-            }}
-            headerContentStyle={{
-              backgroundColor: '#fff',
-              paddingVertical: 6,
-              borderBottomColor: '#CCC',
-              borderBottomWidth: 1,
-            }}
-            hourStyle={{
-              fontSize: 14,
-              color: '#000',
-              fontWeight: '600',
-            }}
-            weekDayLabelStyle={{
-              fontSize: 14,
-              color: 'black',
-              fontWeight: 'bold',
-            }}
-            weekDayHeaderHighlightColor="#000"
-          />
-        )}
-      </GestureHandlerRootView>
+                  {/* Hour label */}
+                  <Text
+                    style={{
+                      width: 60,
+                      textAlign: 'right',
+                      paddingRight: 4,
+                      fontSize: 12,
+                      color: '#555',
+                    }}
+                  >
+                    {hourLabel}
+                  </Text>
+
+                  <View style={{ flex: 1, paddingLeft: 10 }}>
+                    {hourEvents.length > 0 ? (
+                      hourEvents.map((e, idx) => (
+                        <TouchableOpacity
+                          key={idx}
+                          style={{
+                            backgroundColor: '#008080',
+                            padding: 6,
+                            borderRadius: 6,
+                            marginBottom: 4,
+                          }}
+                          onPress={() => handleEventPress(e)}
+                        >
+                          <Text style={{ color: '#fff', fontSize: 12 }}>
+                            {e.time}
+                          </Text>
+                          <Text
+                            style={{
+                              color: '#fff',
+                              fontSize: 14,
+                              fontWeight: 'bold',
+                            }}
+                          >
+                            {e.title}
+                          </Text>
+                        </TouchableOpacity>
+                      ))
+                    ) : (
+                      <View style={{ height: 20 }} />
+                    )}
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        </ScrollView>
+      )}
 
       <View style={styles.bottomBar}>
         <TouchableOpacity
@@ -287,137 +397,124 @@ const EventsCalendar = () => {
           <Text style={styles.navTexts}>Profile</Text>
         </TouchableOpacity>
       </View>
-    </>
+    </View>
   );
 };
+
 export default EventsCalendar;
 
+// Styles
 const styles = StyleSheet.create({
-  wrapper: {
-    flex: 1,
-    backgroundColor: '#f2f4f7',
-    marginBottom: 80,
-  },
-
-  topHeader: {
+  headerWrapper: {
     backgroundColor: '#008080',
-    justifyContent: 'center',
-    elevation: 4,
+    paddingVertical: 12,
     paddingHorizontal: 16,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    marginLeft: 20,
     color: '#fff',
   },
-  header: {
-    backgroundColor: '#fff',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    elevation: 2,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+  monthContainer: {
+    alignItems: 'flex-start',
+    marginVertical: 8,
+    marginTop: 30,
+    paddingLeft: 20,
   },
-  navRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  navButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    backgroundColor: '#e0f2f1',
-  },
-  navText: {
-    fontSize: 18,
-    color: '#008080',
-    fontWeight: 'bold',
-  },
-  todayButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: '#008080',
-    borderRadius: 6,
-  },
-  todayText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  titleRow: {
-    marginTop: 10,
-    alignItems: 'center',
-  },
-  dateText: {
+  monthText: {
     fontSize: 16,
+    fontWeight: 'bold',
     color: '#333',
-    fontWeight: '600',
   },
-  modeRow: {
-    marginTop: 12,
+
+  tabRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'flex-start',
+    marginVertical: 6,
+    marginLeft: 20,
   },
-  viewButton: {
-    paddingHorizontal: 12,
+
+  tabButton: {
+    paddingHorizontal: 16,
     paddingVertical: 6,
+    marginHorizontal: 4,
     borderRadius: 6,
     backgroundColor: '#eee',
   },
-  viewButtonActive: {
+  activeTab: {
     backgroundColor: '#008080',
   },
-  viewText: {
+  tabText: {
     fontSize: 14,
+    color: '#555',
+
+    fontWeight: '600',
+  },
+  activeText: {
+    color: '#fff',
+  },
+  dayContainer: {
+    width: 60,
+    alignItems: 'center',
+    marginHorizontal: 4,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  dayName: {
+    fontSize: 12,
     color: '#555',
     fontWeight: '600',
   },
-  viewTextActive: {
-    color: '#fff',
+  dayNumber: {
+    fontSize: 16,
+    color: '#555',
+    fontWeight: 'bold',
   },
-  loader: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+  selectedDayNumber: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#008080',
+  },
+  eventDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    color: '#008080',
+    marginTop: 4,
   },
   agendaSection: {
     padding: 16,
+
     borderBottomWidth: 1,
     borderBottomColor: '#ddd',
   },
   agendaDate: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
-    color: 'black',
-    // marginBottom: 10,
+    color: '#333',
+    marginBottom: 6,
   },
   agendaCard: {
-    backgroundColor: '#fff',
-    padding: 12,
+    padding: 10,
     borderRadius: 10,
-    marginTop: 10,
-    marginBottom: 10,
-    elevation: 4,
+    marginBottom: 8,
+    elevation: 3,
   },
-
   agendaTime: {
-    fontSize: 14,
-    color: '#888',
+    fontSize: 12,
     fontWeight: 'bold',
+    color: '#555',
   },
   agendaTitle: {
     fontSize: 14,
     fontWeight: 'bold',
-    marginTop: 4,
-    color: '#888',
-  },
-  agendaLocation: {
-    fontSize: 14,
-    color: '#888',
-    fontWeight: 'bold',
+    color: '#333',
     marginTop: 2,
+  },
+  noEvents: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 4,
   },
   bottomBar: {
     flexDirection: 'row',
@@ -429,15 +526,24 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     width: '100%',
-    elevation: 10,
   },
   navItem: {
     alignItems: 'center',
   },
+  hourRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 10,
+    alignItems: 'flex-start',
+  },
+  hourLabel: {
+    width: 50,
+    fontSize: 12,
+    color: '#222',
+    fontWeight: '600',
+  },
   navTexts: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#888',
-    fontWeight: 'bold',
     marginTop: 4,
   },
 });

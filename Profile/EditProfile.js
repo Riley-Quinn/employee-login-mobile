@@ -213,13 +213,6 @@ const EditProfile = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    alignItems: 'center',
-    paddingVertical: 40,
-
-    backgroundColor: '#F0F9F8',
-    paddingHorizontal: 40,
-  },
   bottomBar: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -269,10 +262,18 @@ const styles = StyleSheet.create({
     color: '#888',
     marginLeft: 10,
   },
+  container: {
+    alignItems: 'center',
+    paddingVertical: 100,
+    backgroundColor: '#F0F9F8',
+    paddingHorizontal: 40,
+  },
+
   Card: {
     backgroundColor: '#fff',
     borderRadius: 12,
     paddingTop: 8,
+    paddingBottom: -1,
     paddingHorizontal: 12,
     marginBottom: 15,
     width: '110%',
@@ -287,7 +288,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     fontSize: 14,
     color: '#008080',
-    marginBottom: 45,
+    marginBottom: 15,
 
     fontWeight: 'bold',
     marginTop: 5,
@@ -295,7 +296,7 @@ const styles = StyleSheet.create({
 
   saveButton: {
     backgroundColor: '#00BFA6',
-    width: '100%',
+    width: '110%',
     borderRadius: 15,
     alignItems: 'center',
     marginTop: 30,

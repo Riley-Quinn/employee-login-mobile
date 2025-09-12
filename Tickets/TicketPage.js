@@ -353,19 +353,9 @@ const TicketPage = ({ navigation }) => {
           }
         }}
       >
-        <View style={styles.cardContents}>
-          <View
-            style={[
-              styles.headerRow,
-              {
-                backgroundColor: '#008080',
-                padding: 10,
-                borderRadius: 8,
-                alignItems: 'center',
-              },
-            ]}
-          >
-            <Text style={styles.ticketId}>#{item.ticket_service_id}</Text>
+        <View style={styles.cardWrapper}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.ticketId}>#{item.ticket_id}</Text>
 
             <View style={{ marginLeft: 'auto' }}>
               {(() => {
@@ -374,9 +364,7 @@ const TicketPage = ({ navigation }) => {
                   <View
                     style={[
                       styles.statusChip,
-                      {
-                        backgroundColor: chipStyle.backgroundColor,
-                      },
+                      { backgroundColor: chipStyle.backgroundColor },
                     ]}
                   >
                     <Text
@@ -390,61 +378,43 @@ const TicketPage = ({ navigation }) => {
             </View>
           </View>
 
-          <View style={styles.infoSection}>
-            <View style={styles.infoRow}>
-              <Text style={styles.title}>{item.title ? item.title : '-'}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.label}>{item.description}</Text>
-            </View>
-            <View style={[styles.infoRow, { justifyContent: 'space-between' }]}>
-              <Text style={styles.boldLabel}>
-                Category:{' '}
-                <Text style={styles.labels}>{item.category_name}</Text>
-              </Text>
-              <Text style={styles.boldLabel}>
-                Address:{' '}
-                <Text style={styles.labels}>{` ${item.region_name}`}</Text>
-              </Text>
-            </View>
-
-            <View style={styles.divider} />
-
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
+          <View style={styles.cardBody}>
+            <View style={styles.infoSection}>
+              <View style={styles.infoRows}>
+                <Text style={styles.title}>
+                  {item.title ? item.title : '-'}
+                </Text>
+                <Text style={styles.label}>{item.description}</Text>
+              </View>
               <View
-                style={{ flex: 2, flexDirection: 'row', alignItems: 'center' }}
+                style={[styles.infoRow, { justifyContent: 'space-between' }]}
               >
-                <MaterialIcons
-                  name="person-outline"
-                  size={18}
-                  color="#555"
-                  style={{ marginRight: 4 }}
-                />
-                <Text style={styles.boldLabel}>
-                  Customer:{' '}
-                  <Text style={styles.label}>{item.customer_name}</Text>
+                <Text style={styles.boldLabels}>
+                  Category:{' '}
+                  <Text style={styles.labels}>{item.category_name}</Text>
+                </Text>
+                <Text style={styles.boldLabels}>
+                  Region:{' '}
+                  <Text style={styles.labels}>{` ${item.region_name}`}</Text>
                 </Text>
               </View>
+              {item.status_id !== 6 && <View style={styles.divider} />}
+            </View>
 
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               {item.status_id === 2 && (
                 <View
                   style={{
                     flexDirection: 'row',
-                    flex: 1,
-                    justifyContent: 'flex-end',
+                    justifyContent: item.employee_arrival_date
+                      ? 'space-between'
+                      : 'flex-end',
+                    alignItems: 'center',
+                    width: '100%',
                   }}
                 >
                   <TouchableOpacity
-                    style={[
-                      styles.arrivalButton,
-                      { flex: 0, paddingVertical: 6, paddingHorizontal: 10 },
-                    ]}
+                    style={styles.arrivalButton}
                     onPress={() => {
                       setSelectedTicket(item);
                       setModalVisible(true);
@@ -455,15 +425,7 @@ const TicketPage = ({ navigation }) => {
 
                   {item.employee_arrival_date && (
                     <TouchableOpacity
-                      style={[
-                        styles.startButton,
-                        {
-                          flex: 0,
-                          paddingVertical: 6,
-                          paddingHorizontal: 10,
-                          marginLeft: 4,
-                        },
-                      ]}
+                      style={styles.startButton}
                       onPress={() => handleStartWork(item)}
                     >
                       <Text style={styles.buttonText}>Start</Text>
@@ -474,10 +436,12 @@ const TicketPage = ({ navigation }) => {
 
               {item.status_id === 3 && (
                 <View
-                  style={[
-                    styles.inProgressActionRow,
-                    { flexDirection: 'row', justifyContent: 'flex-end' },
-                  ]}
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    width: '100%',
+                  }}
                 >
                   <TouchableOpacity
                     style={styles.serviceButton}
@@ -512,7 +476,7 @@ const TicketPage = ({ navigation }) => {
       <StatusBar barStyle="light-content" backgroundColor="#008080" />
 
       <SafeAreaView style={{ backgroundColor: '#008080', flex: 0 }}>
-        <Text style={styles.ticketNumber}>Dashboard</Text>
+        <Text style={styles.ticketNumber}>All Tickets</Text>
       </SafeAreaView>
 
       <View style={styles.filterRow}>
@@ -754,39 +718,6 @@ const TicketPage = ({ navigation }) => {
           />
         )}
       </View>
-
-      <View style={styles.bottomBar}>
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => navigation.navigate('Dashboard')}
-        >
-          <FontAwesome name="home" size={30} color="#008080" />
-          <Text style={styles.navText}>Home</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => navigation.navigate('EventsCalendar')}
-        >
-          <Ionicons name="calendar" size={30} color="#888" />
-          <Text style={styles.navText}>Calendar</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => navigation.navigate('EventsOverview')}
-        >
-          <MaterialIcons name="event" size={30} color="#888" />
-          <Text style={styles.navText}>Events</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => navigation.navigate('ProfileScreen')}
-        >
-          <FontAwesome name="user" size={30} color="#888" />
-          <Text style={styles.navText}>Profile</Text>
-        </TouchableOpacity>
-      </View>
     </>
   );
 };
@@ -806,23 +737,44 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
 
-  statusGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    margin: 12,
-  },
-  statusCard: {
-    width: '48%',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+  cardWrapper: {
+    marginTop: 15,
+    borderRadius: 8,
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.2,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 5,
+    backgroundColor: '#fff',
   },
+
+  cardHeader: {
+    backgroundColor: '#008080',
+    padding: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  cardBody: {
+    backgroundColor: '#fff',
+    padding: 10,
+  },
+  infoRows: {
+    flexDirection: 'column',
+  },
+  title: {
+    fontWeight: 'bold',
+    fontSize: 14,
+    color: '#000',
+    marginTop: -18,
+  },
+  label: {
+    fontWeight: 'bold',
+    color: '#555',
+    fontSize: 14,
+  },
+
   statusTitle: {
     fontSize: 16,
     fontWeight: '600',
@@ -843,11 +795,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     color: '#444',
-  },
-  title: {
-    fontWeight: 'bold',
-    fontSize: 14,
-    color: '#000',
   },
 
   cardContents: {
@@ -874,9 +821,9 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   statusChip: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 1,
+    borderRadius: 10,
   },
   statusText: {
     fontSize: 12,
@@ -897,17 +844,18 @@ const styles = StyleSheet.create({
   },
   infoRow: {
     flexDirection: 'row',
-    marginVertical: 4,
+    marginTop: -3,
   },
   boldLabel: {
     fontWeight: 'bold',
     fontSize: 12,
     color: '#555',
   },
-  label: {
+  boldLabels: {
     fontWeight: 'bold',
+    fontSize: 14,
+    marginTop: 5,
     color: '#555',
-    fontSize: 12,
   },
   labels: {
     fontWeight: 'bold',
@@ -917,8 +865,9 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     backgroundColor: '#ddd',
-    marginVertical: 8,
+    marginTop: 6,
   },
+
   infoIcon: {
     marginRight: 6,
   },
@@ -1169,23 +1118,6 @@ const styles = StyleSheet.create({
     gap: 10,
   },
 
-  bottomBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    backgroundColor: '#fff',
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#ddd',
-  },
-  navItem: {
-    alignItems: 'center',
-  },
-  navText: {
-    fontSize: 14,
-    color: '#888',
-    fontWeight: 'bold',
-    marginTop: 4,
-  },
   container: {
     flex: 1,
     paddingHorizontal: 10,
@@ -1235,87 +1167,57 @@ const styles = StyleSheet.create({
     gap: 10,
   },
 
-  Assign: {
-    marginLeft: 'auto',
+  arrivalButton: {
     backgroundColor: '#008080',
-    paddingVertical: 8,
-    marginBottom: 10,
+    paddingVertical: 3,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    marginTop: -2,
 
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    textAlign: 'center',
+    marginLeft: 10,
+    marginRight: 10,
+  },
+
+  startButton: {
+    backgroundColor: '#008080',
+    paddingVertical: 3,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    marginTop: -2,
+
+    marginLeft: 5,
+  },
+
+  serviceButton: {
+    backgroundColor: '#008080',
+    paddingVertical: 3,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    marginTop: -2,
+
+    textAlign: 'center',
+    marginLeft: 10,
+    marginRight: 10,
+  },
+
+  editButton: {
+    backgroundColor: '#008080',
+    paddingVertical: 3,
+    marginTop: -2,
+
+    paddingHorizontal: 12,
+    borderRadius: 6,
   },
 
   arrivalDateAlone: {
     marginLeft: 'auto',
     backgroundColor: '#008080',
+    paddingVertical: 3,
+    marginTop: -2,
 
-    paddingVertical: 8,
-    marginBottom: 10,
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     borderRadius: 8,
-  },
-  arrivalButton: {
-    backgroundColor: '#ff9800',
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-  },
-
-  startButton: {
-    backgroundColor: '#4caf50',
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    marginLeft: 4,
-  },
-
-  inProgressActionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 12,
-    gap: 10,
-  },
-
-  serviceButton: {
-    backgroundColor: '#FFA726',
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-  },
-
-  editButton: {
-    backgroundColor: '#4DB6AC',
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
   },
 
   buttonText: {

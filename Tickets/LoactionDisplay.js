@@ -28,13 +28,11 @@ const LocationDisplay = ({ latitude, longitude }) => {
   return (
     <Text
       style={{
-        fontSize: 16,
+        fontSize: 12,
         fontWeight: 'bold',
         color: '#000',
-        marginBottom: 4,
+        marginTop: -85,
         marginHorizontal: 10,
-        flexWrap: 'wrap',
-        width: '60%',
       }}
     >
       {locationName}

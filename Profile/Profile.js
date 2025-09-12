@@ -16,6 +16,7 @@ import FontAwesome6 from 'react-native-vector-icons/FontAwesome6';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import Feather from 'react-native-vector-icons/Feather';
+import { BASE_URL } from '@env';
 
 const ProfileScreen = ({ navigation }) => {
   const [profile, setProfile] = useState({});
@@ -25,6 +26,8 @@ const ProfileScreen = ({ navigation }) => {
     const getUserId = async () => {
       try {
         const id = await AsyncStorage.getItem('userId');
+        console.log('🔑 Retrieved userId:', id); // ✅ Debug log
+
         if (id) setUserId(id);
       } catch (error) {
         console.error(error);
@@ -38,6 +41,7 @@ const ProfileScreen = ({ navigation }) => {
       const fetchProfile = async () => {
         try {
           const res = await axios.get(`${BASE_URL}/api/employee/${userId}`);
+
           setProfile(res.data);
         } catch (error) {
           console.error(error.message);
@@ -83,13 +87,10 @@ const ProfileScreen = ({ navigation }) => {
           <View style={styles.iconBackground}>
             <Feather name="user" size={50} color="#fff" />
           </View>
-          <Text style={styles.profileName}>{profile.name || 'Employee'}</Text>
-          <Text style={styles.profileEmail}>
-            {profile.email || 'employee@email.com'}
-          </Text>
-          <Text style={styles.profilePhone}>
-            {profile.phone || '9876543210'}
-          </Text>
+          <Text style={styles.profileEmail}>{profile.name}</Text>
+
+          <Text style={styles.profileEmail}>{profile.email}</Text>
+          <Text style={styles.profilePhone}>{profile.phone}</Text>
         </View>
       </View>
 
@@ -118,7 +119,7 @@ const ProfileScreen = ({ navigation }) => {
           style={styles.navItem}
           onPress={() => navigation.navigate('Dashboard')}
         >
-          <FontAwesome name="home" size={30} color="#008080" />
+          <FontAwesome name="home" size={30} color="#888" />
           <Text style={styles.navText}>Home</Text>
         </TouchableOpacity>
 
@@ -141,7 +142,7 @@ const ProfileScreen = ({ navigation }) => {
           style={styles.navItem}
           onPress={() => navigation.navigate('ProfileScreen')}
         >
-          <FontAwesome name="user" size={30} color="#888" />
+          <FontAwesome name="user" size={30} color="#008080" />
           <Text style={styles.navText}>Profile</Text>
         </TouchableOpacity>
       </View>
