@@ -1312,7 +1312,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 14,
     color: '#fff',
-    marginLeft: 260,
+    marginLeft: 180,
   },
   statusChip: {
     paddingHorizontal: 10,

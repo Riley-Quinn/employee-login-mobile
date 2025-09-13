@@ -3,20 +3,17 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
-  TouchableOpacity,
   FlatList,
-  StatusBar,
+  TouchableOpacity,
   ActivityIndicator,
   Dimensions,
+  StatusBar,
 } from 'react-native';
+import dayjs from 'dayjs';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
-import dayjs from 'dayjs';
-import FontAwesome from 'react-native-vector-icons/FontAwesome';
-import Ionicons from 'react-native-vector-icons/Ionicons';
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { BASE_URL } from '@env';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -27,22 +24,12 @@ const EventsCalendar = () => {
   );
   const [activeTab, setActiveTab] = useState('agenda');
   const [loading, setLoading] = useState(false);
-  const [dates, setDates] = useState([]);
-  const [currentMonth, setCurrentMonth] = useState(dayjs().format('MMMM YYYY'));
+  const [allDates, setAllDates] = useState([]);
+  const [visibleMonth, setVisibleMonth] = useState(dayjs().format('MMMM YYYY'));
 
   const navigation = useNavigation();
+  const flatListRef = useRef();
 
-  // For FlatList month header update
-  const viewabilityConfig = { itemVisiblePercentThreshold: 10 };
-  const onViewableItemsChanged = useRef(({ viewableItems }) => {
-    if (viewableItems && viewableItems.length > 0) {
-      const firstVisible = viewableItems[0].item;
-      const newMonth = dayjs(firstVisible).format('MMMM YYYY');
-      setCurrentMonth(newMonth);
-    }
-  }).current;
-
-  // Fetch tickets
   useEffect(() => {
     const fetchEvents = async () => {
       try {
@@ -55,13 +42,11 @@ const EventsCalendar = () => {
         const mapped = tickets
           .filter(t => t.employee_arrival_date)
           .map(ticket => {
-            // Keep all dates in local timezone
             const dateObj = dayjs(ticket.employee_arrival_date);
             return {
               date: dateObj.format('YYYY-MM-DD'),
-              title: `${ticket.ticket_id}`,
+              title: `${ticket.region_name}`,
               Title: `${ticket.title}`,
-
               time: dateObj.format('h:mm A'),
               ticket,
             };
@@ -76,51 +61,41 @@ const EventsCalendar = () => {
     fetchEvents();
   }, []);
 
-  // Generate dates for FlatList
-  useEffect(() => {
-    const start = dayjs().subtract(365, 'day');
-    const end = dayjs().add(365, 'day');
-    const temp = [];
-    let curr = start.clone();
-    while (curr.isBefore(end) || curr.isSame(end, 'day')) {
-      temp.push(curr.clone());
-      curr = curr.add(1, 'day');
-    }
-    setDates(temp);
-  }, []);
-
-  // Group events by date
   const groupedEvents = events.reduce((acc, evt) => {
     if (!acc[evt.date]) acc[evt.date] = [];
     acc[evt.date].push(evt);
     return acc;
   }, {});
 
+  useEffect(() => {
+    const start = dayjs().startOf('year');
+    const end = dayjs().endOf('year');
+    const tempDates = [];
+    let curr = start.clone();
+    while (curr.isBefore(end) || curr.isSame(end, 'day')) {
+      tempDates.push(curr.format('YYYY-MM-DD'));
+      curr = curr.add(1, 'day');
+    }
+    setAllDates(tempDates);
+  }, []);
+
   const handleEventPress = evt => {
     navigation.navigate('ViewTickets', { ticketId: evt.ticket.ticket_id });
   };
 
-  const renderDayItem = ({ item }) => {
-    const isSelected = item.isSame(dayjs(selectedDate), 'day');
-    return (
-      <TouchableOpacity
-        onPress={() => setSelectedDate(item.format('YYYY-MM-DD'))}
-        style={styles.dayContainer}
-      >
-        <Text style={styles.dayName}>{item.format('ddd')}</Text>
-        <Text style={isSelected ? styles.selectedDayNumber : styles.dayNumber}>
-          {item.format('D')}
-        </Text>
-        {events.find(e => e.date === item.format('YYYY-MM-DD')) && (
-          <View style={styles.eventDot} />
-        )}
-      </TouchableOpacity>
-    );
+  const onViewableItemsChanged = ({ viewableItems }) => {
+    if (viewableItems.length > 0) {
+      const firstDate = viewableItems[0].item;
+      setVisibleMonth(dayjs(firstDate).format('MMMM YYYY'));
+    }
   };
+
+  const viewabilityConfig = { itemVisiblePercentThreshold: 50 };
 
   return (
     <View style={{ flex: 1, backgroundColor: '#f2f4f7' }}>
       <StatusBar barStyle="light-content" backgroundColor="#008080" />
+
       <View style={styles.headerWrapper}>
         <Text style={styles.headerTitle}>Calendar</Text>
       </View>
@@ -133,11 +108,19 @@ const EventsCalendar = () => {
         />
       )}
 
-      <View style={styles.monthContainer}>
-        <Text style={styles.monthText}>{currentMonth}</Text>
+      <View style={{ alignItems: 'center', marginVertical: 6 }}>
+        <Text
+          style={{
+            fontSize: 16,
+            fontWeight: 'bold',
+            color: '#000',
+            marginTop: 10,
+          }}
+        >
+          {visibleMonth}
+        </Text>
       </View>
 
-      {/* Tabs */}
       <View style={styles.tabRow}>
         <TouchableOpacity
           style={[styles.tabButton, activeTab === 'agenda' && styles.activeTab]}
@@ -164,250 +147,225 @@ const EventsCalendar = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Horizontal days FlatList */}
-      <FlatList
-        data={dates}
-        renderItem={renderDayItem}
-        keyExtractor={item => item.format('YYYY-MM-DD')}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingVertical: 10 }}
-        onViewableItemsChanged={onViewableItemsChanged}
-        viewabilityConfig={viewabilityConfig}
-        extraData={currentMonth}
-        initialScrollIndex={dates.findIndex(d => d.isSame(dayjs(), 'day'))}
-        getItemLayout={(data, index) => ({
-          length: 68,
-          offset: 68 * index,
-          index,
-        })}
-      />
-
-      {activeTab === 'agenda' && (
-        <ScrollView style={{ flex: 1, marginTop: -800 }}>
-          {dates.map(date => {
-            const dateStr = date.format('YYYY-MM-DD');
+      <View style={{ paddingVertical: 10 }}>
+        <FlatList
+          ref={flatListRef}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          data={allDates}
+          keyExtractor={item => item}
+          onViewableItemsChanged={onViewableItemsChanged}
+          viewabilityConfig={viewabilityConfig}
+          renderItem={({ item }) => {
+            const isSelected = item === selectedDate;
             return (
-              <View key={dateStr} style={styles.agendaSection}>
-                <Text style={styles.agendaDate}>
-                  {date.isSame(dayjs(), 'day')
-                    ? `${date.format('MMM D')} Today`
-                    : date.format('ddd, MMM D')}
+              <TouchableOpacity
+                onPress={() => setSelectedDate(item)}
+                style={{
+                  width: 40,
+                  alignItems: 'center',
+                  marginHorizontal: 3,
+                  paddingVertical: 4,
+                  borderRadius: 6,
+                }}
+              >
+                <Text
+                  style={{ fontSize: 12, color: '#000', fontWeight: 'bold' }}
+                >
+                  {dayjs(item).format('ddd')}
                 </Text>
+                <Text
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 'bold',
+                    color: isSelected ? '#008080' : '#555',
+                  }}
+                >
+                  {dayjs(item).format('D')}
+                </Text>
+              </TouchableOpacity>
+            );
+          }}
+        />
+      </View>
 
-                {groupedEvents[dateStr]?.length > 0 ? (
-                  groupedEvents[dateStr].map((e, idx) => (
+      <View style={{ flex: 1 }}>
+        {activeTab === 'agenda' ? (
+          <FlatList
+            data={allDates}
+            keyExtractor={item => item}
+            contentContainerStyle={{ paddingBottom: 10 }}
+            renderItem={({ item }) => (
+              <View style={styles.agendaSection}>
+                <Text style={styles.agendaDate}>
+                  {dayjs(item).isSame(dayjs(), 'day')
+                    ? `${dayjs(item).format('MMM D')} Today`
+                    : dayjs(item).format('ddd, MMM D')}
+                </Text>
+                {groupedEvents[item]?.length > 0 ? (
+                  groupedEvents[item].map((e, idx) => (
                     <TouchableOpacity
                       key={idx}
                       style={styles.agendaCard}
                       onPress={() => handleEventPress(e)}
                     >
-                      <Text style={styles.agendaTime}>{e.time}</Text>
-                      <Text style={styles.agendaTitle}>{e.title}</Text>
-                    </TouchableOpacity>
-                  ))
-                ) : (
-                  <Text style={styles.noEvents}>No events</Text>
-                )}
-              </View>
-            );
-          })}
-        </ScrollView>
-      )}
-
-      {/* {activeTab === 'agenda' && (
-        <ScrollView style={{ flex: 1, marginTop: -600 }}>
-          <View style={styles.agendaSection}>
-            <Text style={styles.agendaDate}>
-              {dayjs(selectedDate).isSame(dayjs(), 'day')
-                ? `${dayjs(selectedDate).format('MMM D')} Today`
-                : dayjs(selectedDate).format('ddd, MMM D')}
-            </Text>
-
-            {(groupedEvents[selectedDate]?.length > 0
-              ? groupedEvents[selectedDate]
-              : []
-            ).map((e, idx) => (
-              <TouchableOpacity
-                key={idx}
-                style={[
-                  styles.agendaCard,
-                  { flexDirection: 'row', alignItems: 'flex-start' },
-                ]}
-                onPress={() => handleEventPress(e)}
-              >
-                <View
-                  style={{ width: 70, alignItems: 'flex-end', paddingRight: 8 }}
-                >
-                  <Text style={styles.agendaTime}>{e.time}</Text>
-                </View>
-
-                <View
-                  style={{
-                    width: 1,
-                    backgroundColor: '#888',
-                    marginRight: 8,
-                    height: '100%',
-                  }}
-                />
-
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.agendaTitle}>{e.Title}</Text>
-                  <Text style={{ fontSize: 13, color: '#000' }}>{e.title}</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-
-            {(!groupedEvents[selectedDate] ||
-              groupedEvents[selectedDate].length === 0) && (
-              <Text style={styles.noEvents}>No events</Text>
-            )}
-          </View>
-        </ScrollView>
-      )} */}
-
-      {activeTab === 'day' && (
-        <ScrollView
-          style={{ flex: 1, marginTop: -720 }}
-          contentContainerStyle={{ paddingBottom: 100 }}
-        >
-          <View style={{ flex: 1, paddingLeft: 0, position: 'relative' }}>
-            <View
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 60,
-                width: 1,
-                height: '100%',
-                backgroundColor: '#bbb',
-                zIndex: 0,
-              }}
-            />
-
-            {Array.from({ length: 24 }).map((_, hour) => {
-              const hourLabel = dayjs(selectedDate)
-                .hour(hour)
-                .minute(0)
-                .format('h A');
-
-              const hourEvents = (groupedEvents[selectedDate] || []).filter(
-                evt => {
-                  const evtHour = parseInt(
-                    dayjs(evt.ticket.employee_arrival_date).format('H'),
-                  );
-                  return evtHour === hour;
-                },
-              );
-
-              const rowHeight = 60 + hourEvents.length * 50;
-
-              return (
-                <View
-                  key={hour}
-                  style={{
-                    flexDirection: 'row',
-                    height: rowHeight,
-                    alignItems: 'flex-start',
-                    marginBottom: 2,
-                    borderBottomWidth: 1,
-                    borderBottomColor: '#ddd',
-                  }}
-                >
-                  {/* Hour label */}
-                  <Text
-                    style={{
-                      width: 60,
-                      textAlign: 'right',
-                      paddingRight: 4,
-                      fontSize: 12,
-                      color: '#555',
-                    }}
-                  >
-                    {hourLabel}
-                  </Text>
-
-                  <View style={{ flex: 1, paddingLeft: 10 }}>
-                    {hourEvents.length > 0 ? (
-                      hourEvents.map((e, idx) => (
-                        <TouchableOpacity
-                          key={idx}
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'flex-start',
+                        }}
+                      >
+                        <Text
                           style={{
-                            backgroundColor: '#008080',
-                            padding: 6,
-                            borderRadius: 6,
-                            marginBottom: 4,
+                            fontWeight: 'bold',
+                            color: '#000',
+                            fontSize: 12,
+                            width: 60,
                           }}
-                          onPress={() => handleEventPress(e)}
                         >
-                          <Text style={{ color: '#fff', fontSize: 12 }}>
-                            {e.time}
+                          {e.time}
+                        </Text>
+                        <View
+                          style={{
+                            width: 1,
+                            backgroundColor: '#000',
+                            marginHorizontal: 5,
+                            height: 36,
+                          }}
+                        />
+                        <View style={{ flexDirection: 'column' }}>
+                          <Text
+                            style={{
+                              fontWeight: 'bold',
+                              color: '#000',
+                              fontSize: 12,
+                            }}
+                          >
+                            {e.Title}
                           </Text>
                           <Text
                             style={{
-                              color: '#fff',
-                              fontSize: 14,
                               fontWeight: 'bold',
+                              color: '#555',
+                              fontSize: 12,
                             }}
                           >
                             {e.title}
                           </Text>
-                        </TouchableOpacity>
-                      ))
-                    ) : (
-                      <View style={{ height: 20 }} />
-                    )}
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  ))
+                ) : (
+                  <Text
+                    style={{ marginLeft: 10, color: '#888', marginBottom: 4 }}
+                  >
+                    No events
+                  </Text>
+                )}
+              </View>
+            )}
+          />
+        ) : (
+          <View style={{ flex: 1 }}>
+            <View
+              style={{
+                position: 'absolute',
+                top: 0,
+                bottom: 0,
+                left: 60, // j
+                width: 1,
+                backgroundColor: '#444',
+              }}
+            />
+
+            <FlatList
+              data={Array.from({ length: 24 })}
+              keyExtractor={(_, index) => index.toString()}
+              renderItem={({ _, index: hour }) => {
+                const hourLabel = dayjs(selectedDate)
+                  .hour(hour)
+                  .minute(0)
+                  .format('h A');
+                const hourEvents = (groupedEvents[selectedDate] || []).filter(
+                  evt => {
+                    const evtHour = parseInt(
+                      dayjs(evt.ticket.employee_arrival_date).format('H'),
+                    );
+                    return evtHour === hour;
+                  },
+                );
+
+                return (
+                  <View style={{ height: 60, justifyContent: 'center' }}>
+                    <View
+                      style={{
+                        position: 'absolute',
+                        bottom: 0,
+                        left: 60,
+                        right: 0,
+                        height: 1,
+                        backgroundColor: '#444',
+                      }}
+                    />
+
+                    <View style={{ flexDirection: 'row', flex: 1 }}>
+                      <Text
+                        style={{
+                          width: 60,
+                          textAlign: 'right',
+                          paddingRight: 6,
+                          fontSize: 12,
+                          color: '#000',
+                        }}
+                      >
+                        {hourLabel}
+                      </Text>
+
+                      <View style={{ flex: 1 }}>
+                        {hourEvents.map((e, idx) => (
+                          <TouchableOpacity
+                            key={idx}
+                            style={{
+                              backgroundColor: '#008080',
+                              padding: 6,
+                              borderRadius: 6,
+                              margin: 4,
+                            }}
+                            onPress={() => handleEventPress(e)}
+                          >
+                            <Text style={{ color: '#fff', fontSize: 12 }}>
+                              {e.time}
+                            </Text>
+                            <Text
+                              style={{
+                                color: '#fff',
+                                fontSize: 14,
+                                fontWeight: 'bold',
+                              }}
+                            >
+                              {e.title}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
                   </View>
-                </View>
-              );
-            })}
+                );
+              }}
+              contentContainerStyle={{ paddingBottom: 100 }}
+            />
           </View>
-        </ScrollView>
-      )}
-
-      <View style={styles.bottomBar}>
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => navigation.navigate('Dashboard')}
-        >
-          <FontAwesome name="home" size={30} color="#888" />
-          <Text style={styles.navTexts}>Home</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => navigation.navigate('EventsCalendar')}
-        >
-          <Ionicons name="calendar" size={30} color="#008080" />
-          <Text style={styles.navTexts}>Calendar</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => navigation.navigate('EventsOverview')}
-        >
-          <MaterialIcons name="event" size={30} color="#888" />
-          <Text style={styles.navTexts}>Events</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => navigation.navigate('ProfileScreen')}
-        >
-          <FontAwesome name="user" size={30} color="#888" />
-          <Text style={styles.navTexts}>Profile</Text>
-        </TouchableOpacity>
+        )}
       </View>
     </View>
   );
 };
 
-export default EventsCalendar;
-
-// Styles
 const styles = StyleSheet.create({
   headerWrapper: {
     backgroundColor: '#008080',
-    paddingVertical: 12,
+    paddingVertical: 20,
     paddingHorizontal: 16,
   },
   headerTitle: {
@@ -415,25 +373,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#fff',
   },
-  monthContainer: {
-    alignItems: 'flex-start',
-    marginVertical: 8,
-    marginTop: 30,
-    paddingLeft: 20,
-  },
-  monthText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-
   tabRow: {
     flexDirection: 'row',
     justifyContent: 'flex-start',
-    marginVertical: 6,
-    marginLeft: 20,
+    marginBottom: 10,
+    marginLeft: 10,
   },
-
   tabButton: {
     paddingHorizontal: 16,
     paddingVertical: 6,
@@ -447,44 +392,13 @@ const styles = StyleSheet.create({
   tabText: {
     fontSize: 14,
     color: '#555',
-
     fontWeight: '600',
   },
   activeText: {
     color: '#fff',
   },
-  dayContainer: {
-    width: 60,
-    alignItems: 'center',
-    marginHorizontal: 4,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  dayName: {
-    fontSize: 12,
-    color: '#555',
-    fontWeight: '600',
-  },
-  dayNumber: {
-    fontSize: 16,
-    color: '#555',
-    fontWeight: 'bold',
-  },
-  selectedDayNumber: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#008080',
-  },
-  eventDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    color: '#008080',
-    marginTop: 4,
-  },
   agendaSection: {
-    padding: 16,
-
+    padding: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#ddd',
   },
@@ -498,52 +412,10 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 10,
     marginBottom: 8,
-    elevation: 3,
-  },
-  agendaTime: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#555',
-  },
-  agendaTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#333',
-    marginTop: 2,
-  },
-  noEvents: {
-    fontSize: 12,
-    color: '#888',
-    marginTop: 4,
-  },
-  bottomBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
+
     backgroundColor: '#fff',
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#ddd',
-    position: 'absolute',
-    bottom: 0,
-    width: '100%',
-  },
-  navItem: {
-    alignItems: 'center',
-  },
-  hourRow: {
-    flexDirection: 'row',
-    paddingHorizontal: 10,
-    alignItems: 'flex-start',
-  },
-  hourLabel: {
-    width: 50,
-    fontSize: 12,
-    color: '#222',
-    fontWeight: '600',
-  },
-  navTexts: {
-    fontSize: 12,
-    color: '#888',
-    marginTop: 4,
+    elevation: 1,
   },
 });
+
+export default EventsCalendar;

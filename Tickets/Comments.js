@@ -28,8 +28,8 @@ const AddComments = ({ ticket, user, fetchData, fetchError, fetchSuccess }) => {
     const data = CommentsHistory(
       ticket?.comments,
       commentData,
-      commentId,
-      user?.userId,
+      commentId, // Pass conversation ID
+      user?.userId, // Participant ID
       user?.Role[0],
       user?.name,
     );

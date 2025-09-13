@@ -40,11 +40,16 @@ const ProfileScreen = ({ navigation }) => {
     if (userId) {
       const fetchProfile = async () => {
         try {
-          const res = await axios.get(`${BASE_URL}/api/employee/${userId}`);
+          const clientId = await AsyncStorage.getItem('clientId');
+          const res = await axios.get(`${BASE_URL}/api/employee/${userId}`, {
+            headers: {
+              'x-client-id': clientId,
+            },
+          });
 
           setProfile(res.data);
         } catch (error) {
-          console.error(error.message);
+          console.error(' Error fetching profile:', error.message);
         }
       };
       fetchProfile();

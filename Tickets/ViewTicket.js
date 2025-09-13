@@ -112,7 +112,6 @@ const ViewTickets = () => {
       setLocationName('No Preupload media');
     }
   }, [ticket]);
-
   const handleEmployeeMediaUpload = async mediaStage => {
     try {
       const result = await launchImageLibrary({
@@ -120,9 +119,7 @@ const ViewTickets = () => {
         quality: 1,
       });
 
-      if (result.didCancel || !result.assets || result.assets.length === 0) {
-        return;
-      }
+      if (result.didCancel || !result.assets?.length) return;
 
       const file = result.assets[0];
 
@@ -130,11 +127,15 @@ const ViewTickets = () => {
 
       const isImage = file.type?.startsWith('image/');
       const mediaType = isImage ? 'Photo' : 'Video';
+      const fileType = file.type || (isImage ? 'image/jpeg' : 'video/mp4');
+      const fileUri = file.uri.startsWith('file://')
+        ? file.uri
+        : `file://${file.uri}`;
 
       const formData = new FormData();
       formData.append('file', {
-        uri: file.uri,
-        type: file.type,
+        uri: fileUri,
+        type: fileType,
         name: file.fileName || `upload.${isImage ? 'jpg' : 'mp4'}`,
       });
       formData.append('ticket', ticketId);
@@ -144,15 +145,11 @@ const ViewTickets = () => {
       formData.append('longitude', longitude);
       formData.append('uploaded_by', userId);
 
-      for (let [key, value] of formData._parts) {
-        console.log(`${key}:`, value);
-      }
-
-      const uploadUrl = `${BASE_URL}/api/employee-uploads`;
-
-      const response = await axios.post(uploadUrl, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      const response = await axios.post(
+        `${BASE_URL}/api/employee-uploads`,
+        formData,
+      );
+      console.log('Upload successful:', response.data);
 
       fetchTicket();
     } catch (err) {
@@ -787,7 +784,7 @@ const ViewTickets = () => {
                       {media.file_type === 'Photo' ? (
                         <Image
                           source={{
-                            uri: `https://d3shribgms6bZ4.cloudfront.net/${encodeURIComponent(
+                            uri: `https://d2plv0g319oam3.cloudfront.net/${encodeURIComponent(
                               media.file_name,
                             )}`,
                           }}
@@ -804,7 +801,7 @@ const ViewTickets = () => {
                       ) : media.file_type === 'Video' ? (
                         <Video
                           source={{
-                            uri: `https://d3shribgms6bZ4.cloudfront.net/${encodeURIComponent(
+                            uri: `https://d2plv0g319oam3.cloudfront.net/${encodeURIComponent(
                               media.file_name,
                             )}`,
                           }}
@@ -867,7 +864,7 @@ const ViewTickets = () => {
                           >
                             <Image
                               source={{
-                                uri: `https://d3shribgms6bZ4.cloudfront.net/${media.file_name}`,
+                                uri: `https://d2plv0g319oam3.cloudfront.net/${media.file_name}`,
                               }}
                               style={styles.mediaImage}
                             />
@@ -962,7 +959,7 @@ const ViewTickets = () => {
                               {media.file_type === 'Photo' ? (
                                 <Image
                                   source={{
-                                    uri: `https://d3shribgms6bZ4.cloudfront.net/${media.file_name}`,
+                                    uri: `https://d2plv0g319oam3.cloudfront.net/${media.file_name}`,
                                   }}
                                   style={styles.mediaImages}
                                 />
@@ -1123,6 +1120,34 @@ const ViewTickets = () => {
                       {ticket.customer_email}
                     </Text>
                   </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>State</Text>
+                    <Text style={styles.colons}>:</Text>
+                    <Text style={styles.detailValue}>{ticket.state_name}</Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>City</Text>
+                    <Text style={styles.colons}>:</Text>
+                    <Text style={styles.detailValue}>{ticket.city_name}</Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Region</Text>
+                    <Text style={styles.colons}>:</Text>
+                    <Text style={styles.detailValue}>{ticket.region_name}</Text>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Address</Text>
+                    <Text style={styles.colons}>:</Text>
+                    <Text style={styles.detailValue}>{ticket.address}</Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Address</Text>
+                    <Text style={styles.colons}>:</Text>
+                    <Text style={styles.detailValue}>
+                      {ticket.address_type}
+                    </Text>
+                  </View>
                 </>
               ) : (
                 <>
@@ -1147,6 +1172,33 @@ const ViewTickets = () => {
                     <Text style={styles.colons}>:</Text>
                     <Text style={styles.detailValue}>
                       {ticket.customer_email}
+                    </Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>State</Text>
+                    <Text style={styles.colons}>:</Text>
+                    <Text style={styles.detailValue}>{ticket.state_name}</Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>City</Text>
+                    <Text style={styles.colons}>:</Text>
+                    <Text style={styles.detailValue}>{ticket.city_name}</Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Region</Text>
+                    <Text style={styles.colons}>:</Text>
+                    <Text style={styles.detailValue}>{ticket.region_name}</Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>AddressType</Text>
+                    <Text style={styles.colons}>:</Text>
+                    <Text style={styles.detailValue}>{ticket.address}</Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Address</Text>
+                    <Text style={styles.colons}>:</Text>
+                    <Text style={styles.detailValue}>
+                      {ticket.address_type}
                     </Text>
                   </View>
                 </>
