@@ -11,21 +11,20 @@ import {
 } from 'react-native';
 import { Formik } from 'formik';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+
 import axios from 'axios';
 import io from 'socket.io-client';
 import DateFormat from './DateFormat';
 import { BASE_URL } from '@env';
 
-const AddConversation = ({ data, customerComments, fetchData }) => {
+const AddConversation = ({ data, user, customerComments, fetchData }) => {
   const [conversationData, setConversationData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [userInfo, setUserInfo] = useState(null);
   const socket = useRef(null);
-  const scrollViewRef = useRef(null);
-
   const currentTime = DateFormat();
 
-  // Load logged-in user info
   useEffect(() => {
     const loadUser = async () => {
       try {
@@ -35,63 +34,26 @@ const AddConversation = ({ data, customerComments, fetchData }) => {
 
         setUserInfo({
           userId,
-          name: name || 'Employee',
-          Role: role ? [role] : ['Employee'],
+          name: name || '',
+          Role: role ? [role] : [],
         });
       } catch (err) {
         console.log('Failed to load user', err);
       }
     };
+
     loadUser();
   }, []);
 
-  // Parse old messages and normalize
   useEffect(() => {
     try {
       const parsed = JSON.parse(customerComments || '[]');
 
       const allMessages = parsed.flatMap(item => {
         if (Array.isArray(item.message)) {
-          return item.message
-            .filter(m => m && m.text)
-            .map(m => ({
-              id: m.id || `old-${Math.random().toString(36).substr(2, 9)}`,
-              text: m.text,
-              date:
-                m.date ||
-                new Date().toLocaleString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
-                  hour: 'numeric',
-                  minute: 'numeric',
-                }),
-              sender_name:
-                m.sender_name ||
-                (m.sender_role === 'Employee' ? 'Employee' : 'Customer'),
-              sender_role: m.sender_role || 'Customer',
-            }));
+          return item.message.filter(m => m && m.text);
         } else if (item.message && item.message.text) {
-          const m = item.message;
-          return [
-            {
-              id: m.id || `old-${Math.random().toString(36).substr(2, 9)}`,
-              text: m.text,
-              date:
-                m.date ||
-                new Date().toLocaleString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
-                  hour: 'numeric',
-                  minute: 'numeric',
-                }),
-              sender_name:
-                m.sender_name ||
-                (m.sender_role === 'Employee' ? 'Employee' : 'Customer'),
-              sender_role: m.sender_role || 'Customer',
-            },
-          ];
+          return [item.message];
         }
         return [];
       });
@@ -106,18 +68,19 @@ const AddConversation = ({ data, customerComments, fetchData }) => {
     }
   }, [customerComments]);
 
-  // Setup Socket.IO
   const setupSocketIO = useCallback(() => {
-    socket.current = io(BASE_URL, { transports: ['websocket'] });
+    const socketUrl = `${BASE_URL}`;
+    socket.current = io(socketUrl, {
+      transports: ['websocket'],
+    });
 
     socket.current.on('connect', () => {
       console.log('Socket connected');
     });
 
     socket.current.on('message', msg => {
+      console.log('Received via socket:', msg);
       setConversationData(prev => [...prev, msg]);
-      // Scroll to bottom
-      scrollViewRef.current?.scrollToEnd({ animated: true });
     });
 
     return () => {
@@ -129,7 +92,6 @@ const AddConversation = ({ data, customerComments, fetchData }) => {
     const cleanup = setupSocketIO();
     return cleanup;
   }, [setupSocketIO]);
-
   const handleConversation = async (values, resetForm) => {
     if (!userInfo) {
       Alert.alert('Error', 'User not loaded');
@@ -140,27 +102,26 @@ const AddConversation = ({ data, customerComments, fetchData }) => {
     const newMessage = {
       id: conversationId,
       text: values.customer_comments,
-      sender_id: userInfo.userId,
-      sender_role: userInfo.Role[0],
-      sender_name: userInfo.name,
+      sender_id: userInfo?.userId,
+      sender_role: userInfo?.Role?.[0],
+      sender_name: userInfo?.name,
       date: currentTime,
     };
 
-    // Optimistic UI update
-    setConversationData(prev => [...prev, newMessage]);
-    scrollViewRef.current?.scrollToEnd({ animated: true });
+    const updatedConversation = [...conversationData, newMessage];
+    setConversationData(updatedConversation);
 
     try {
       const ticketData = {
-        customer_comments: JSON.stringify([...conversationData, newMessage]),
+        customer_comments: JSON.stringify(
+          updatedConversation.map(msg => ({ message: msg })),
+        ),
       };
 
-      // Update backend
       await axios.put(`${BASE_URL}/api/tickets/${data?.ticket_id}`, {
         ticketData,
       });
 
-      // Broadcast to socket
       if (socket.current?.connected) {
         socket.current.emit('message', newMessage);
       }
@@ -169,9 +130,7 @@ const AddConversation = ({ data, customerComments, fetchData }) => {
       fetchData();
     } catch (err) {
       Alert.alert('Error', err?.response?.data?.error || 'Failed to send');
-
-      // Remove message if failed
-      setConversationData(prev => prev.filter(m => m.id !== conversationId));
+      setConversationData(prev => prev.filter(m => m.id !== newMessage.id));
     }
   };
 
@@ -184,27 +143,29 @@ const AddConversation = ({ data, customerComments, fetchData }) => {
   }
 
   return (
-    <View style={{ flex: 1 }}>
-      <ScrollView
-        ref={scrollViewRef}
-        style={styles.messagesContainer}
-        onContentSizeChange={() =>
-          scrollViewRef.current?.scrollToEnd({ animated: true })
-        }
-      >
+    <ScrollView>
+      <View style={styles.messagesContainer}>
         {conversationData.length === 0 ? (
           <Text style={styles.noData}>No conversation yet.</Text>
         ) : (
-          conversationData.map((msg, index) => (
-            <View key={msg.id || index} style={styles.messageBubble}>
-              <Text style={styles.sender}>
-                {msg.sender_name} - {msg.date}
-              </Text>
-              <Text style={styles.messageText}>{msg.text}</Text>
-            </View>
-          ))
+          conversationData.map((msg, index) => {
+            const isMe = String(msg.sender_id) === String(userInfo.userId);
+            return (
+              <View
+                key={msg.id || index}
+                style={[
+                  styles.messageBubble,
+                  isMe ? styles.myMessage : styles.theirMessage,
+                ]}
+              >
+                <Text style={styles.sender}>{msg.sender_name}</Text>
+                <Text style={styles.messageText}>{msg.text}</Text>
+                <Text style={styles.dateText}>{msg.date}</Text>
+              </View>
+            );
+          })
         )}
-      </ScrollView>
+      </View>
 
       <Formik
         initialValues={{ customer_comments: '' }}
@@ -213,48 +174,86 @@ const AddConversation = ({ data, customerComments, fetchData }) => {
         }
       >
         {({ values, handleChange, handleSubmit }) => (
-          <View style={styles.inputRow}>
-            <TextInput
-              placeholder="Type a message"
-              placeholderTextColor="#888"
-              style={styles.input}
-              value={values.customer_comments}
-              onChangeText={handleChange('customer_comments')}
-              multiline
-            />
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+            }}
+          >
+            <View style={[styles.formContainer, { flex: 1 }]}>
+              <TextInput
+                placeholder="Type a message"
+                placeholderTextColor="#888"
+                style={styles.input}
+                value={values.customer_comments}
+                onChangeText={handleChange('customer_comments')}
+                multiline
+              />
+            </View>
+
             <TouchableOpacity
               onPress={handleSubmit}
               disabled={!values.customer_comments}
-              style={[
-                styles.sendButton,
-                {
-                  backgroundColor: values.customer_comments
-                    ? '#007AFF'
-                    : '#ccc',
-                },
-              ]}
+              style={{
+                marginLeft: 8,
+                backgroundColor: !values.customer_comments ? '#ccc' : '#007AFF',
+                paddingHorizontal: 8,
+                paddingVertical: 8,
+                borderRadius: 15,
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
             >
               <Text style={{ color: '#fff', fontWeight: 'bold' }}>Send</Text>
             </TouchableOpacity>
           </View>
         )}
       </Formik>
-    </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
-  loaderContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  messagesContainer: { flex: 1, paddingBottom: 10, paddingHorizontal: 10 },
-  messageBubble: {
-    backgroundColor: '#fff',
-    padding: 10,
-    borderRadius: 10,
-    marginBottom: 6,
-    elevation: 1,
+  loaderContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  sender: { fontWeight: '600', fontSize: 14, color: 'black', marginBottom: 4 },
-  messageText: { fontSize: 14, color: '#888', fontWeight: 'bold' },
+  messagesContainer: {
+    paddingBottom: 10,
+  },
+  myMessage: {
+    backgroundColor: '#fff',
+    alignSelf: 'flex-end',
+
+    marginHorizontal: 12,
+    marginBottom: 6,
+    padding: 10,
+  },
+  theirMessage: {
+    backgroundColor: '#fff',
+    alignSelf: 'flex-start',
+
+    marginHorizontal: 12,
+    marginBottom: 6,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#eee',
+  },
+  dateText: {
+    fontSize: 10,
+    color: '#999',
+    alignSelf: 'flex-end',
+    marginTop: 4,
+  },
+
+  title: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: 'black',
+    marginHorizontal: 22,
+    marginBottom: 6,
+  },
   noData: {
     fontSize: 14,
     color: '#999',
@@ -262,22 +261,57 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 10,
   },
-  inputRow: {
+  messageBubble: {
+    backgroundColor: '#ffffff',
+    padding: 10,
+    borderRadius: 10,
+    marginBottom: 6,
+    marginHorizontal: 12,
+    elevation: 1,
+  },
+  sender: {
+    fontWeight: '600',
+    fontSize: 14,
+    color: 'black',
+    marginBottom: 4,
+  },
+  messageText: {
+    fontSize: 14,
+    color: '#888',
+    fontWeight: 'bold',
+  },
+  formContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 6,
     backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderColor: '#ddd',
+    borderRadius: 10,
+
+    elevation: 2,
   },
-  input: { flex: 1, fontSize: 14, paddingHorizontal: 10, color: '#000' },
-  sendButton: {
-    paddingHorizontal: 12,
+
+  input: {
+    flex: 1,
+    fontSize: 14,
+    paddingVertical: 2,
+    paddingHorizontal: 2,
+    color: '#888',
+    marginHorizontal: 10,
+    fontWeight: 'bold',
+  },
+  button: {
+    backgroundColor: '#008080',
     paddingVertical: 8,
-    borderRadius: 15,
+    paddingHorizontal: 16,
+    borderRadius: 20,
     marginLeft: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
+  },
+  buttonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  disabledButton: {
+    backgroundColor: '#ccc',
   },
 });
 

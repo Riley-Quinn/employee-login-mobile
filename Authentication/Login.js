@@ -23,7 +23,7 @@ const Login = ({ navigation }) => {
   const [secureText, setSecureText] = useState(true);
   const handleLogin = async (values, { setSubmitting }) => {
     try {
-      const response = await axios.post(`${BASE_URL}/api/auth/admin/login`, {
+      const response = await axios.post(`{BASE_URL}/api/auth/admin/login`, {
         email: values.email,
         password: values.password,
         rememberMe: true,

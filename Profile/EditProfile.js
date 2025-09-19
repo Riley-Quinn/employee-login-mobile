@@ -1,4 +1,6 @@
 import React, { useEffect } from 'react';
+import { Dimensions } from 'react-native';
+
 import {
   View,
   Text,
@@ -20,6 +22,9 @@ import { Formik } from 'formik';
 import * as Yup from 'yup';
 import { BASE_URL } from '@env';
 import { SafeAreaView } from 'react-native-safe-area-context';
+const { width } = Dimensions.get('window');
+const isTablet = width >= 768;
+
 const validationSchema = Yup.object().shape({
   name: Yup.string().required('Name is required'),
   phone: Yup.string()
@@ -41,7 +46,7 @@ const EditProfile = ({ navigation }) => {
         const userId = await AsyncStorage.getItem('userId');
 
         const clientId = await AsyncStorage.getItem('clientId');
-        const res = await axios.get(`${BASE_URL}/api/employee/${userId}`, {
+        const res = await axios.get(`{BASE_URL}/api/employee/${userId}`, {
           headers: {
             'x-client-id': clientId,
           },
@@ -63,7 +68,7 @@ const EditProfile = ({ navigation }) => {
   const handleSave = async values => {
     try {
       const userId = await AsyncStorage.getItem('userId');
-      await axios.put(`${BASE_URL}/api/employee/${userId}`, values);
+      await axios.put(`{BASE_URL}/api/employee/${userId}`, values);
       navigation.navigate('ProfileScreen');
       Alert.alert('Success', 'Profile updated successfully!');
     } catch (error) {
@@ -76,7 +81,10 @@ const EditProfile = ({ navigation }) => {
     <>
       <SafeAreaView style={{ backgroundColor: '#008080', padding: 0 }}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+          >
             <Ionicons name="arrow-back" size={26} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Edit Profile</Text>
@@ -176,60 +184,11 @@ const EditProfile = ({ navigation }) => {
           )}
         </Formik>
       </ScrollView>
-      <View style={styles.bottomBar}>
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => navigation.navigate('Dashboard')}
-        >
-          <FontAwesome name="home" size={30} color="#008080" />
-          <Text style={styles.navText}>Home</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => navigation.navigate('EventsCalendar')}
-        >
-          <Ionicons name="calendar" size={30} color="#888" />
-          <Text style={styles.navText}>Calendar</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => navigation.navigate('EventsOverview')}
-        >
-          <MaterialIcons name="event" size={30} color="#888" />
-          <Text style={styles.navText}>Events</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => navigation.navigate('ProfileScreen')}
-        >
-          <FontAwesome name="user" size={30} color="#888" />
-          <Text style={styles.navText}>Profile</Text>
-        </TouchableOpacity>
-      </View>
     </>
   );
 };
 
 const styles = StyleSheet.create({
-  bottomBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    backgroundColor: '#fff',
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#ddd',
-  },
-  navItem: {
-    alignItems: 'center',
-  },
-  navText: {
-    fontSize: 14,
-    color: '#888',
-    fontWeight: 'bold',
-    marginTop: 4,
-  },
   profileCircle: {
     width: 120,
     height: 120,
@@ -264,20 +223,9 @@ const styles = StyleSheet.create({
   },
   container: {
     alignItems: 'center',
-    paddingVertical: 100,
+    paddingVertical: 125,
     backgroundColor: '#F0F9F8',
-    paddingHorizontal: 40,
-  },
-
-  Card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingTop: 8,
-    paddingBottom: -1,
-    paddingHorizontal: 12,
-    marginBottom: 15,
-    width: '110%',
-    alignSelf: 'center',
+    paddingHorizontal: isTablet ? 30 : 40,
   },
 
   input: {
@@ -293,10 +241,20 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginTop: 5,
   },
+  Card: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingTop: 8,
+    paddingBottom: -1,
+    paddingHorizontal: 12,
+    marginBottom: 15,
+    width: isTablet ? '100%' : '110%',
+    alignSelf: 'center',
+  },
 
   saveButton: {
     backgroundColor: '#00BFA6',
-    width: '110%',
+    width: isTablet ? '100%' : '110%',
     borderRadius: 15,
     alignItems: 'center',
     marginTop: 30,
@@ -304,7 +262,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     padding: 10,
+    alignSelf: 'center',
   },
+
   saveButtonText: {
     color: '#fff',
     fontSize: 18,
@@ -323,20 +283,24 @@ const styles = StyleSheet.create({
   Ionicons: {
     marginRight: 30,
   },
-
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    // paddingHorizontal: 16,
-    backgroundColor: '#008080',
+    paddingHorizontal: 16,
     // height: 1,
+    backgroundColor: '#008080',
   },
+
+  backButton: {
+    marginRight: 10,
+  },
+
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#fff',
-    marginLeft: 15,
   },
+
   backicon: {
     marginTop: -23,
   },
@@ -347,17 +311,6 @@ const styles = StyleSheet.create({
     marginLeft: 20,
     marginTop: 15,
     marginBottom: 5,
-  },
-  card: {
-    backgroundColor: '#fff',
-    padding: 15,
-    borderRadius: 10,
-    marginVertical: 10,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
   },
 });
 

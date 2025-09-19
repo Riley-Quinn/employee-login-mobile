@@ -28,7 +28,7 @@ const AddComments = ({ ticket, user, fetchData, fetchError, fetchSuccess }) => {
     const data = CommentsHistory(
       ticket?.comments,
       commentData,
-      commentId, // Pass conversation ID
+      commentId,
       user?.userId, // Participant ID
       user?.Role[0],
       user?.name,
@@ -40,7 +40,7 @@ const AddComments = ({ ticket, user, fetchData, fetchError, fetchSuccess }) => {
 
     try {
       const response = await axios.put(
-        `${BASE_URL}/api/tickets/${ticket?.ticket_id}`,
+        `{BASE_URL}/api/tickets/${ticket?.ticket_id}`,
         { ticketData },
       );
       fetchData();

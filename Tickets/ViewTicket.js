@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { Dimensions } from 'react-native';
 import {
   View,
   Text,
@@ -9,7 +10,6 @@ import {
   FlatList,
   TextInput,
   Modal,
-  Dimensions,
   Image,
   ActivityIndicator,
   Alert,
@@ -42,7 +42,7 @@ import { reverseGeocode } from './Geocode';
 import LocationExample from './LoactionDisplay';
 import { launchImageLibrary } from 'react-native-image-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
-
+const isTablet = width >= 768;
 const { width, height } = Dimensions.get('window');
 const GOOGLE_MAPS_API_KEY = 'AIzaSyBUusGFrajBXyPHb2yuwF_VGBjmaVRzLqY';
 
@@ -119,45 +119,69 @@ const ViewTickets = () => {
         quality: 1,
       });
 
-      if (result.didCancel || !result.assets?.length) return;
+      if (result.didCancel || !result.assets || result.assets.length === 0) {
+        return;
+      }
 
       const file = result.assets[0];
 
-      const { latitude, longitude } = await getLocation();
+      let latitude = null;
+      let longitude = null;
+      let address = null;
+
+      try {
+        const coords = await getLocation();
+        if (coords) {
+          latitude = coords.latitude;
+          longitude = coords.longitude;
+          // fetch human-readable address
+          address = await reverseGeocode(latitude, longitude);
+        }
+      } catch (locError) {
+        console.error('❌ Location or geocode error:', locError.message);
+      }
 
       const isImage = file.type?.startsWith('image/');
       const mediaType = isImage ? 'Photo' : 'Video';
-      const fileType = file.type || (isImage ? 'image/jpeg' : 'video/mp4');
-      const fileUri = file.uri.startsWith('file://')
-        ? file.uri
-        : `file://${file.uri}`;
 
       const formData = new FormData();
       formData.append('file', {
-        uri: fileUri,
-        type: fileType,
+        uri: file.uri,
+        type: file.type,
         name: file.fileName || `upload.${isImage ? 'jpg' : 'mp4'}`,
       });
       formData.append('ticket', ticketId);
       formData.append('media_type', mediaType);
       formData.append('media_stage', mediaStage);
-      formData.append('latitude', latitude);
-      formData.append('longitude', longitude);
+      if (latitude != null) formData.append('latitude', latitude);
+      if (longitude != null) formData.append('longitude', longitude);
+      if (address != null) formData.append('address', address);
+
       formData.append('uploaded_by', userId);
 
-      const response = await axios.post(
-        `${BASE_URL}/api/employee-uploads`,
-        formData,
-      );
-      console.log('Upload successful:', response.data);
+      for (let [key, value] of formData._parts) {
+        console.log(`${key}:`, value);
+      }
+
+      const uploadUrl = `{BASE_URL}/api/employee-uploads`;
+
+      const response = await axios.post(uploadUrl, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
 
       fetchTicket();
     } catch (err) {
-      console.error(
-        '❌ Upload failed:',
-        err?.response?.status,
-        err?.response?.data || err.message,
-      );
+      if (err.response) {
+        console.error(
+          '❌ Server responded with:',
+          err.response.status,
+          err.response.data,
+        );
+      } else if (err.request) {
+        console.error('❌ No response, request was:', err.request);
+      } else {
+        console.error('❌ Upload setup error:', err.message);
+      }
       Alert.alert('Error', 'Upload failed. Try again.');
     }
   };
@@ -196,7 +220,7 @@ const ViewTickets = () => {
     );
 
     try {
-      await axios.put(`${BASE_URL}/api/tickets/${item.ticket_id}`, {
+      await axios.put(`{BASE_URL}/api/tickets/${item.ticket_id}`, {
         ticketData: { status_id: 3, status_tracker: trackerData },
       });
       fetchTickets();
@@ -230,7 +254,7 @@ const ViewTickets = () => {
       selectedTicket.employee_phone,
     );
     try {
-      await axios.put(`${BASE_URL}/api/tickets/${selectedTicket.ticket_id}`, {
+      await axios.put(`{BASE_URL}/api/tickets/${selectedTicket.ticket_id}`, {
         ticketData: {
           employee_arrival_date: formattedDate,
           status_tracker: trackerData,
@@ -248,16 +272,13 @@ const ViewTickets = () => {
 
     try {
       const response = await axios.get(
-        `${BASE_URL}/api/tickets/employee/${userId}`,
+        `{BASE_URL}/api/tickets/employee/${userId}`,
       );
 
       const allTickets = response?.data?.list || [];
 
       const today = moment().format('YYYY-MM-DD');
 
-      // Sort today tickets by employee_arrival_time ascending
-
-      // Weekly summary logic
       const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       const weeklyCounts = days.map(day => ({ label: day, done: 0, todo: 0 }));
 
@@ -318,7 +339,7 @@ const ViewTickets = () => {
     );
 
     try {
-      await axios.put(`${BASE_URL}/api/tickets/${selectedTicket.ticket_id}`, {
+      await axios.put(`{BASE_URL}/api/tickets/${selectedTicket.ticket_id}`, {
         ticketData: { status_tracker: trackerData, status_id: 3 },
       });
       fetchTickets();
@@ -361,7 +382,7 @@ const ViewTickets = () => {
     }
 
     try {
-      await axios.put(`${BASE_URL}/api/tickets/${selectedTicket.ticket_id}`, {
+      await axios.put(`{BASE_URL}/api/tickets/${selectedTicket.ticket_id}`, {
         ticketData,
       });
       fetchTickets();
@@ -381,7 +402,7 @@ const ViewTickets = () => {
     }
 
     try {
-      const res = await axios.get(`${BASE_URL}/api/tickets/${ticketId}`, {
+      const res = await axios.get(`{BASE_URL}/api/tickets/${ticketId}`, {
         params: { userId },
       });
 
@@ -450,7 +471,9 @@ const ViewTickets = () => {
           <View style={styles.headerRow}></View>
 
           <View style={styles.infoRow}>
-            <FontAwesome name="flag" size={20} color="#555" />
+            <View style={styles.iconBox}>
+              <FontAwesome name="flag" size={20} color="#555" />
+            </View>
             <Text style={styles.infoLabel}>Priority</Text>
             <Text style={styles.colon}>:</Text>
             <Text
@@ -468,35 +491,40 @@ const ViewTickets = () => {
           </View>
 
           <View style={styles.infoRow}>
-            <MaterialIcons name="person" size={20} color="#555" />
+            <View style={styles.iconBox}>
+              <MaterialIcons name="person" size={20} color="#555" />
+            </View>
             <Text style={styles.infoLabel}>Assigned</Text>
             <Text style={styles.colon}>:</Text>
             <Text style={styles.infoValue}>
               {ticket.employee_name || 'N/A'}
             </Text>
           </View>
-
           <View style={styles.infoRow}>
-            <FontAwesome5 name="cogs" size={20} color="#555" />
+            <View style={styles.iconBox}>
+              <FontAwesome5 name="cogs" size={20} color="#555" />
+            </View>
             <Text style={styles.infoLabel}>Asset</Text>
             <Text style={styles.colon}>:</Text>
             <Text style={styles.infoValue}>{ticket.asset_name || 'N/A'}</Text>
           </View>
-
           <View style={styles.infoRow}>
-            <MaterialIcons name="person-outline" size={20} color="#555" />
-
-            <Text style={styles.infoLabel2}>Customer</Text>
-            <Text style={styles.colon2}>:</Text>
-
-            <Text style={styles.infoValue2}>{ticket.customer_name}</Text>
-            <TouchableOpacity onPress={() => setShowCustomerModal(true)}>
-              <Text style={styles.detailsBtn}>Details</Text>
-            </TouchableOpacity>
+            <View style={styles.iconBox}>
+              <MaterialIcons name="person-outline" size={20} color="#555" />
+            </View>
+            <Text style={styles.infoLabel}>Customer</Text>
+            <Text style={styles.colon}>:</Text>
+            <View style={styles.valueRow}>
+              <Text style={styles.infoValue}>{ticket.customer_name}</Text>
+              <TouchableOpacity onPress={() => setShowCustomerModal(true)}>
+                <Text style={styles.detailsBtn}>Details</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-
           <View style={styles.infoRow}>
-            <MaterialIcons name="access-time" size={20} color="#555" />
+            <View style={styles.iconBox}>
+              <MaterialIcons name="access-time" size={20} color="#555" />
+            </View>
             <Text style={styles.infoLabel}>Assigned On</Text>
             <Text style={styles.colon}>:</Text>
             <Text style={styles.infoValue}>
@@ -507,7 +535,9 @@ const ViewTickets = () => {
           </View>
 
           <View style={styles.infoRow}>
-            <MaterialIcons name="category" size={20} color="#555" />
+            <View style={styles.iconBox}>
+              <MaterialIcons name="category" size={20} color="#555" />
+            </View>
             <Text style={styles.infoLabel}>Category</Text>
             <Text style={styles.colon}>:</Text>
             <Text style={styles.infoValues}>{ticket.category_name}</Text>
@@ -682,13 +712,15 @@ const ViewTickets = () => {
             />
           )}
           <TouchableOpacity
-            style={styles.infoRow}
+            style={styles.infoRows}
             onPress={() =>
               openMap(ticket.address, ticket.city_name, ticket.state_name)
             }
           >
             <View style={styles.leftRow}>
-              <Feather name="map-pin" size={20} color="#555" />
+              <View style={styles.iconBox}>
+                <Feather name="map-pin" size={20} color="#555" />
+              </View>
               <Text style={styles.viewMapText}>View Location</Text>
             </View>
 
@@ -743,7 +775,7 @@ const ViewTickets = () => {
 
                 {ticket.employee_arrival_date && (
                   <TouchableOpacity
-                    style={[styles.startButton, { marginLeft: 12 }]} // add gap
+                    style={[styles.startButton, { marginLeft: 12 }]}
                     onPress={() => handleStartWork(ticket)}
                   >
                     <Text style={styles.buttonText}>Start</Text>
@@ -784,7 +816,7 @@ const ViewTickets = () => {
                       {media.file_type === 'Photo' ? (
                         <Image
                           source={{
-                            uri: `https://d2plv0g319oam3.cloudfront.net/${encodeURIComponent(
+                            uri: `https://d3shribgms6bZ4.cloudfront.net/${encodeURIComponent(
                               media.file_name,
                             )}`,
                           }}
@@ -801,7 +833,7 @@ const ViewTickets = () => {
                       ) : media.file_type === 'Video' ? (
                         <Video
                           source={{
-                            uri: `https://d2plv0g319oam3.cloudfront.net/${encodeURIComponent(
+                            uri: `https://d3shribgms6bZ4.cloudfront.net${encodeURIComponent(
                               media.file_name,
                             )}`,
                           }}
@@ -864,7 +896,7 @@ const ViewTickets = () => {
                           >
                             <Image
                               source={{
-                                uri: `https://d2plv0g319oam3.cloudfront.net/${media.file_name}`,
+                                uri: `https://d2plv0g319oam3.cloudfront.nets/${media.file_name}`,
                               }}
                               style={styles.mediaImage}
                             />
@@ -959,7 +991,7 @@ const ViewTickets = () => {
                               {media.file_type === 'Photo' ? (
                                 <Image
                                   source={{
-                                    uri: `https://d2plv0g319oam3.cloudfront.net/${media.file_name}`,
+                                    uri: `https://d3shribgms6bZ4.cloudfront.net/${media.file_name}`,
                                   }}
                                   style={styles.mediaImages}
                                 />
@@ -1029,7 +1061,7 @@ const ViewTickets = () => {
             {selectedMedia && selectedMedia.file_type === 'Photo' && (
               <Image
                 source={{
-                  uri: `https://d2plv0g319oam3.cloudfront.net/${selectedMedia.file_name}`,
+                  uri: `https://d3shribgms6bZ4.cloudfront.net/${selectedMedia.file_name}`,
                 }}
                 style={{
                   width: '90%',
@@ -1042,7 +1074,7 @@ const ViewTickets = () => {
             {selectedMedia && selectedMedia.file_type === 'Video' && (
               <Video
                 source={{
-                  uri: `https://d2plv0g319oam3.cloudfront.net/${selectedMedia.file_name}`,
+                  uri: `https://d3shribgms6bZ4.cloudfront.net/${selectedMedia.file_name}`,
                 }}
                 style={{ width: '90%', height: '80%' }}
                 controls
@@ -1274,7 +1306,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   mediaGrids: {
-    flexDirection: 'row',
+    flexDirection: isTablet ? 'row' : 'column',
     flexWrap: 'wrap',
     justifyContent: 'flex-start',
   },
@@ -1295,8 +1327,8 @@ const styles = StyleSheet.create({
   },
 
   mediaImages: {
-    width: '48%',
-    height: 100,
+    width: isTablet ? '48%' : '50%',
+    height: isTablet ? 100 : 80,
     borderRadius: 8,
   },
   picker: {
@@ -1432,9 +1464,6 @@ const styles = StyleSheet.create({
 
   safeContainer: { flex: 1, backgroundColor: '#f2f2f2' },
 
-  infoSection: {
-    marginHorizontal: 40,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1548,7 +1577,12 @@ const styles = StyleSheet.create({
     color: '#1976D2',
     fontWeight: 'bold',
   },
-
+  infoRows: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 2,
+  },
   boldLabel: {
     fontWeight: 'bold',
     fontSize: 14,
@@ -1585,44 +1619,25 @@ const styles = StyleSheet.create({
 
     marginTop: 5,
   },
-
-  infoLabel2: {
-    flex: 1.6,
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginLeft: 6,
-  },
-  infoValue2: {
-    flex: 2,
-    fontSize: 14,
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    color: '#555',
-    fontWeight: '600',
-  },
-  colon2: {
-    marginLeft: -28,
-    textAlign: 'center',
-    width: 10,
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-  },
-
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 2,
+    paddingVertical: 4,
   },
+
+  iconBox: {
+    width: 28, // fixed width so all icons align
+    alignItems: 'center',
+  },
+
   infoLabel: {
-    flex: 0.8,
+    flex: 1,
     fontSize: 14,
     fontWeight: '600',
     color: '#333',
     marginLeft: 6,
   },
+
   colon: {
     width: 10,
     textAlign: 'center',
@@ -1630,38 +1645,38 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
   },
+
   infoValue: {
     flex: 2,
     fontSize: 14,
-    alignItems: 'center',
-    justifyContent: 'space-between',
     color: '#555',
     fontWeight: '600',
   },
+
+  valueRow: {
+    flex: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+
   detailsBtn: {
     color: '#007BFF',
     fontWeight: '600',
-    marginRight: 40,
+    marginLeft: 10,
   },
+
+  priorityHigh: { color: 'red' },
+  priorityMedium: { color: 'orange' },
+  priorityLow: { color: 'green' },
+
   infoValues: {
     flex: 2,
     fontSize: 14,
     color: '#008080',
     fontWeight: '600',
   },
-  labelText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#444',
-    marginTop: 6,
-  },
-  colonss: {
-    width: 200,
-    textAlign: 'center',
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-  },
+
   uploadCard: {
     backgroundColor: '#008080',
     borderRadius: 10,
@@ -1743,18 +1758,18 @@ const styles = StyleSheet.create({
     right: 10,
     zIndex: 1,
   },
-  priorityHigh: {
-    color: 'red',
-    fontWeight: '700',
-  },
-  priorityMedium: {
-    color: 'orange',
-    fontWeight: '700',
-  },
-  priorityLow: {
-    color: 'pink',
-    fontWeight: '700',
-  },
+  // priorityHigh: {
+  //   color: 'red',
+  //   fontWeight: '700',
+  // },
+  // priorityMedium: {
+  //   color: 'orange',
+  //   fontWeight: '700',
+  // },
+  // priorityLow: {
+  //   color: 'pink',
+  //   fontWeight: '700',
+  // },
 
   locationText: {
     color: 'white',
@@ -1824,7 +1839,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   wrapper: {
-    marginTop: 10,
     borderRadius: 12,
     overflow: 'hidden',
     elevation: 2,
@@ -1949,12 +1963,6 @@ const styles = StyleSheet.create({
     marginVertical: 6,
     fontWeight: '500',
     lineHeight: 20,
-  },
-  viewMapButton: {
-    marginTop: 6,
-    marginBottom: 8,
-    alignSelf: 'flex-start',
-    marginHorizontal: 10,
   },
 
   modalcontent: {

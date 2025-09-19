@@ -1,4 +1,7 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { Dimensions } from 'react-native';
+import { Animated } from 'react-native';
+
 import {
   View,
   Text,
@@ -12,6 +15,7 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Dropdown } from 'react-native-element-dropdown';
+import dayjs from 'dayjs';
 
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -21,6 +25,8 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import { BASE_URL } from '@env';
 import { SafeAreaView } from 'react-native-safe-area-context';
+const screenWidth = Dimensions.get('window').width;
+const isTablet = screenWidth >= 768;
 
 const serviceReasons = [
   'Power Supply Issues',
@@ -78,9 +84,9 @@ const TicketPage = ({ navigation }) => {
 
         console.log(
           '🌐 Fetching ticket statuses from:',
-          `${BASE_URL}/api/ticket-statuses`,
+          `{BASE_URL}/api/ticket-statuses`,
         );
-        const res = await axios.get(`${BASE_URL}/api/ticket-statuses`);
+        const res = await axios.get(`{BASE_URL}/api/ticket-statuses`);
         console.log('✅ Ticket statuses API response:', res?.data);
 
         setTicketStatuses(res?.data || []);
@@ -96,7 +102,7 @@ const TicketPage = ({ navigation }) => {
 
     try {
       const response = await axios.get(
-        `${BASE_URL}/api/tickets/employee/${userId}`,
+        `{BASE_URL}/api/tickets/employee/${userId}`,
       );
       let list = response?.data?.list || [];
 
@@ -121,7 +127,7 @@ const TicketPage = ({ navigation }) => {
     const fetchTicketCounts = async () => {
       try {
         const response = await axios.get(
-          `${BASE_URL}/api/tickets/employee/ticket-counts/${userId}`,
+          `{BASE_URL}/api/tickets/employee/ticket-counts/${userId}`,
         );
 
         console.log('📊 Ticket counts response:', response.data);
@@ -141,7 +147,32 @@ const TicketPage = ({ navigation }) => {
 
     fetchTicketCounts();
   }, [userId, fetchTickets, statusFilter]);
+  const BlinkingText = ({ children, style, duration = 500 }) => {
+    const opacity = useRef(new Animated.Value(1)).current;
 
+    useEffect(() => {
+      const blink = Animated.loop(
+        Animated.sequence([
+          Animated.timing(opacity, {
+            toValue: 0,
+            duration,
+            useNativeDriver: true,
+          }),
+          Animated.timing(opacity, {
+            toValue: 1,
+            duration,
+            useNativeDriver: true,
+          }),
+        ]),
+      );
+      blink.start();
+      return () => blink.stop();
+    }, [opacity, duration]);
+
+    return (
+      <Animated.Text style={[style, { opacity }]}>{children}</Animated.Text>
+    );
+  };
   const handleAssignToMe = async item => {
     const userStr = await AsyncStorage.getItem('userId');
     const user = JSON.parse(userStr);
@@ -162,7 +193,7 @@ const TicketPage = ({ navigation }) => {
       employee_arrival_date: null,
     };
     try {
-      await axios.put(`${BASE_URL}/api/tickets/${item.ticket_id}`, {
+      await axios.put(`{BASE_URL}/api/tickets/${item.ticket_id}`, {
         ticketData,
       });
       fetchTickets();
@@ -186,7 +217,7 @@ const TicketPage = ({ navigation }) => {
     );
 
     try {
-      await axios.put(`${BASE_URL}/api/tickets/${item.ticket_id}`, {
+      await axios.put(`{BASE_URL}/api/tickets/${item.ticket_id}`, {
         ticketData: { status_id: 3, status_tracker: trackerData },
       });
       fetchTickets();
@@ -220,7 +251,7 @@ const TicketPage = ({ navigation }) => {
       selectedTicket.employee_phone,
     );
     try {
-      await axios.put(`${BASE_URL}/api/tickets/${selectedTicket.ticket_id}`, {
+      await axios.put(`{BASE_URL}/api/tickets/${selectedTicket.ticket_id}`, {
         ticketData: {
           employee_arrival_date: formattedDate,
           status_tracker: trackerData,
@@ -252,7 +283,7 @@ const TicketPage = ({ navigation }) => {
     );
 
     try {
-      await axios.put(`${BASE_URL}/api/tickets/${selectedTicket.ticket_id}`, {
+      await axios.put(`{BASE_URL}/api/tickets/${selectedTicket.ticket_id}`, {
         ticketData: { status_tracker: trackerData, status_id: 3 },
       });
       fetchTickets();
@@ -295,7 +326,7 @@ const TicketPage = ({ navigation }) => {
     }
 
     try {
-      await axios.put(`${BASE_URL}/api/tickets/${selectedTicket.ticket_id}`, {
+      await axios.put(`{BASE_URL}/api/tickets/${selectedTicket.ticket_id}`, {
         ticketData,
       });
       fetchTickets();
@@ -356,7 +387,19 @@ const TicketPage = ({ navigation }) => {
         <View style={styles.cardWrapper}>
           <View style={styles.cardHeader}>
             <Text style={styles.ticketId}>#{item.ticket_id}</Text>
+            <Text style={styles.employee}>
+              {item.employee_arrival_date
+                ? dayjs(item.employee_arrival_date).format('MMM D, YYYY')
+                : ''}
+            </Text>
 
+            <BlinkingText style={styles.employeee}>
+              {item.employee_arrival_time
+                ? dayjs(`1970-01-01T${item.employee_arrival_time}`).format(
+                    'h:mm A',
+                  )
+                : ''}
+            </BlinkingText>
             <View style={{ marginLeft: 'auto' }}>
               {(() => {
                 const chipStyle = getStatusChipStyle(item.status_name);
@@ -381,10 +424,20 @@ const TicketPage = ({ navigation }) => {
           <View style={styles.cardBody}>
             <View style={styles.infoSection}>
               <View style={styles.infoRows}>
-                <Text style={styles.title}>
+                <Text
+                  style={styles.title}
+                  numberOfLines={2}
+                  ellipsizeMode="tail"
+                >
                   {item.title ? item.title : '-'}
                 </Text>
-                <Text style={styles.label}>{item.description}</Text>
+                <Text
+                  style={styles.label}
+                  numberOfLines={2}
+                  ellipsizeMode="tail"
+                >
+                  {item.description}
+                </Text>
               </View>
               <View
                 style={[styles.infoRow, { justifyContent: 'space-between' }]}
@@ -488,6 +541,10 @@ const TicketPage = ({ navigation }) => {
             style={{
               flexDirection: 'row',
               justifyContent: 'space-between',
+              marginHorizontal: 6,
+              marginTop: isTablet ? 5 : 0,
+              marginBottom: isTablet ? -20 : 0,
+
               alignItems: 'center',
             }}
           >
@@ -543,11 +600,19 @@ const TicketPage = ({ navigation }) => {
       </Modal>
 
       <View style={styles.container}>
-        <FlatList
+        {/* <FlatList
           data={tickets}
           keyExtractor={item => item.ticket_id.toString()}
           renderItem={renderItem}
+        /> */}
+        <FlatList
+          data={tickets}
+          key={isTablet ? 'tablet' : 'mobile'}
+          keyExtractor={(item, index) => `${item.ticket_id}-${index}`}
+          renderItem={renderItem}
+          numColumns={isTablet ? 2 : 1}
         />
+
         <Modal visible={editVisible} transparent animationType="slide">
           <View style={styles.modalWrapper}>
             <View style={styles.modalContent}>
@@ -723,22 +788,11 @@ const TicketPage = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  headerContainer: {
-    backgroundColor: '#008080',
-  },
-  cardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    marginTop: 8,
-  },
-  textBlock: {
-    alignItems: 'flex-start',
-  },
-
   cardWrapper: {
-    marginTop: 15,
+    marginTop: -5,
+    marginBottom: isTablet ? -20 : 20,
+    marginHoriZontal: isTablet ? -2 : 0,
+
     borderRadius: 8,
     overflow: 'hidden',
     shadowColor: '#000',
@@ -746,12 +800,33 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 5,
+    minHeight: isTablet ? 150 : 0,
+
+    flex: isTablet ? 1 : 0,
+
     backgroundColor: '#fff',
+  },
+  employee: {
+    fontWeight: 'bold',
+    fontSize: 14,
+    color: '#fff',
+    marginLeft: screenWidth < 768 ? 130 : 550,
+  },
+  employeee: {
+    fontWeight: 'bold',
+    fontSize: 14,
+    color: '#fff',
+    marginLeft: screenWidth < 768 ? 13 : 550,
+  },
+  ticketCard: {
+    margin: isTablet ? 8 : 0,
+    width: isTablet ? screenWidth / 2 - 20 : '100%',
   },
 
   cardHeader: {
     backgroundColor: '#008080',
     padding: 6,
+
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -774,51 +849,11 @@ const styles = StyleSheet.create({
     color: '#555',
     fontSize: 14,
   },
-
-  statusTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-  },
-  statusNumber: {
-    fontSize: 22,
-    fontWeight: '700',
-    marginVertical: 6,
-    color: '#000',
-  },
-  statusFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  statusPercent: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#444',
-  },
-
-  cardContents: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    marginHorizontal: 6,
-    marginVertical: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-
-  headerRow: {
-    flexDirection: 'row',
-    marginVertical: 6,
-  },
   ticketId: {
     fontWeight: 'bold',
     fontSize: 16,
     color: '#fff',
+    marginLeft: 10,
   },
   statusChip: {
     paddingHorizontal: 10,
@@ -829,16 +864,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
   },
-  iconCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#2196F3',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 8,
-  },
-
   infoSection: {
     padding: 10,
   },
@@ -867,142 +892,31 @@ const styles = StyleSheet.create({
     backgroundColor: '#ddd',
     marginTop: 6,
   },
-
-  infoIcon: {
-    marginRight: 6,
-  },
-
   Ticket: {
     fontWeight: '600',
     color: '#222',
     fontSize: 14,
-  },
-
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#efedf4',
-    flex: 1,
-    marginLeft: 12,
   },
   filterButton: {
     width: '100%',
     paddingVertical: 8,
     paddingHorizontal: 12,
   },
-  // filterRow: {
-  //   marginVertical: 10,
-  // },
   Tickets: {
     fontWeight: '600',
     color: '#000',
     fontSize: 14,
   },
-  dropdownWrapper: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    backgroundColor: '#fff',
-  },
-
   picker: {
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 8,
     paddingHorizontal: 10,
   },
-
-  cardLabel: {
-    fontSize: 14,
-    marginBottom: 4,
-    color: '#333',
-  },
-
-  ticketHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  avatar: {
-    width: 30,
-    height: 30,
-    backgroundColor: '#008080',
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
-    marginTop: -50,
-  },
-  avatarText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  headerInfo: {
-    flex: 1,
-  },
-  ticketTitle: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 3,
-    color: '#000',
-  },
-
-  categoryLabel: {
-    fontSize: 14,
-    color: '#000',
-    fontWeight: '400',
-  },
-
-  categoryName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#000',
-  },
   row: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     marginBottom: 5,
-  },
-
-  iconBox: {
-    width: 10,
-    height: 10,
-    backgroundColor: '#008080',
-    marginRight: 8,
-    marginTop: 6,
-    borderRadius: 2,
-  },
-
-  emptyBox: {
-    width: 10,
-    height: 10,
-    marginRight: 8,
-    marginTop: 6,
-  },
-
-  ticketDate: {
-    fontSize: 16,
-    color: '#000',
-    fontWeight: 'bold',
-    marginBottom: 3,
-  },
-  dateRow: {
-    marginBottom: 12,
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: '#ffffff',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    borderWidth: 0.1,
-    borderColor: '#000',
-  },
-
-  ticketDates: {
-    fontSize: 14,
-    color: '#000',
   },
   tickets: {
     fontSize: 14,
@@ -1011,37 +925,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     textAlignVertical: 'center',
   },
-
-  priorityText: {
-    fontSize: 14,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    backgroundColor: '#eee',
-    borderRadius: 8,
-    color: '#222',
-    fontWeight: 'bold',
-  },
-  subText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    marginLeft: 8,
-    color: '#888',
-  },
-  buttonFilled: {
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    backgroundColor: '#008080',
-
-    borderRadius: 8,
-    marginTop: 8,
-  },
-
   modalWrapper: {
     flex: 1,
     justifyContent: 'center',
     backgroundColor: 'rgba(0,0,0,0.4)',
   },
-
   modalContent: {
     backgroundColor: '#fff',
     marginHorizontal: 20,
@@ -1053,7 +941,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 6,
   },
-
   modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
@@ -1061,7 +948,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     textAlign: 'center',
   },
-
   input: {
     borderColor: '#ccc',
     borderWidth: 1,
@@ -1073,20 +959,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9f9f9',
     color: '#000',
   },
-
   modalButtonRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 10,
   },
-
   ticketNumber: {
     fontSize: 20,
     fontWeight: 'bold',
     marginLeft: 10,
     color: '#fff',
   },
-
   modalButton: {
     flex: 1,
     backgroundColor: '#008080',
@@ -1095,7 +978,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
   },
-
   modalCancelButton: {
     flex: 1,
     backgroundColor: '#bbb',
@@ -1103,70 +985,16 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
   },
-
   modalButtonText: {
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 14,
   },
-
-  buttonRows: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-
-    gap: 10,
-  },
-
   container: {
     flex: 1,
     paddingHorizontal: 10,
     paddingVertical: 2,
   },
-
-  actionButton: {
-    flex: 1,
-    backgroundColor: '#008080',
-    paddingVertical: 10,
-    marginHorizontal: 5,
-
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-
-  filterSection: {
-    marginTop: 12,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 1 },
-    shadowRadius: 4,
-    elevation: 3,
-  },
-
-  filterLabel: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: 'black',
-    marginBottom: 6,
-  },
-
-  pickerWrapper: {
-    borderColor: '#000',
-    borderWidth: 0.5,
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-
-  buttonRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 12,
-    gap: 10,
-  },
-
   arrivalButton: {
     backgroundColor: '#008080',
     paddingVertical: 3,
@@ -1178,55 +1006,37 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     marginRight: 10,
   },
-
   startButton: {
     backgroundColor: '#008080',
     paddingVertical: 3,
     paddingHorizontal: 12,
     borderRadius: 6,
     marginTop: -2,
-
     marginLeft: 5,
   },
-
   serviceButton: {
     backgroundColor: '#008080',
     paddingVertical: 3,
     paddingHorizontal: 12,
     borderRadius: 6,
     marginTop: -2,
-
     textAlign: 'center',
     marginLeft: 10,
     marginRight: 10,
   },
-
   editButton: {
     backgroundColor: '#008080',
     paddingVertical: 3,
     marginTop: -2,
-
     paddingHorizontal: 12,
     borderRadius: 6,
   },
-
-  arrivalDateAlone: {
-    marginLeft: 'auto',
-    backgroundColor: '#008080',
-    paddingVertical: 3,
-    marginTop: -2,
-
-    paddingHorizontal: 12,
-    borderRadius: 8,
-  },
-
   buttonText: {
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 14,
     letterSpacing: 0.5,
   },
-
   whiteButtonText: {
     color: '#fff',
     fontWeight: 'bold',

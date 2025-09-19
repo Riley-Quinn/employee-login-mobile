@@ -2,7 +2,7 @@ import Geolocation from 'react-native-geolocation-service';
 import { PermissionsAndroid, Platform } from 'react-native';
 
 const getLocation = async () => {
-  return new Promise(async (resolve, reject) => {
+  return new Promise(async resolve => {
     try {
       if (Platform.OS === 'android') {
         const granted = await PermissionsAndroid.request(
@@ -10,7 +10,8 @@ const getLocation = async () => {
         );
 
         if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-          return reject(new Error('Location permission denied'));
+          console.log('Location permission denied');
+          return resolve(null); // return null instead of reject
         }
       }
 
@@ -19,14 +20,16 @@ const getLocation = async () => {
           resolve(position.coords);
         },
         error => {
-          reject(error);
+          console.log('Geolocation error:', error.message);
+          resolve(null); // return null on error
         },
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 },
       );
     } catch (error) {
-      reject(error);
+      console.log('Unexpected location error:', error.message);
+      resolve(null);
     }
   });
 };
 
-export default getLocation; // ✅ default export
+export default getLocation;

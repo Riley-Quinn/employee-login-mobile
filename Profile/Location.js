@@ -11,7 +11,7 @@ const Locations = () => {
 
   const handleStates = async () => {
     try {
-      const response = await axios.get(`${BASE_URL}/api/states`, {
+      const response = await axios.get(`{BASE_URL}/api/states`, {
         params: { is_active: 1 },
       });
       const { data } = response;
@@ -23,7 +23,7 @@ const Locations = () => {
 
   const handleCities = async state => {
     try {
-      const response = await axios.get(`${BASE_URL}/api/cities/state/${state}`);
+      const response = await axios.get(`{BASE_URL}/api/cities/state/${state}`);
       const { data } = response;
       setCities(data);
     } catch (error) {
@@ -33,7 +33,7 @@ const Locations = () => {
 
   const handleAreas = async city => {
     try {
-      const response = await axios.get(`${BASE_URL}/api/regions/city/${city}`);
+      const response = await axios.get(`{BASE_URL}/api/regions/city/${city}`);
       const { data } = response;
       setAreas(data);
     } catch (error) {
