@@ -1,125 +1,66 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
+  TextInput,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
-  Alert,
   Image,
+  ActivityIndicator,
+  Alert,
+  ScrollView,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import FontAwesome6 from 'react-native-vector-icons/FontAwesome6';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import Feather from 'react-native-vector-icons/Feather';
 import { BASE_URL } from '@env';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
 import { launchImageLibrary } from 'react-native-image-picker';
 
 const ProfileScreen = ({ navigation }) => {
-  const [profile, setProfile] = useState({});
-  const [userId, setUserId] = useState(null);
+  const [userData, setUserData] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
 
-  useEffect(() => {
-    const getUserId = async () => {
-      try {
-        const id = await AsyncStorage.getItem('userId');
-        console.log('🔑 Retrieved userId:', id);
+  const fetchUserData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const userId = await AsyncStorage.getItem('userId');
+      const token = await AsyncStorage.getItem('token');
+      const clientId = await AsyncStorage.getItem('clientId');
 
-        if (id) setUserId(id);
-      } catch (error) {
-        console.error(error);
-      }
-    };
-    getUserId();
+      console.log('Fetching user data with userId:', userId);
+
+      const res = await axios.get(`${BASE_URL}/api/employee/${userId}`, {
+        headers: { Authorization: `Bearer ${token}`, 'x-client-id': clientId },
+      });
+
+      console.log('Fetched user data:', res.data);
+
+      setUserData(res.data);
+      setName(res.data.name);
+      setEmail(res.data.email);
+      setPhone(res.data.phone);
+    } catch (err) {
+      console.log('Fetch user error:', err);
+      Alert.alert('Error', 'Failed to fetch user data');
+    }
+    setLoading(false);
   }, []);
 
   useEffect(() => {
-    if (userId) {
-      const fetchProfile = async () => {
-        try {
-          const clientId = await AsyncStorage.getItem('clientId');
-          const res = await axios.get(`{BASE_URL}/api/employee/${userId}`, {
-            headers: {
-              'x-client-id': clientId,
-            },
-          });
+    fetchUserData();
+  }, [fetchUserData]);
 
-          setProfile(res.data);
-        } catch (error) {
-          console.error(' Error fetching profile:', error.message);
-        }
-      };
-      fetchProfile();
-    }
-  }, [userId]);
-
-  const handleChoosePhoto = () => {
-    console.log('📸 Opening image library...');
-    launchImageLibrary({ mediaType: 'photo', quality: 0.7 }, response => {
-      if (response.didCancel) {
-        console.log('❌ User cancelled image picker');
-      } else if (response.errorCode) {
-        console.error('❌ ImagePicker Error: ', response.errorMessage);
-      } else {
-        const asset = response.assets[0];
-        console.log('✅ Selected image:', asset);
-        setSelectedImage(asset.uri);
-        handleUploadPhoto(asset);
-      }
-    });
-  };
-
-  const handleUploadPhoto = async photo => {
-    try {
-      console.log('🚀 Uploading photo...', photo);
-      const clientId = await AsyncStorage.getItem('clientId');
-      const formData = new FormData();
-      formData.append('profile_image', {
-        uri: photo.uri,
-        type: photo.type,
-        name: photo.fileName,
-      });
-
-      const res = await axios.put(
-        `{BASE_URL}/api/employee/${userId}/upload-profile`,
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-            'x-client-id': clientId,
-          },
-        },
-      );
-
-      console.log('✅ Profile image uploaded successfully:', res.data);
-      Alert.alert('Success', 'Profile image updated!');
-      setProfile(res.data);
-    } catch (error) {
-      console.error(
-        '❌ Error uploading profile image:',
-        error.response?.data || error.message,
-      );
-      Alert.alert('Error', 'Failed to upload profile image.');
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      console.log('🔒 Logging out...');
-      await AsyncStorage.removeItem('userId');
-      await AsyncStorage.removeItem('userName');
-      navigation.navigate('Login');
-    } catch (error) {
-      console.error('❌ Error logging out:', error);
-      Alert.alert('Error', 'Error logging out');
-    }
-  };
   const CardButton = ({ icon, title, subtitle, onPress }) => (
     <TouchableOpacity style={styles.cardButton} onPress={onPress}>
       <View style={styles.iconContainer}>
@@ -138,47 +79,36 @@ const ProfileScreen = ({ navigation }) => {
     </TouchableOpacity>
   );
 
+  if (loading || !userData) {
+    return <ActivityIndicator size="large" style={{ flex: 1 }} />;
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Profile</Text>
-
         <View style={styles.profileCircle}>
-          {selectedImage || profile?.profile_image ? (
+          {selectedImage || userData?.profile_image ? (
             <View style={{ position: 'relative', alignItems: 'center' }}>
               <Image
                 source={{
                   uri: selectedImage
-                    ? selectedImage
-                    : `https://d3shribgms6bz4.cloudfront.net/${profile.profile_image}`,
+                    ? selectedImage.uri
+                    : `https://d2plv0g319oam3.cloudfront.net/${userData.profile_image}`,
                 }}
                 style={{ width: 100, height: 100, borderRadius: 55 }}
               />
-              <TouchableOpacity
-                style={styles.editIconWrapper}
-                onPress={handleChoosePhoto}
-              >
-                <Feather name="edit-2" size={20} color="#fff" />
-              </TouchableOpacity>
             </View>
           ) : (
             <View style={styles.iconBackground}>
               <Feather name="user" size={50} color="#fff" />
-              <TouchableOpacity
-                style={styles.editIconWrapper}
-                onPress={handleChoosePhoto}
-              >
-                <Feather name="edit-2" size={20} color="#fff" />
-              </TouchableOpacity>
             </View>
           )}
-
-          <Text style={styles.profileEmail}>{profile.name}</Text>
-          <Text style={styles.profileEmail}>{profile.email}</Text>
-          <Text style={styles.profilePhone}>{profile.phone}</Text>
+          <Text style={styles.profileEmail}>{userData.name}</Text>
+          <Text style={styles.profileEmail}>{userData.email}</Text>
+          <Text style={styles.profilePhone}>{userData.phone}</Text>
         </View>
       </View>
-
       <ScrollView contentContainerStyle={{ padding: 20 }}>
         <CardButton
           icon="pencil"
@@ -196,7 +126,11 @@ const ProfileScreen = ({ navigation }) => {
           icon="log-out-outline"
           title="Logout"
           subtitle="Sign out of your account"
-          onPress={handleLogout}
+          onPress={async () => {
+            await AsyncStorage.removeItem('userId');
+            await AsyncStorage.removeItem('token');
+            navigation.navigate('Login');
+          }}
         />
       </ScrollView>
       <View style={styles.bottomBar}>
@@ -215,6 +149,7 @@ const ProfileScreen = ({ navigation }) => {
           <Ionicons name="calendar" size={30} color="#888" />
           <Text style={styles.navText}>Calendar</Text>
         </TouchableOpacity>
+
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => navigation.navigate('EventsOverview')}
@@ -258,7 +193,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 10,
   },
-
   profileCircle: { marginTop: 20, alignItems: 'center' },
   profileName: {
     color: '#fff',
@@ -292,7 +226,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 3,
   },
-
   iconContainer: {
     width: 40,
     height: 40,
@@ -301,7 +234,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-
+  saveButton: {
+    backgroundColor: '#008080',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginVertical: 20,
+  },
   bottomBar: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -319,7 +258,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginTop: 4,
   },
-
   cardTitle: { fontSize: 16, fontWeight: 'bold', color: '#000' },
   cardSubtitle: {
     fontSize: 14,
@@ -327,7 +265,6 @@ const styles = StyleSheet.create({
     marginTop: 3,
     fontWeight: 'bold',
   },
-
   editIconWrapper: {
     position: 'absolute',
     bottom: 0,

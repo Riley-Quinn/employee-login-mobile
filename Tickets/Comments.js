@@ -40,7 +40,7 @@ const AddComments = ({ ticket, user, fetchData, fetchError, fetchSuccess }) => {
 
     try {
       const response = await axios.put(
-        `{BASE_URL}/api/tickets/${ticket?.ticket_id}`,
+        `${BASE_URL}/api/tickets/${ticket?.ticket_id}`,
         { ticketData },
       );
       fetchData();

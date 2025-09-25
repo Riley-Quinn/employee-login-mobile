@@ -50,7 +50,7 @@ const Password = ({ navigation }) => {
       }
 
       const res = await axios.put(
-        `{BASE_URL}/api/employee/password/${userId}`,
+        `${BASE_URL}/api/employee/password/${userId}`,
         {
           password: values.currentPassword,
           newPassword: values.newPassword,
@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
   },
 
   saveButton: {
-    backgroundColor: '#00BFA6',
+    backgroundColor: '#008080',
     width: isTablet ? '100%' : '110%',
     borderRadius: 15,
     alignItems: 'center',

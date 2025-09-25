@@ -22,16 +22,14 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 const screenWidth = Dimensions.get('window').width;
 const isTablet = screenWidth > 600;
 
-const ITEM_WIDTH = isTablet ? screenWidth / 7 : 66;
-const AGENDA_ITEM_HEIGHT = 80;
+const ITEM_WIDTH = isTablet ? screenWidth / 7 : 65;
+const AGENDA_ITEM_HEIGHT = 75;
 
 const EventsCalendar = () => {
   const [events, setEvents] = useState([]);
-
   const [selectedDate, setSelectedDate] = useState(
     dayjs().format('YYYY-MM-DD'),
   );
-
   const [activeTab, setActiveTab] = useState('agenda');
   const [loading, setLoading] = useState(false);
   const [allDates, setAllDates] = useState([]);
@@ -47,10 +45,11 @@ const EventsCalendar = () => {
       try {
         setLoading(true);
         const userId = await AsyncStorage.getItem('userId');
-        const response = await axios.get(
-          `{BASE_URL}/api/tickets/employee/${userId}`,
+
+        const res = await axios.get(
+          `${BASE_URL}/api/tickets/employee/${userId}`,
         );
-        const tickets = response.data?.list || [];
+        const tickets = res.data?.list || [];
         const mapped = tickets
           .filter(t => t.employee_arrival_date)
           .map(ticket => {
@@ -80,50 +79,64 @@ const EventsCalendar = () => {
   }, {});
 
   useEffect(() => {
-    const start = dayjs().startOf('year');
-    const end = dayjs().endOf('year');
-    const tempDates = [];
+    const startOfYear = dayjs().startOf('year');
+    const endOfYear = dayjs().endOf('year');
     const tempDatesWithMonth = [];
-    let curr = start.clone();
-    while (curr.isBefore(end) || curr.isSame(end, 'day')) {
-      tempDates.push(curr.format('YYYY-MM-DD'));
+    let curr = startOfYear.clone();
+    while (curr.isBefore(endOfYear) || curr.isSame(endOfYear, 'day')) {
       tempDatesWithMonth.push({
         date: curr.format('YYYY-MM-DD'),
         monthHeader: curr.date() === 1,
       });
       curr = curr.add(1, 'day');
     }
-    setAllDates(tempDates);
     setAllDatesWithMonth(tempDatesWithMonth);
+
+    const start = dayjs().startOf('year');
+    const end = dayjs().endOf('year');
+    const tempDates = [];
+    let currDate = startOfYear.clone();
+    while (currDate.isBefore(end) || currDate.isSame(end, 'day')) {
+      tempDates.push(currDate.format('YYYY-MM-DD'));
+      currDate = currDate.add(1, 'day');
+    }
+    setAllDates(tempDates);
   }, []);
 
   useEffect(() => {
     if (allDatesWithMonth.length > 0 && flatListRef.current) {
       const startOfWeek = dayjs().startOf('week');
-      const weekStartIndex = allDatesWithMonth.findIndex(
-        item => item.date === startOfWeek.format('YYYY-MM-DD'),
+      const weekStartIndex = allDatesWithMonth.findIndex(item =>
+        dayjs(item.date).isSame(startOfWeek, 'day'),
       );
-
       if (weekStartIndex >= 0) {
         flatListRef.current.scrollToIndex({
           index: weekStartIndex,
-          animated: false,
+          animated: true,
         });
       }
+    }
+  }, [allDatesWithMonth]);
+
+  useEffect(() => {
+    const startOfYear = dayjs().startOf('year');
+    const endOfYear = dayjs().endOf('year');
+    const tempDates = [];
+    let currDate = startOfYear.clone();
+
+    while (currDate.isBefore(endOfYear) || currDate.isSame(endOfYear, 'day')) {
+      tempDates.push(currDate.format('YYYY-MM-DD'));
+      currDate = currDate.add(1, 'day');
     }
 
-    if (allDates.length > 0 && agendaRef.current) {
-      const todayIndex = allDates.findIndex(
-        item => item === dayjs().format('YYYY-MM-DD'),
-      );
-      if (todayIndex >= 0 && todayIndex < allDates.length) {
-        agendaRef.current.scrollToIndex({
-          index: todayIndex,
-          animated: false,
-        });
-      }
-    }
-  }, [allDates, allDatesWithMonth]);
+    setAllDates(tempDates);
+
+    const tempDatesWithMonth = tempDates.map(date => ({
+      date,
+      monthHeader: dayjs(date).date() === 1,
+    }));
+    setAllDatesWithMonth(tempDatesWithMonth);
+  }, []);
 
   const handleEventPress = evt => {
     navigation.navigate('ViewTickets', { ticketId: evt.ticket.ticket_id });
@@ -207,14 +220,10 @@ const EventsCalendar = () => {
           })}
           renderItem={({ item }) => {
             const isToday = item.date === dayjs().format('YYYY-MM-DD');
-
             return (
               <View style={{ alignItems: 'center', width: ITEM_WIDTH }}>
                 <TouchableOpacity
-                  style={{
-                    alignItems: 'center',
-                    paddingVertical: 6,
-                  }}
+                  style={{ alignItems: 'center', paddingVertical: 6 }}
                 >
                   <Text
                     style={{
@@ -290,6 +299,9 @@ const EventsCalendar = () => {
               offset: AGENDA_ITEM_HEIGHT * index,
               index,
             })}
+            initialScrollIndex={allDates.findIndex(
+              item => item === dayjs().format('YYYY-MM-DD'),
+            )}
             renderItem={({ item }) => (
               <View style={styles.agendaSection}>
                 <Text style={styles.agendaDate}>
@@ -368,40 +380,8 @@ const EventsCalendar = () => {
         ) : (
           <View style={{ flex: 1 }}></View>
         )}
-        <View style={styles.bottomBar}>
-          <TouchableOpacity
-            style={styles.navItem}
-            onPress={() => navigation.navigate('Dashboard')}
-          >
-            <FontAwesome name="home" size={26} color="#888" />
-            <Text style={styles.navText}>Home</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.navItem}
-            onPress={() => navigation.navigate('EventsCalendar')}
-          >
-            <Ionicons name="calendar" size={26} color="#008080" />
-            <Text style={styles.navText}>Calendar</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.navItem}
-            onPress={() => navigation.navigate('EventsOverview')}
-          >
-            <MaterialIcons name="event" size={26} color="#888" />
-            <Text style={styles.navText}>Events</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.navItem}
-            onPress={() => navigation.navigate('ProfileScreen')}
-          >
-            <FontAwesome name="user" size={26} color="#888" />
-            <Text style={styles.navText}>Profile</Text>
-          </TouchableOpacity>
-        </View>
       </View>
+
       {activeTab === 'day' && (
         <ScrollView
           style={{ flex: 1, marginTop: -720 }}
@@ -498,6 +478,39 @@ const EventsCalendar = () => {
           </View>
         </ScrollView>
       )}
+      <View style={styles.bottomBar}>
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => navigation.navigate('Dashboard')}
+        >
+          <FontAwesome name="home" size={26} color="#888" />
+          <Text style={styles.navText}>Home</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => navigation.navigate('EventsCalendar')}
+        >
+          <Ionicons name="calendar" size={26} color="#008080" />
+          <Text style={styles.navText}>Calendar</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => navigation.navigate('EventsOverview')}
+        >
+          <MaterialIcons name="event" size={26} color="#888" />
+          <Text style={styles.navText}>Events</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => navigation.navigate('ProfileScreen')}
+        >
+          <FontAwesome name="user" size={26} color="#888" />
+          <Text style={styles.navText}>Profile</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
@@ -516,20 +529,9 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#ddd',
   },
-  navItem: {
-    alignItems: 'center',
-  },
-  navText: {
-    fontSize: 14,
-    color: '#888',
-    fontWeight: 'bold',
-    marginTop: 4,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
+  navItem: { alignItems: 'center' },
+  navText: { fontSize: 14, color: '#888', fontWeight: 'bold', marginTop: 4 },
+  headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#fff' },
   tabRow: {
     flexDirection: 'row',
     justifyContent: 'flex-start',
@@ -543,17 +545,9 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     backgroundColor: '#eee',
   },
-  activeTab: {
-    backgroundColor: '#008080',
-  },
-  tabText: {
-    fontSize: 14,
-    color: '#555',
-    fontWeight: '600',
-  },
-  activeText: {
-    color: '#fff',
-  },
+  activeTab: { backgroundColor: '#008080' },
+  tabText: { fontSize: 14, color: '#555', fontWeight: '600' },
+  activeText: { color: '#fff' },
   agendaSection: {
     padding: 12,
     borderBottomWidth: 1,

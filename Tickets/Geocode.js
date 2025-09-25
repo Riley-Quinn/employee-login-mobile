@@ -1,31 +1,43 @@
 export const reverseGeocode = async (latitude, longitude) => {
-  if (!latitude || !longitude) return 'Location data not available';
+  const latNum = Number(latitude);
+  const lonNum = Number(longitude);
+
+  if (!latNum || !lonNum) return 'Location data not available';
 
   try {
-    const url = new URL(
-      'https://api.bigdatacloud.net/data/reverse-geocode-client',
-    );
-    url.searchParams.set('latitude', latitude);
-    url.searchParams.set('longitude', longitude);
-    url.searchParams.set('localityLanguage', 'en');
+    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latNum}&lon=${lonNum}&zoom=18&addressdetails=1`;
+    console.log('Reverse geocode URL:', url);
 
-    const response = await fetch(url.toString());
+    const response = await fetch(url, {
+      headers: {
+        Referer: 'myapp://',
+        'Accept-Language': 'en',
+      },
+    });
+
     if (!response.ok) {
       console.log('Reverse geocode HTTP error:', response.status);
       return 'Location unknown';
     }
 
     const data = await response.json();
-    if (!data) return 'Location unknown';
+    console.log('Reverse geocode response data:', data);
 
-    const addressParts = [
-      data.city,
-      data.locality,
-      data.principalSubdivision,
-      data.countryName,
+    if (data.error) {
+      return 'Location unknown';
+    }
+
+    const address = data.address || {};
+    const locationParts = [
+      address.road,
+      address.suburb,
+      address.neighbourhood,
+      address.city_district,
+      address.city,
+      address.state,
     ].filter(Boolean);
 
-    return addressParts.join(', ') || 'Location unknown';
+    return locationParts.join(', ') || 'Location unknown';
   } catch (error) {
     console.log('Reverse geocode fetch error:', error);
     return 'Location unknown';

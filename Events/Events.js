@@ -53,9 +53,10 @@ const EventsOverview = () => {
     try {
       setLoading(true);
       const response = await axios.get(
-        `{BASE_URL}/api/tickets/employee/${userId}`,
+        `${BASE_URL}/api/tickets/employee/${userId}`,
         { params: { status_id: 2 } },
       );
+
       const tickets = response.data?.list || [];
 
       const scheduledTickets = tickets.filter(t => t.employee_arrival_date);

@@ -52,13 +52,11 @@ const ViewTickets = () => {
   const ticketId = route.params?.ticketId;
   const [emailPopup, setEmailPopup] = useState(null);
   const [selectedMedia, setSelectedMedia] = useState(null);
-  // const [showDropdown, setShowDropdown] = useState(true);
   const [showDropdownPost, setShowDropdownPost] = useState(true);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [visible, setVisible] = useState(false);
   const [locationName, setLocationName] = useState('Loading location...');
   const [ticket, setTicket] = useState(null);
-  // const [userId, setUserId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [tickets, setTickets] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
@@ -124,22 +122,7 @@ const ViewTickets = () => {
       }
 
       const file = result.assets[0];
-
-      let latitude = null;
-      let longitude = null;
-      let address = null;
-
-      try {
-        const coords = await getLocation();
-        if (coords) {
-          latitude = coords.latitude;
-          longitude = coords.longitude;
-          // fetch human-readable address
-          address = await reverseGeocode(latitude, longitude);
-        }
-      } catch (locError) {
-        console.error('❌ Location or geocode error:', locError.message);
-      }
+      const { latitude, longitude } = await getLocation();
 
       const isImage = file.type?.startsWith('image/');
       const mediaType = isImage ? 'Photo' : 'Video';
@@ -153,17 +136,15 @@ const ViewTickets = () => {
       formData.append('ticket', ticketId);
       formData.append('media_type', mediaType);
       formData.append('media_stage', mediaStage);
-      if (latitude != null) formData.append('latitude', latitude);
-      if (longitude != null) formData.append('longitude', longitude);
-      if (address != null) formData.append('address', address);
-
+      formData.append('latitude', latitude);
+      formData.append('longitude', longitude);
       formData.append('uploaded_by', userId);
 
       for (let [key, value] of formData._parts) {
         console.log(`${key}:`, value);
       }
 
-      const uploadUrl = `{BASE_URL}/api/employee-uploads`;
+      const uploadUrl = `${BASE_URL}/api/employee-uploads`;
 
       const response = await axios.post(uploadUrl, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -220,7 +201,7 @@ const ViewTickets = () => {
     );
 
     try {
-      await axios.put(`{BASE_URL}/api/tickets/${item.ticket_id}`, {
+      await axios.put(`${BASE_URL}/api/tickets/${item.ticket_id}`, {
         ticketData: { status_id: 3, status_tracker: trackerData },
       });
       fetchTickets();
@@ -254,7 +235,7 @@ const ViewTickets = () => {
       selectedTicket.employee_phone,
     );
     try {
-      await axios.put(`{BASE_URL}/api/tickets/${selectedTicket.ticket_id}`, {
+      await axios.put(`${BASE_URL}/api/tickets/${selectedTicket.ticket_id}`, {
         ticketData: {
           employee_arrival_date: formattedDate,
           status_tracker: trackerData,
@@ -271,10 +252,7 @@ const ViewTickets = () => {
     if (!userId) return;
 
     try {
-      const response = await axios.get(
-        `{BASE_URL}/api/tickets/employee/${userId}`,
-      );
-
+      const res = await axios.get(`${BASE_URL}/api/tickets/employee/${userId}`);
       const allTickets = response?.data?.list || [];
 
       const today = moment().format('YYYY-MM-DD');
@@ -339,7 +317,7 @@ const ViewTickets = () => {
     );
 
     try {
-      await axios.put(`{BASE_URL}/api/tickets/${selectedTicket.ticket_id}`, {
+      await axios.put(`${BASE_URL}/api/tickets/${selectedTicket.ticket_id}`, {
         ticketData: { status_tracker: trackerData, status_id: 3 },
       });
       fetchTickets();
@@ -382,7 +360,7 @@ const ViewTickets = () => {
     }
 
     try {
-      await axios.put(`{BASE_URL}/api/tickets/${selectedTicket.ticket_id}`, {
+      await axios.put(`${BASE_URL}/api/tickets/${selectedTicket.ticket_id}`, {
         ticketData,
       });
       fetchTickets();
@@ -402,7 +380,7 @@ const ViewTickets = () => {
     }
 
     try {
-      const res = await axios.get(`{BASE_URL}/api/tickets/${ticketId}`, {
+      const res = await axios.get(`${BASE_URL}/api/tickets/${ticketId}`, {
         params: { userId },
       });
 
@@ -816,9 +794,8 @@ const ViewTickets = () => {
                       {media.file_type === 'Photo' ? (
                         <Image
                           source={{
-                            uri: `https://d3shribgms6bZ4.cloudfront.net/${encodeURIComponent(
-                              media.file_name,
-                            )}`,
+                            uri: `https://d2plv0g319oam3.cloudfront.net
+ /${encodeURIComponent(media.file_name)}`,
                           }}
                           style={styles.mediaImage}
                           resizeMode="cover"
@@ -833,9 +810,8 @@ const ViewTickets = () => {
                       ) : media.file_type === 'Video' ? (
                         <Video
                           source={{
-                            uri: `https://d3shribgms6bZ4.cloudfront.net${encodeURIComponent(
-                              media.file_name,
-                            )}`,
+                            uri: `https://d2plv0g319oam3.cloudfront.net
+ ${encodeURIComponent(media.file_name)}`,
                           }}
                           style={styles.mediaImage}
                           controls
@@ -873,70 +849,69 @@ const ViewTickets = () => {
                   <MaterialIcons name="add" size={24} color="#fff" />
                 </View>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => setShowDropdown(!showDropdown)}>
-                <MaterialIcons
-                  name={showDropdown ? 'arrow-drop-up' : 'arrow-drop-down'}
-                  size={30}
-                  color="#555"
-                />
-              </TouchableOpacity>
             </View>
           </View>
+
           <View style={styles.cardBody}>
-            {showDropdown && (
-              <>
-                {preMedia?.length > 0 ? (
-                  <>
-                    <View style={styles.mediaGrid}>
-                      {preMedia.map((media, index) => (
-                        <View key={index} style={styles.mediaItem}>
-                          <TouchableOpacity
-                            onPress={() => openMediaModal(media)}
-                            style={styles.mediaWrapper}
-                          >
-                            <Image
-                              source={{
-                                uri: `https://d2plv0g319oam3.cloudfront.nets/${media.file_name}`,
-                              }}
-                              style={styles.mediaImage}
-                            />
-                          </TouchableOpacity>
-
-                          {media.latitude && media.longitude && (
-                            <LocationExample
-                              latitude={parseFloat(media.latitude)}
-                              longitude={parseFloat(media.longitude)}
-                            />
-                          )}
-                        </View>
-                      ))}
-                    </View>
-
-                    {preMedia?.some(m => m.latitude && m.longitude) && (
-                      <>
-                        <Text style={styles.mapText}>Google Maps</Text>
-                        <TouchableOpacity
-                          onPress={() => {
-                            const mediaWithCoords = preMedia.find(
-                              m => m.latitude && m.longitude,
-                            );
-                            if (mediaWithCoords) {
-                              openMap(
-                                mediaWithCoords.address,
-                                mediaWithCoords.city,
-                                mediaWithCoords.state,
-                              );
-                            }
+            {preMedia?.length > 0 ? (
+              <View style={styles.mediaGrid}>
+                {preMedia.map((media, index) => (
+                  <View key={index} style={styles.mediaItem}>
+                    <TouchableOpacity
+                      onPress={() => openMediaModal(media)}
+                      style={styles.mediaWrapper}
+                    >
+                      {media.file_type === 'Photo' ? (
+                        <Image
+                          source={{
+                            uri: `https://d2plv0g319oam3.cloudfront.net
+ /${media.file_name}`,
                           }}
-                          style={styles.mapRow}
+                          style={styles.mediaImage}
                         />
-                      </>
+                      ) : (
+                        <Video
+                          source={{
+                            uri: `https://d2plv0g319oam3.cloudfront.net
+ /${media.file_name}`,
+                          }}
+                          style={styles.mediaImage}
+                          controls
+                          resizeMode="contain"
+                        />
+                      )}
+                    </TouchableOpacity>
+                    {media.latitude && media.longitude && (
+                      <LocationExample
+                        latitude={parseFloat(media.latitude)}
+                        longitude={parseFloat(media.longitude)}
+                      />
                     )}
-                  </>
-                ) : (
-                  <Text style={styles.noMediaText}>No Preupload media</Text>
-                )}
-              </>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <Text style={styles.noMediaText}>No Preupload media</Text>
+            )}
+            {preMedia?.some(m => m.latitude && m.longitude) && (
+              <TouchableOpacity
+                onPress={() => {
+                  const mediaWithCoords = postMedia.find(
+                    m => m.latitude && m.longitude,
+                  );
+                  if (mediaWithCoords) {
+                    console.log('Opening map:', mediaWithCoords);
+                    openMap(
+                      mediaWithCoords.address,
+                      mediaWithCoords.city,
+                      mediaWithCoords.state,
+                    );
+                  }
+                }}
+                style={styles.mapRow}
+              >
+                <Text style={styles.mapText}>Google Maps</Text>
+              </TouchableOpacity>
             )}
           </View>
         </View>
@@ -962,83 +937,66 @@ const ViewTickets = () => {
                     <MaterialIcons name="add" size={24} color="#fff" />
                   </View>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => setShowDropdownPost(!showDropdownPost)}
-                >
-                  <MaterialIcons
-                    name={
-                      showDropdownPost ? 'arrow-drop-up' : 'arrow-drop-down'
-                    }
-                    size={30}
-                    color="#555"
-                  />
-                </TouchableOpacity>
               </View>
             </View>
 
             <View style={styles.cardBody}>
-              {showDropdownPost && (
-                <>
-                  {postMedia?.length > 0 ? (
-                    <>
-                      <View style={styles.mediaGrids}>
-                        {postMedia.map((media, index) => (
-                          <View key={index} style={styles.mediaItems}>
-                            <TouchableOpacity
-                              onPress={() => openMediaModal(media)}
-                              style={styles.mediaWrapper}
-                            >
-                              {media.file_type === 'Photo' ? (
-                                <Image
-                                  source={{
-                                    uri: `https://d3shribgms6bZ4.cloudfront.net/${media.file_name}`,
-                                  }}
-                                  style={styles.mediaImages}
-                                />
-                              ) : (
-                                <View style={styles.videoContainer}>
-                                  <Text style={styles.videoText}>
-                                    {media.file_name}
-                                  </Text>
-                                </View>
-                              )}
-                            </TouchableOpacity>
-
-                            {media.latitude && media.longitude && (
-                              <LocationExample
-                                latitude={parseFloat(media.latitude)}
-                                longitude={parseFloat(media.longitude)}
-                              />
-                            )}
-                          </View>
-                        ))}
-                      </View>
-
-                      {postMedia?.some(m => m.latitude && m.longitude) && (
-                        <>
-                          <Text style={styles.mapText}>Google Maps</Text>
-                          <TouchableOpacity
-                            onPress={() => {
-                              const mediaWithCoords = postMedia.find(
-                                m => m.latitude && m.longitude,
-                              );
-                              if (mediaWithCoords) {
-                                openMap(
-                                  mediaWithCoords.address,
-                                  mediaWithCoords.city,
-                                  mediaWithCoords.state,
-                                );
-                              }
+              {postMedia?.length > 0 ? (
+                <View style={styles.mediaGrid}>
+                  {postMedia.map((media, index) => (
+                    <View key={index} style={styles.mediaItem}>
+                      <TouchableOpacity
+                        onPress={() => openMediaModal(media)}
+                        style={styles.mediaWrapper}
+                      >
+                        {media.file_type === 'Photo' ? (
+                          <Image
+                            source={{
+                              uri: `https://d2plv0g319oam3.cloudfront.net
+ /${media.file_name}`,
                             }}
-                            style={styles.mapRow}
+                            style={styles.mediaImage}
                           />
-                        </>
+                        ) : (
+                          <View style={styles.videoContainer}>
+                            <Text style={styles.videoText}>
+                              {media.file_name}
+                            </Text>
+                          </View>
+                        )}
+                      </TouchableOpacity>
+
+                      {media.latitude && media.longitude && (
+                        <LocationExample
+                          latitude={parseFloat(media.latitude)}
+                          longitude={parseFloat(media.longitude)}
+                        />
                       )}
-                    </>
-                  ) : (
-                    <Text style={styles.noMediaText}>No Post Upload media</Text>
-                  )}
-                </>
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <Text style={styles.noMediaText}>No Post Upload media</Text>
+              )}
+
+              {postMedia?.some(m => m.latitude && m.longitude) && (
+                <TouchableOpacity
+                  onPress={() => {
+                    const mediaWithCoords = postMedia.find(
+                      m => m.latitude && m.longitude,
+                    );
+                    if (mediaWithCoords) {
+                      openMap(
+                        mediaWithCoords.address,
+                        mediaWithCoords.city,
+                        mediaWithCoords.state,
+                      );
+                    }
+                  }}
+                  style={styles.mapRow}
+                >
+                  <Text style={styles.mapText}>Google Maps</Text>
+                </TouchableOpacity>
               )}
             </View>
           </View>
@@ -1061,7 +1019,8 @@ const ViewTickets = () => {
             {selectedMedia && selectedMedia.file_type === 'Photo' && (
               <Image
                 source={{
-                  uri: `https://d3shribgms6bZ4.cloudfront.net/${selectedMedia.file_name}`,
+                  uri: `https://d2plv0g319oam3.cloudfront.net
+ /${selectedMedia.file_name}`,
                 }}
                 style={{
                   width: '90%',
@@ -1074,7 +1033,8 @@ const ViewTickets = () => {
             {selectedMedia && selectedMedia.file_type === 'Video' && (
               <Video
                 source={{
-                  uri: `https://d3shribgms6bZ4.cloudfront.net/${selectedMedia.file_name}`,
+                  uri: `https://d2plv0g319oam3.cloudfront.net
+ /${selectedMedia.file_name}`,
                 }}
                 style={{ width: '90%', height: '80%' }}
                 controls
@@ -1305,32 +1265,7 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 8,
   },
-  mediaGrids: {
-    flexDirection: isTablet ? 'row' : 'column',
-    flexWrap: 'wrap',
-    justifyContent: 'flex-start',
-  },
 
-  mediaItems: {
-    width: '48%',
-    margin: '1%',
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    paddingTop: 10,
-    paddingLeft: 10,
-    paddingRight: 10,
-    paddingBottom: 30,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-
-  mediaImages: {
-    width: isTablet ? '48%' : '50%',
-    height: isTablet ? 100 : 80,
-    borderRadius: 8,
-  },
   picker: {
     borderWidth: 1,
     borderColor: '#ccc',

@@ -84,9 +84,9 @@ const TicketPage = ({ navigation }) => {
 
         console.log(
           '🌐 Fetching ticket statuses from:',
-          `{BASE_URL}/api/ticket-statuses`,
+          `${BASE_URL}/api/ticket-statuses`,
         );
-        const res = await axios.get(`{BASE_URL}/api/ticket-statuses`);
+        const res = await axios.get(`${BASE_URL}/api/ticket-statuses`);
         console.log('✅ Ticket statuses API response:', res?.data);
 
         setTicketStatuses(res?.data || []);
@@ -102,7 +102,7 @@ const TicketPage = ({ navigation }) => {
 
     try {
       const response = await axios.get(
-        `{BASE_URL}/api/tickets/employee/${userId}`,
+        `${BASE_URL}/api/tickets/employee/${userId}`,
       );
       let list = response?.data?.list || [];
 
@@ -127,7 +127,7 @@ const TicketPage = ({ navigation }) => {
     const fetchTicketCounts = async () => {
       try {
         const response = await axios.get(
-          `{BASE_URL}/api/tickets/employee/ticket-counts/${userId}`,
+          `${BASE_URL}/api/tickets/employee/ticket-counts/${userId}`,
         );
 
         console.log('📊 Ticket counts response:', response.data);
@@ -193,7 +193,7 @@ const TicketPage = ({ navigation }) => {
       employee_arrival_date: null,
     };
     try {
-      await axios.put(`{BASE_URL}/api/tickets/${item.ticket_id}`, {
+      await axios.put(`${BASE_URL}/api/tickets/${item.ticket_id}`, {
         ticketData,
       });
       fetchTickets();
@@ -217,7 +217,7 @@ const TicketPage = ({ navigation }) => {
     );
 
     try {
-      await axios.put(`{BASE_URL}/api/tickets/${item.ticket_id}`, {
+      await axios.put(`${BASE_URL}/api/tickets/${item.ticket_id}`, {
         ticketData: { status_id: 3, status_tracker: trackerData },
       });
       fetchTickets();
@@ -251,7 +251,7 @@ const TicketPage = ({ navigation }) => {
       selectedTicket.employee_phone,
     );
     try {
-      await axios.put(`{BASE_URL}/api/tickets/${selectedTicket.ticket_id}`, {
+      await axios.put(`${BASE_URL}/api/tickets/${selectedTicket.ticket_id}`, {
         ticketData: {
           employee_arrival_date: formattedDate,
           status_tracker: trackerData,
@@ -283,7 +283,7 @@ const TicketPage = ({ navigation }) => {
     );
 
     try {
-      await axios.put(`{BASE_URL}/api/tickets/${selectedTicket.ticket_id}`, {
+      await axios.put(`${BASE_URL}/api/tickets/${selectedTicket.ticket_id}`, {
         ticketData: { status_tracker: trackerData, status_id: 3 },
       });
       fetchTickets();
@@ -326,7 +326,7 @@ const TicketPage = ({ navigation }) => {
     }
 
     try {
-      await axios.put(`{BASE_URL}/api/tickets/${selectedTicket.ticket_id}`, {
+      await axios.put(`${BASE_URL}/api/tickets/${selectedTicket.ticket_id}`, {
         ticketData,
       });
       fetchTickets();
@@ -455,35 +455,21 @@ const TicketPage = ({ navigation }) => {
             </View>
 
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              {item.status_id === 2 && (
+              {item.status_id === 2 && item.employee_arrival_date && (
                 <View
                   style={{
                     flexDirection: 'row',
-                    justifyContent: item.employee_arrival_date
-                      ? 'space-between'
-                      : 'flex-end',
+                    justifyContent: 'flex-end',
                     alignItems: 'center',
                     width: '100%',
                   }}
                 >
                   <TouchableOpacity
-                    style={styles.arrivalButton}
-                    onPress={() => {
-                      setSelectedTicket(item);
-                      setModalVisible(true);
-                    }}
+                    style={styles.startButton}
+                    onPress={() => handleStartWork(item)}
                   >
-                    <Text style={styles.buttonText}>Arrival Date</Text>
+                    <Text style={styles.buttonText}>Start</Text>
                   </TouchableOpacity>
-
-                  {item.employee_arrival_date && (
-                    <TouchableOpacity
-                      style={styles.startButton}
-                      onPress={() => handleStartWork(item)}
-                    >
-                      <Text style={styles.buttonText}>Start</Text>
-                    </TouchableOpacity>
-                  )}
                 </View>
               )}
 
@@ -528,8 +514,16 @@ const TicketPage = ({ navigation }) => {
     <>
       <StatusBar barStyle="light-content" backgroundColor="#008080" />
 
-      <SafeAreaView style={{ backgroundColor: '#008080', flex: 0 }}>
-        <Text style={styles.ticketNumber}>All Tickets</Text>
+      <SafeAreaView style={{ backgroundColor: '#008080', padding: 0 }}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+          >
+            <Ionicons name="arrow-back" size={26} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>All Tickets</Text>
+        </View>
       </SafeAreaView>
 
       <View style={styles.filterRow}>
@@ -810,13 +804,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 14,
     color: '#fff',
-    marginLeft: screenWidth < 768 ? 130 : 550,
+    marginLeft: screenWidth < 768 ? 110 : 550,
   },
   employeee: {
     fontWeight: 'bold',
     fontSize: 14,
     color: '#fff',
-    marginLeft: screenWidth < 768 ? 13 : 550,
+    marginLeft: screenWidth < 768 ? 13 : 50,
   },
   ticketCard: {
     margin: isTablet ? 8 : 0,
@@ -830,7 +824,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginLeft: 10,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    // height: 1,
+    backgroundColor: '#008080',
+  },
   cardBody: {
     backgroundColor: '#fff',
     padding: 10,

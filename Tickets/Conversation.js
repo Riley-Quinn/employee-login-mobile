@@ -69,7 +69,7 @@ const AddConversation = ({ data, user, customerComments, fetchData }) => {
   }, [customerComments]);
 
   const setupSocketIO = useCallback(() => {
-    const socketUrl = `${BASE_URL}`;
+    const socketUrl = `$${BASE_URL}`;
     socket.current = io(socketUrl, {
       transports: ['websocket'],
     });
@@ -118,7 +118,7 @@ const AddConversation = ({ data, user, customerComments, fetchData }) => {
         ),
       };
 
-      await axios.put(`${BASE_URL}/api/tickets/${data?.ticket_id}`, {
+      await axios.put(`$${BASE_URL}/api/tickets/${data?.ticket_id}`, {
         ticketData,
       });
 

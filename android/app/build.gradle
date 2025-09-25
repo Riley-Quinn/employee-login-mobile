@@ -117,4 +117,16 @@ dependencies {
     } else {
         implementation jscFlavor
     }
+      // ✅ Firebase Dependencies
+    implementation platform('com.google.firebase:firebase-bom:32.7.0')
+    implementation 'com.google.firebase:firebase-messaging'
+    implementation 'com.google.firebase:firebase-analytics'
+    configurations.all {
+        resolutionStrategy {
+            force 'androidx.core:core:1.16.0'
+            exclude group: 'com.android.support', module: 'support-compat'
+        }
+    }
+    
 }
+apply plugin: "com.google.gms.google-services"

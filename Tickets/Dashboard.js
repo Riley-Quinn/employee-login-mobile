@@ -17,6 +17,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Dropdown } from 'react-native-element-dropdown';
 import moment from 'moment';
 import dayjs from 'dayjs';
+import { PieChart } from 'react-native-gifted-charts';
 
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -80,6 +81,7 @@ const Dashboard = ({ navigation }) => {
     statusCounts.inProgress +
     statusCounts.pending +
     statusCounts.onHold;
+
   const getPriorityTicket = ticketsArray => {
     const high = ticketsArray.find(t => t.priority_rank === 'High');
     if (high) return high;
@@ -92,6 +94,33 @@ const Dashboard = ({ navigation }) => {
 
     return null;
   };
+  const pieData = [
+    {
+      value: statusCounts.todo,
+      color: '#FF6B6B',
+      text: 'ToDo',
+    },
+    {
+      value: statusCounts.inProgress,
+      color: '#ff954d',
+      text: 'In Progress',
+    },
+    {
+      value: statusCounts.pending,
+      color: '#6C63FF',
+      text: 'Pending',
+    },
+    {
+      value: statusCounts.onHold,
+      color: '#cf82ac',
+      text: 'On Hold',
+    },
+    {
+      value: statusCounts.done,
+      color: '#008080',
+      text: 'done',
+    },
+  ];
 
   const ticketToDisplay = getPriorityTicket(tickets);
 
@@ -106,9 +135,10 @@ const Dashboard = ({ navigation }) => {
 
         console.log(
           '🌐 Fetching ticket statuses from:',
-          `{BASE_URL}/api/ticket-statuses`,
+          `${BASE_URL}/api/ticket-statuses`,
         );
-        const res = await axios.get(`{BASE_URL}/api/ticket-statuses`);
+        const res = await axios.get(`${BASE_URL}/api/ticket-statuses`);
+
         console.log('✅ Ticket statuses API response:', res?.data);
 
         setTicketStatuses(res?.data || []);
@@ -123,11 +153,8 @@ const Dashboard = ({ navigation }) => {
     if (!userId) return;
 
     try {
-      const response = await axios.get(
-        `{BASE_URL}/api/tickets/employee/${userId}`,
-      );
-
-      const allTickets = response?.data?.list || [];
+      const res = await axios.get(`${BASE_URL}/api/tickets/employee/${userId}`);
+      const allTickets = res?.data?.list || [];
 
       let filteredTickets = allTickets;
       if (statusFilter && statusFilter !== 'all') {
@@ -179,46 +206,9 @@ const Dashboard = ({ navigation }) => {
       }
 
       setTickets(finalTickets);
-      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-      const weeklyCounts = days.map(day => ({ label: day, done: 0, todo: 0 }));
-
-      allTickets.forEach(ticket => {
-        const createdDate = moment(ticket.created_at);
-        const dayIndex = createdDate.day();
-
-        if (
-          ticket.status_id === 2 ||
-          ticket.status_name?.toLowerCase() === 'todo'
-        ) {
-          weeklyCounts[dayIndex].todo += 1;
-        }
-
-        if (
-          ticket.status_id === 6 ||
-          ticket.status_name?.toLowerCase() === 'done'
-        ) {
-          let doneDate = createdDate;
-
-          if (Array.isArray(ticket.status_tracker)) {
-            const doneEntry = ticket.status_tracker.find(
-              entry =>
-                entry.status?.toLowerCase() === 'done' &&
-                (entry.Date || entry.updatedDate),
-            );
-            if (doneEntry)
-              doneDate = moment(doneEntry.Date || doneEntry.updatedDate);
-          }
-
-          const dayIndexDone = doneDate.day();
-          weeklyCounts[dayIndexDone].done += 1;
-        }
-      });
-
-      setWeeklyData(weeklyCounts);
     } catch (error) {
       console.error('Error fetching tickets:', error);
       setTickets([]);
-      setWeeklyData([]);
     }
   }, [userId, statusFilter]);
   const BlinkingText = ({ children, style, duration = 500 }) => {
@@ -254,10 +244,16 @@ const Dashboard = ({ navigation }) => {
 
     const fetchTicketCounts = async () => {
       try {
-        const response = await axios.get(
-          `{BASE_URL}/api/tickets/employee/ticket-counts/${userId}`,
-        );
+        const clientId = await AsyncStorage.getItem('clientId');
 
+        const response = await axios.get(
+          `${BASE_URL}/api/tickets/employee/ticket-counts/${userId}`,
+          {
+            headers: {
+              'x-client-id': clientId,
+            },
+          },
+        );
         console.log('📊 Ticket counts response:', response.data);
 
         const counts = response.data.list;
@@ -267,7 +263,6 @@ const Dashboard = ({ navigation }) => {
           inProgress: counts['In-Progress']?.total_count || 0,
           pending: counts.Pending?.total_count || 0,
           done: counts.Done?.total_count || 0,
-          open: counts.Open?.total_count || 0,
 
           onHold: counts['On-Hold']?.total_count || 0,
         });
@@ -278,34 +273,6 @@ const Dashboard = ({ navigation }) => {
 
     fetchTicketCounts();
   }, [userId, fetchTickets, statusFilter]);
-  const groupedBarData = [];
-  weeklyData.forEach(day => {
-    groupedBarData.push({
-      value: day.done,
-      label: day.label,
-      spacing: 2,
-      labelWidth: 30,
-      labelTextStyle: { color: 'gray' },
-      frontColor: '#008080',
-      onPress: () => {
-        setPopupData({
-          label: day.label,
-          done: day.done ?? 0,
-          todo: day.todo ?? 0,
-        });
-        setPopupVisible(true);
-      },
-    });
-    groupedBarData.push({
-      value: day.todo,
-      frontColor: '#377df7',
-      onPress: () => {
-        console.log('Clicked day:', day);
-        setPopupData(day);
-        setPopupVisible(true);
-      },
-    });
-  });
 
   const handleStartWork = async item => {
     const userStr = await AsyncStorage.getItem('userId');
@@ -321,7 +288,7 @@ const Dashboard = ({ navigation }) => {
     );
 
     try {
-      await axios.put(`{BASE_URL}/api/tickets/${item.ticket_id}`, {
+      await axios.put(`${BASE_URL}/api/tickets/${item.ticket_id}`, {
         ticketData: { status_id: 3, status_tracker: trackerData },
       });
       fetchTickets();
@@ -355,7 +322,7 @@ const Dashboard = ({ navigation }) => {
       selectedTicket.employee_phone,
     );
     try {
-      await axios.put(`{BASE_URL}/api/tickets/${selectedTicket.ticket_id}`, {
+      await axios.put(`${BASE_URL}/api/tickets/${selectedTicket.ticket_id}`, {
         ticketData: {
           employee_arrival_date: formattedDate,
           status_tracker: trackerData,
@@ -387,7 +354,7 @@ const Dashboard = ({ navigation }) => {
     );
 
     try {
-      await axios.put(`{BASE_URL}/api/tickets/${selectedTicket.ticket_id}`, {
+      await axios.put(`${BASE_URL}/api/tickets/${selectedTicket.ticket_id}`, {
         ticketData: { status_tracker: trackerData, status_id: 3 },
       });
       fetchTickets();
@@ -430,7 +397,7 @@ const Dashboard = ({ navigation }) => {
     }
 
     try {
-      await axios.put(`{BASE_URL}/api/tickets/${selectedTicket.ticket_id}`, {
+      await axios.put(`${BASE_URL}/api/tickets/${selectedTicket.ticket_id}`, {
         ticketData,
       });
       fetchTickets();
@@ -442,7 +409,6 @@ const Dashboard = ({ navigation }) => {
       Alert.alert('Error', 'Failed to update status');
     }
   };
-
   const getStatusChipStyle = status => {
     switch (status?.toLowerCase()) {
       case 'open':
@@ -452,12 +418,12 @@ const Dashboard = ({ navigation }) => {
         };
       case 'todo':
         return {
-          backgroundColor: '#d8b487',
+          backgroundColor: '#FF6B6B',
           color: '#FFFFFF',
         };
       case 'in-progress':
         return {
-          backgroundColor: '#A6C8FF',
+          backgroundColor: '#ff954d',
           color: '#FFFFFF',
         };
       case 'pending':
@@ -473,7 +439,7 @@ const Dashboard = ({ navigation }) => {
         };
       default:
         return {
-          backgroundColor: '#cf82ac',
+          backgroundColor: '#008080',
           color: '#FFFFFF',
         };
     }
@@ -563,35 +529,21 @@ const Dashboard = ({ navigation }) => {
             </View>
 
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              {item.status_id === 2 && (
+              {item.status_id === 2 && item.employee_arrival_date && (
                 <View
                   style={{
                     flexDirection: 'row',
-                    justifyContent: item.employee_arrival_date
-                      ? 'space-between'
-                      : 'flex-end',
+                    justifyContent: 'flex-end',
                     alignItems: 'center',
                     width: '100%',
                   }}
                 >
                   <TouchableOpacity
-                    style={styles.arrivalButton}
-                    onPress={() => {
-                      setSelectedTicket(item);
-                      setModalVisible(true);
-                    }}
+                    style={styles.startButton}
+                    onPress={() => handleStartWork(item)}
                   >
-                    <Text style={styles.buttonText}>Arrival Date</Text>
+                    <Text style={styles.buttonText}>Start</Text>
                   </TouchableOpacity>
-
-                  {item.employee_arrival_date && (
-                    <TouchableOpacity
-                      style={styles.startButton}
-                      onPress={() => handleStartWork(item)}
-                    >
-                      <Text style={styles.buttonText}>Start</Text>
-                    </TouchableOpacity>
-                  )}
                 </View>
               )}
 
@@ -819,144 +771,77 @@ const Dashboard = ({ navigation }) => {
             </View>
           </View>
         </View>
-        <View style={styles.graph}>
+
+        <View style={{ marginTop: -10, alignItems: 'center' }}>
           <Text
             style={{
-              fontSize: 16,
+              fontSize: 14,
+              marginRight: 300,
+              fontWeight: 'bold',
               color: '#000',
-              fontWeight: '600',
-              marginLeft: isTablet ? 130 : 0,
-
-              marginBottom: 10,
-              // marginHorizontal: -2,
             }}
           >
-            Weekly Progress
+            Ticket Statuses
           </Text>
 
-          <BarChart
-            data={groupedBarData}
-            barWidth={12}
-            spacing={15}
-            maxValue={12}
-            yAxisLabelTexts={['0', '2', '4', '6', '8', '10', '12']}
-            yAxisTextStyle={{ color: 'gray', fontSize: 12, fontWeight: 'bold' }}
-            noOfSections={6}
-            xAxisTextStyle={{
-              color: 'red',
-              fontSize: 12,
-              fontWeight: 'bold',
-            }}
-          />
-          <Modal visible={popupVisible} transparent animationType="fade">
-            <View
-              style={{
-                flex: 1,
-                justifyContent: 'center',
-                alignItems: 'center',
-                marginBottom: isTablet ? 250 : 350,
-              }}
-            >
-              <View
-                style={{
-                  width: 150,
-                  padding: 15,
-                  borderRadius: 10,
-                  backgroundColor: '#fff',
-                  alignItems: 'center',
-                  position: 'relative',
-                  elevation: 5,
-                }}
-              >
-                <TouchableOpacity
-                  onPress={() => setPopupVisible(false)}
-                  style={{
-                    position: 'absolute',
-                    top: 5,
-                    right: 5,
-                    zIndex: 10,
-                  }}
-                >
-                  <Ionicons name="close-circle" size={25} color="#888" />
-                </TouchableOpacity>
-
-                {popupData && (
-                  <>
-                    <Text
-                      style={{
-                        fontSize: 18,
-                        fontWeight: '600',
-                        marginBottom: 10,
-                        color: '#000',
-                      }}
-                    >
-                      {popupData.label}
-                    </Text>
-
-                    <Text
-                      style={{ fontSize: 16, marginBottom: 5, color: '#000' }}
-                    >
-                      Done: {popupData.done ?? 0}
-                    </Text>
-                    <Text style={{ fontSize: 16, color: '#000' }}>
-                      ToDo: {popupData.todo ?? 0}
-                    </Text>
-                  </>
-                )}
-              </View>
-            </View>
-          </Modal>
-
-          {/* <View
-            style={{
-              flexDirection: 'row',
-              marginTop: 5,
-              justifyContent: 'center',
-            }}
-          > */}
           <View
             style={{
               flexDirection: 'row',
-              marginTop: 5,
-              justifyContent: isTablet ? 'center' : 'center',
-              marginRight: isTablet ? 200 : 0,
+              justifyContent: 'center',
+              alignItems: 'center',
+              marginTop: 10,
             }}
           >
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                marginRight: 15,
-              }}
-            >
-              <View
-                style={{
-                  width: 12,
-                  height: 12,
-                  borderRadius: 6,
-                  backgroundColor: '#008080',
-                  marginRight: 5,
-                }}
+            <View style={{ width: 220, alignItems: 'center', marginLeft: 55 }}>
+              <PieChart
+                data={pieData}
+                donut
+                showText={false}
+                innerRadius={50}
+                radius={80}
+                donutColor="#fff"
+                wedgeColor="#000"
+                showValuesAsLabels={false}
+                textColor="#000"
+                textSize={14}
+                labelPosition="outside"
+                labelsStyle={{ fontWeight: '600' }}
               />
-              <Text style={{ color: '#000', fontSize: 14, fontWeight: 'bold' }}>
-                Done
-              </Text>
             </View>
 
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <View
-                style={{
-                  width: 12,
-                  height: 12,
-                  borderRadius: 6,
-                  backgroundColor: '#377df7',
-                  marginRight: 5,
-                }}
-              />
-              <Text style={{ color: '#000', fontSize: 14, fontWeight: 'bold' }}>
-                ToDo
-              </Text>
-            </View>
+            <ScrollView
+              style={{ maxHeight: 200, marginLeft: -10 }}
+              contentContainerStyle={{ paddingVertical: 5 }}
+            >
+              {pieData.map(item => {
+                const percentage = totalTickets
+                  ? ((item.value / totalTickets) * 100).toFixed(0)
+                  : 0;
+                return (
+                  <View
+                    key={item.text}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      marginVertical: 5,
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: 16,
+                        height: 16,
+                        backgroundColor: item.color,
+                        marginRight: 6,
+                        borderRadius: 4,
+                      }}
+                    />
+                    <Text style={{ color: 'black' }}>
+                      {`${item.text} ${percentage}% (${item.value})`}
+                    </Text>
+                  </View>
+                );
+              })}
+            </ScrollView>
           </View>
         </View>
 
@@ -1246,23 +1131,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginTop: 8,
   },
-  graph: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    marginTop: -5,
-    paddingLeft: isTablet ? 230 : 20,
 
-    paddingBottom: 20,
-    paddingTop: 20,
-
-    marginBottom: 50,
-    marginHorizontal: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
-  },
   ticketCard: {
     margin: isTablet ? 6 : 0,
     width: isTablet ? screenWidth / 2 - 10 : '100%',
@@ -1305,13 +1174,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 14,
     color: '#fff',
-    marginLeft: screenWidth < 768 ? 130 : 550,
+    marginLeft: screenWidth < 768 ? 110 : 850,
   },
   employeee: {
     fontWeight: 'bold',
     fontSize: 14,
     color: '#fff',
-    marginLeft: screenWidth < 768 ? 13 : 550,
+    marginLeft: screenWidth < 768 ? 10 : 50,
   },
   infoSection: {
     padding: 10,
@@ -1610,7 +1479,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 5,
 
-    marginTop: isTablet ? -45 : -50,
+    marginTop: isTablet ? -45 : -10,
   },
   filterButton: {
     flexDirection: 'row',
