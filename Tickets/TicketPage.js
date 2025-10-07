@@ -804,13 +804,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 14,
     color: '#fff',
-    marginLeft: screenWidth < 768 ? 110 : 550,
+    marginLeft: screenWidth < 768 ? 90 : 550,
   },
   employeee: {
     fontWeight: 'bold',
     fontSize: 14,
     color: '#fff',
-    marginLeft: screenWidth < 768 ? 13 : 50,
+    marginLeft: screenWidth < 768 ? 8 : 50,
   },
   ticketCard: {
     margin: isTablet ? 8 : 0,
@@ -863,11 +863,13 @@ const styles = StyleSheet.create({
   },
   statusChip: {
     paddingHorizontal: 10,
+    marginRight: 18,
     paddingVertical: 1,
     borderRadius: 10,
   },
   statusText: {
     fontSize: 12,
+
     fontWeight: 'bold',
   },
   infoSection: {

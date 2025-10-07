@@ -129,33 +129,24 @@ const EditProfile = ({ navigation }) => {
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.profileCircle}>
           {selectedImage || profileImageName ? (
-            <View style={{ position: 'relative', alignItems: 'center' }}>
-              <Image
-                source={{
-                  uri: selectedImage
-                    ? selectedImage.uri
-                    : `https://d2plv0g319oam3.cloudfront.net/${profileImageName}`,
-                }}
-                style={{ width: 120, height: 120, borderRadius: 80 }}
-              />
-              <TouchableOpacity
-                style={styles.editIconWrapper}
-                onPress={handleChooseImage}
-              >
-                <Feather name="edit-2" size={20} color="#fff" />
-              </TouchableOpacity>
-            </View>
+            <Image
+              source={{
+                uri: selectedImage
+                  ? selectedImage.uri
+                  : `https://innovative-lifts.blr1.cdn.digitaloceanspaces.com/${profileImageName}`,
+              }}
+              style={{ width: 100, height: 100, borderRadius: 50 }}
+            />
           ) : (
-            <>
-              <Feather name="user" size={50} color="#fff" />
-              <TouchableOpacity
-                style={styles.editIconWrapper}
-                onPress={handleChooseImage}
-              >
-                <Feather name="edit-2" size={20} color="#fff" />
-              </TouchableOpacity>
-            </>
+            <Feather name="user" size={50} color="#fff" />
           )}
+
+          <TouchableOpacity
+            style={styles.editIconWrapper}
+            onPress={handleChooseImage}
+          >
+            <Feather name="edit-2" size={20} color="#fff" />
+          </TouchableOpacity>
         </View>
 
         <Formik

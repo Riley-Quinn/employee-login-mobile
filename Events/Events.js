@@ -127,19 +127,19 @@ const EventsOverview = () => {
                 {item.city_name}, {item.region_name}
               </Text>
             </View>
+            {item.employee_arrival_date ? (
+              <View style={styles.row}>
+                <Text style={styles.label}>ArrivalDate</Text>
+                <Text style={styles.colon}>:</Text>
+                <BlinkingText style={styles.value}>
+                  {dayjs
+                    .utc(item.employee_arrival_date)
+                    .local()
+                    .format('YYYY-MM-DD h:mm A')}
+                </BlinkingText>
+              </View>
+            ) : null}
 
-            <View style={styles.row}>
-              <Text style={styles.label}>ArrivalDate</Text>
-              <Text style={styles.colon}>:</Text>
-              <BlinkingText style={styles.value}>
-                {item.employee_arrival_date
-                  ? dayjs
-                      .utc(item.employee_arrival_date)
-                      .local()
-                      .format('YYYY-MM-DD h:mm A')
-                  : ''}
-              </BlinkingText>
-            </View>
             <View style={styles.row}>
               <Text style={styles.label}>Customer</Text>
               <Text style={styles.colon}>:</Text>

@@ -120,6 +120,11 @@ const Dashboard = ({ navigation }) => {
       color: '#008080',
       text: 'done',
     },
+    {
+      value: statusCounts.Closed,
+      color: '#22C55E',
+      text: 'Closed',
+    },
   ];
 
   const ticketToDisplay = getPriorityTicket(tickets);
@@ -263,6 +268,7 @@ const Dashboard = ({ navigation }) => {
           inProgress: counts['In-Progress']?.total_count || 0,
           pending: counts.Pending?.total_count || 0,
           done: counts.Done?.total_count || 0,
+          Closed: counts.Closed?.total_count || 0,
 
           onHold: counts['On-Hold']?.total_count || 0,
         });
@@ -772,33 +778,26 @@ const Dashboard = ({ navigation }) => {
           </View>
         </View>
 
-        <View style={{ marginTop: -10, alignItems: 'center' }}>
+        <View style={{ marginTop: -10, paddingHorizontal: 16 }}>
           <Text
             style={{
               fontSize: 14,
-              marginRight: 300,
               fontWeight: 'bold',
               color: '#000',
+              marginBottom: 10,
             }}
           >
             Ticket Statuses
           </Text>
 
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'center',
-              alignItems: 'center',
-              marginTop: 10,
-            }}
-          >
-            <View style={{ width: 220, alignItems: 'center', marginLeft: 55 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+            <View style={{ width: 150, marginRight: -10 }}>
               <PieChart
                 data={pieData}
                 donut
                 showText={false}
                 innerRadius={50}
-                radius={80}
+                radius={70}
                 donutColor="#fff"
                 wedgeColor="#000"
                 showValuesAsLabels={false}
@@ -810,7 +809,7 @@ const Dashboard = ({ navigation }) => {
             </View>
 
             <ScrollView
-              style={{ maxHeight: 200, marginLeft: -10 }}
+              style={{ maxHeight: 200, marginLeft: 40 }}
               contentContainerStyle={{ paddingVertical: 5 }}
             >
               {pieData.map(item => {
@@ -1315,6 +1314,7 @@ const styles = StyleSheet.create({
   statusChip: {
     paddingHorizontal: 10,
     paddingVertical: 1,
+
     borderRadius: 10,
   },
 

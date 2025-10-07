@@ -22,8 +22,8 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 const screenWidth = Dimensions.get('window').width;
 const isTablet = screenWidth > 600;
 
-const ITEM_WIDTH = isTablet ? screenWidth / 7 : 65;
-const AGENDA_ITEM_HEIGHT = 75;
+const ITEM_WIDTH = isTablet ? screenWidth / 7 : 63;
+const AGENDA_ITEM_HEIGHT = 74;
 
 const EventsCalendar = () => {
   const [events, setEvents] = useState([]);
@@ -35,6 +35,7 @@ const EventsCalendar = () => {
   const [allDates, setAllDates] = useState([]);
   const [allDatesWithMonth, setAllDatesWithMonth] = useState([]);
   const [visibleMonth, setVisibleMonth] = useState(dayjs().format('MMMM YYYY'));
+  const [showFullAgenda, setShowFullAgenda] = useState(false); // <-- new state
 
   const navigation = useNavigation();
   const flatListRef = useRef();
@@ -45,7 +46,6 @@ const EventsCalendar = () => {
       try {
         setLoading(true);
         const userId = await AsyncStorage.getItem('userId');
-
         const res = await axios.get(
           `${BASE_URL}/api/tickets/employee/${userId}`,
         );
@@ -92,11 +92,9 @@ const EventsCalendar = () => {
     }
     setAllDatesWithMonth(tempDatesWithMonth);
 
-    const start = dayjs().startOf('year');
-    const end = dayjs().endOf('year');
     const tempDates = [];
     let currDate = startOfYear.clone();
-    while (currDate.isBefore(end) || currDate.isSame(end, 'day')) {
+    while (currDate.isBefore(endOfYear) || currDate.isSame(endOfYear, 'day')) {
       tempDates.push(currDate.format('YYYY-MM-DD'));
       currDate = currDate.add(1, 'day');
     }
@@ -118,26 +116,6 @@ const EventsCalendar = () => {
     }
   }, [allDatesWithMonth]);
 
-  useEffect(() => {
-    const startOfYear = dayjs().startOf('year');
-    const endOfYear = dayjs().endOf('year');
-    const tempDates = [];
-    let currDate = startOfYear.clone();
-
-    while (currDate.isBefore(endOfYear) || currDate.isSame(endOfYear, 'day')) {
-      tempDates.push(currDate.format('YYYY-MM-DD'));
-      currDate = currDate.add(1, 'day');
-    }
-
-    setAllDates(tempDates);
-
-    const tempDatesWithMonth = tempDates.map(date => ({
-      date,
-      monthHeader: dayjs(date).date() === 1,
-    }));
-    setAllDatesWithMonth(tempDatesWithMonth);
-  }, []);
-
   const handleEventPress = evt => {
     navigation.navigate('ViewTickets', { ticketId: evt.ticket.ticket_id });
   };
@@ -150,6 +128,22 @@ const EventsCalendar = () => {
   };
 
   const agendaViewabilityConfig = { itemVisiblePercentThreshold: 50 };
+
+  const today = dayjs().format('YYYY-MM-DD');
+  const filteredDatesFromToday = allDates.filter(
+    date => dayjs(date).isSame(today) || dayjs(date).isAfter(today),
+  );
+
+  useEffect(() => {
+    if (showFullAgenda && agendaRef.current) {
+      const todayIndex = allDates.findIndex(d =>
+        dayjs(d).isSame(dayjs(), 'day'),
+      );
+      if (todayIndex >= 0) {
+        agendaRef.current.scrollToIndex({ index: todayIndex, animated: true });
+      }
+    }
+  }, [showFullAgenda]);
 
   return (
     <View style={{ flex: 1, backgroundColor: '#f2f4f7' }}>
@@ -219,7 +213,7 @@ const EventsCalendar = () => {
             index,
           })}
           renderItem={({ item }) => {
-            const isToday = item.date === dayjs().format('YYYY-MM-DD');
+            const isToday = item.date === today;
             return (
               <View style={{ alignItems: 'center', width: ITEM_WIDTH }}>
                 <TouchableOpacity
@@ -291,7 +285,7 @@ const EventsCalendar = () => {
         {activeTab === 'agenda' ? (
           <FlatList
             ref={agendaRef}
-            data={allDates}
+            data={showFullAgenda ? allDates : filteredDatesFromToday}
             keyExtractor={item => item}
             contentContainerStyle={{ paddingBottom: 10 }}
             getItemLayout={(data, index) => ({
@@ -299,16 +293,29 @@ const EventsCalendar = () => {
               offset: AGENDA_ITEM_HEIGHT * index,
               index,
             })}
-            initialScrollIndex={allDates.findIndex(
-              item => item === dayjs().format('YYYY-MM-DD'),
-            )}
+            initialScrollIndex={0}
             renderItem={({ item }) => (
               <View style={styles.agendaSection}>
-                <Text style={styles.agendaDate}>
-                  {dayjs(item).isSame(dayjs(), 'day')
-                    ? `${dayjs(item).format('MMM D')} Today`
-                    : dayjs(item).format('ddd, MMM D')}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Text style={styles.agendaDate}>
+                    {dayjs(item).isSame(dayjs(), 'day')
+                      ? `${dayjs(item).format('MMM D')} Today`
+                      : dayjs(item).format('ddd, MMM D')}
+                  </Text>
+                  {dayjs(item).isSame(dayjs(), 'day') && !showFullAgenda && (
+                    <TouchableOpacity
+                      style={{ marginLeft: 6 }}
+                      onPress={() => setShowFullAgenda(true)}
+                    >
+                      <Ionicons
+                        name="arrow-down-circle"
+                        size={20}
+                        color="#008080"
+                      />
+                    </TouchableOpacity>
+                  )}
+                </View>
+
                 {groupedEvents[item]?.length > 0 ? (
                   groupedEvents[item].map((e, idx) => (
                     <TouchableOpacity
@@ -384,7 +391,7 @@ const EventsCalendar = () => {
 
       {activeTab === 'day' && (
         <ScrollView
-          style={{ flex: 1, marginTop: -720 }}
+          style={{ flex: 1, marginTop: -550 }}
           contentContainerStyle={{ paddingBottom: 100 }}
         >
           <View style={{ flex: 1, paddingLeft: 0, position: 'relative' }}>
@@ -478,6 +485,7 @@ const EventsCalendar = () => {
           </View>
         </ScrollView>
       )}
+
       <View style={styles.bottomBar}>
         <TouchableOpacity
           style={styles.navItem}
@@ -518,7 +526,7 @@ const EventsCalendar = () => {
 const styles = StyleSheet.create({
   headerWrapper: {
     backgroundColor: '#008080',
-    paddingVertical: 40,
+    paddingVertical: 30,
     paddingHorizontal: 16,
   },
   bottomBar: {

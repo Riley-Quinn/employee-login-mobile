@@ -499,18 +499,18 @@ const ViewTickets = () => {
               </TouchableOpacity>
             </View>
           </View>
-          <View style={styles.infoRow}>
-            <View style={styles.iconBox}>
-              <MaterialIcons name="access-time" size={20} color="#555" />
+          {ticket.assigned_on ? (
+            <View style={styles.infoRow}>
+              <View style={styles.iconBox}>
+                <MaterialIcons name="access-time" size={20} color="#555" />
+              </View>
+              <Text style={styles.infoLabel}>Assigned On</Text>
+              <Text style={styles.colon}>:</Text>
+              <Text style={styles.infoValue}>
+                {dayjs(ticket.assigned_on).format('MMM D, YYYY')}
+              </Text>
             </View>
-            <Text style={styles.infoLabel}>Assigned On</Text>
-            <Text style={styles.colon}>:</Text>
-            <Text style={styles.infoValue}>
-              {ticket.created_at
-                ? dayjs(ticket.created_at).format('MMM D, YYYY')
-                : ''}
-            </Text>
-          </View>
+          ) : null}
 
           <View style={styles.infoRow}>
             <View style={styles.iconBox}>
@@ -794,8 +794,9 @@ const ViewTickets = () => {
                       {media.file_type === 'Photo' ? (
                         <Image
                           source={{
-                            uri: `https://d2plv0g319oam3.cloudfront.net
- /${encodeURIComponent(media.file_name)}`,
+                            uri: `https://innovative-lifts.blr1.cdn.digitaloceanspaces.com/${encodeURIComponent(
+                              media.file_name,
+                            )}`,
                           }}
                           style={styles.mediaImage}
                           resizeMode="cover"
@@ -810,8 +811,9 @@ const ViewTickets = () => {
                       ) : media.file_type === 'Video' ? (
                         <Video
                           source={{
-                            uri: `https://d2plv0g319oam3.cloudfront.net
- ${encodeURIComponent(media.file_name)}`,
+                            uri: `https://innovative-lifts.blr1.cdn.digitaloceanspaces.com${encodeURIComponent(
+                              media.file_name,
+                            )}`,
                           }}
                           style={styles.mediaImage}
                           controls
@@ -864,16 +866,14 @@ const ViewTickets = () => {
                       {media.file_type === 'Photo' ? (
                         <Image
                           source={{
-                            uri: `https://d2plv0g319oam3.cloudfront.net
- /${media.file_name}`,
+                            uri: `https://innovative-lifts.blr1.cdn.digitaloceanspaces.com/${media.file_name}`,
                           }}
                           style={styles.mediaImage}
                         />
                       ) : (
                         <Video
                           source={{
-                            uri: `https://d2plv0g319oam3.cloudfront.net
- /${media.file_name}`,
+                            uri: `https://innovative-lifts.blr1.cdn.digitaloceanspaces.com/${media.file_name}`,
                           }}
                           style={styles.mediaImage}
                           controls
@@ -881,6 +881,18 @@ const ViewTickets = () => {
                         />
                       )}
                     </TouchableOpacity>
+
+                    {media.latitude && media.longitude && (
+                      <TouchableOpacity
+                        onPress={() =>
+                          openMap(media.address, media.city, media.state)
+                        }
+                        style={styles.mapRow}
+                      >
+                        <Text style={styles.maptext}>Google Maps</Text>
+                      </TouchableOpacity>
+                    )}
+
                     {media.latitude && media.longitude && (
                       <LocationExample
                         latitude={parseFloat(media.latitude)}
@@ -892,26 +904,6 @@ const ViewTickets = () => {
               </View>
             ) : (
               <Text style={styles.noMediaText}>No Preupload media</Text>
-            )}
-            {preMedia?.some(m => m.latitude && m.longitude) && (
-              <TouchableOpacity
-                onPress={() => {
-                  const mediaWithCoords = postMedia.find(
-                    m => m.latitude && m.longitude,
-                  );
-                  if (mediaWithCoords) {
-                    console.log('Opening map:', mediaWithCoords);
-                    openMap(
-                      mediaWithCoords.address,
-                      mediaWithCoords.city,
-                      mediaWithCoords.state,
-                    );
-                  }
-                }}
-                style={styles.mapRow}
-              >
-                <Text style={styles.mapText}>Google Maps</Text>
-              </TouchableOpacity>
             )}
           </View>
         </View>
@@ -952,8 +944,7 @@ const ViewTickets = () => {
                         {media.file_type === 'Photo' ? (
                           <Image
                             source={{
-                              uri: `https://d2plv0g319oam3.cloudfront.net
- /${media.file_name}`,
+                              uri: `https://innovative-lifts.blr1.cdn.digitaloceanspaces.com/${media.file_name}`,
                             }}
                             style={styles.mediaImage}
                           />
@@ -967,6 +958,16 @@ const ViewTickets = () => {
                       </TouchableOpacity>
 
                       {media.latitude && media.longitude && (
+                        <TouchableOpacity
+                          onPress={() =>
+                            openMap(media.address, media.city, media.state)
+                          }
+                          style={styles.mapRow}
+                        >
+                          <Text style={styles.maptext}>Google Maps</Text>
+                        </TouchableOpacity>
+                      )}
+                      {media.latitude && media.longitude && (
                         <LocationExample
                           latitude={parseFloat(media.latitude)}
                           longitude={parseFloat(media.longitude)}
@@ -977,26 +978,6 @@ const ViewTickets = () => {
                 </View>
               ) : (
                 <Text style={styles.noMediaText}>No Post Upload media</Text>
-              )}
-
-              {postMedia?.some(m => m.latitude && m.longitude) && (
-                <TouchableOpacity
-                  onPress={() => {
-                    const mediaWithCoords = postMedia.find(
-                      m => m.latitude && m.longitude,
-                    );
-                    if (mediaWithCoords) {
-                      openMap(
-                        mediaWithCoords.address,
-                        mediaWithCoords.city,
-                        mediaWithCoords.state,
-                      );
-                    }
-                  }}
-                  style={styles.mapRow}
-                >
-                  <Text style={styles.mapText}>Google Maps</Text>
-                </TouchableOpacity>
               )}
             </View>
           </View>
@@ -1019,8 +1000,7 @@ const ViewTickets = () => {
             {selectedMedia && selectedMedia.file_type === 'Photo' && (
               <Image
                 source={{
-                  uri: `https://d2plv0g319oam3.cloudfront.net
- /${selectedMedia.file_name}`,
+                  uri: `https://innovative-lifts.blr1.cdn.digitaloceanspaces.com/${selectedMedia.file_name}`,
                 }}
                 style={{
                   width: '90%',
@@ -1033,8 +1013,7 @@ const ViewTickets = () => {
             {selectedMedia && selectedMedia.file_type === 'Video' && (
               <Video
                 source={{
-                  uri: `https://d2plv0g319oam3.cloudfront.net
- /${selectedMedia.file_name}`,
+                  uri: `https://innovative-lifts.blr1.cdn.digitaloceanspaces.com/${selectedMedia.file_name}`,
                 }}
                 style={{ width: '90%', height: '80%' }}
                 controls
@@ -1236,7 +1215,13 @@ const styles = StyleSheet.create({
     marginHorizontal: 30,
     color: '#007bff',
     fontSize: 14,
-    marginTop: -30,
+    marginBottom: -70,
+  },
+  maptext: {
+    marginHorizontal: 30,
+    color: '#007bff',
+    fontSize: 14,
+    marginBottom: -70,
   },
 
   mediaGrid: {

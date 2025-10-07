@@ -11,7 +11,6 @@ import messaging from '@react-native-firebase/messaging';
 import Login from './Authentication/Login';
 import Dashboard from './Tickets/Dashboard';
 import ViewTickets from './Tickets/ViewTicket';
-import EditTicket from './Tickets/EditTicket';
 import EventsOverview from './Events/Events';
 import ProfileScreen from './Profile/Profile';
 import OTPScreen from './Authentication/Otp';
@@ -117,7 +116,6 @@ const App = () => {
         <Stack.Screen name="EventsOverview" component={EventsOverview} />
         <Stack.Screen name="EventsCalendar" component={EventsCalendar} />
         <Stack.Screen name="Login" component={Login} />
-        <Stack.Screen name="EditTicket" component={EditTicket} />
         <Stack.Screen name="Dashboard" component={Dashboard} />
         <Stack.Screen name="ViewTickets" component={ViewTickets} />
         <Stack.Screen name="ForgotPassword" component={ForgotPassword} />

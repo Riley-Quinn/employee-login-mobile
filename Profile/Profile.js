@@ -88,27 +88,31 @@ const ProfileScreen = ({ navigation }) => {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Profile</Text>
         <View style={styles.profileCircle}>
-          {selectedImage || userData?.profile_image ? (
-            <View style={{ position: 'relative', alignItems: 'center' }}>
-              <Image
-                source={{
-                  uri: selectedImage
-                    ? selectedImage.uri
-                    : `https://d2plv0g319oam3.cloudfront.net/${userData.profile_image}`,
-                }}
-                style={{ width: 100, height: 100, borderRadius: 55 }}
-              />
-            </View>
+          {selectedImage ? (
+            <Image
+              source={{ uri: selectedImage.uri }}
+              style={styles.profileImage}
+              resizeMode="cover"
+            />
+          ) : userData?.profile_image &&
+            userData.profile_image.trim() !== '' ? (
+            <Image
+              source={{
+                uri: `https://innovative-lifts.blr1.cdn.digitaloceanspaces.com/${userData.profile_image}`,
+              }}
+              style={styles.profileImage}
+              resizeMode="cover"
+            />
           ) : (
-            <View style={styles.iconBackground}>
-              <Feather name="user" size={50} color="#fff" />
-            </View>
+            <Feather name="user" size={40} color="#fff" />
           )}
-          <Text style={styles.profileEmail}>{userData.name}</Text>
-          <Text style={styles.profileEmail}>{userData.email}</Text>
-          <Text style={styles.profilePhone}>{userData.phone}</Text>
         </View>
+
+        <Text style={styles.profileName}>{userData.name}</Text>
+        <Text style={styles.profileEmail}>{userData.email}</Text>
+        <Text style={styles.profilePhone}>{userData.phone}</Text>
       </View>
+
       <ScrollView contentContainerStyle={{ padding: 20 }}>
         <CardButton
           icon="pencil"
@@ -184,16 +188,21 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     marginLeft: 20,
   },
-  iconBackground: {
+  profileCircle: {
     width: 100,
     height: 100,
-    borderRadius: 55,
-    backgroundColor: '#4ac7b7',
-    alignItems: 'center',
+    borderRadius: 50,
+    backgroundColor: '#00BFA6',
     justifyContent: 'center',
-    marginBottom: 10,
+    alignItems: 'center',
+    marginTop: 50,
   },
-  profileCircle: { marginTop: 20, alignItems: 'center' },
+  profileImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 50,
+  },
+
   profileName: {
     color: '#fff',
     fontSize: 18,
@@ -202,16 +211,17 @@ const styles = StyleSheet.create({
   },
   profileEmail: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginTop: 7,
-  },
-  profilePhone: {
-    color: '#fff',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
     marginTop: 5,
   },
+  profilePhone: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginTop: 5,
+  },
+
   cardButton: {
     flexDirection: 'row',
     alignItems: 'center',
