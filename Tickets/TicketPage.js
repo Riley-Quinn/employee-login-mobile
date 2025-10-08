@@ -16,6 +16,7 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Dropdown } from 'react-native-element-dropdown';
 import dayjs from 'dayjs';
+import moment from 'moment';
 
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -112,6 +113,12 @@ const TicketPage = ({ navigation }) => {
         );
       }
 
+      list = list.sort((a, b) => {
+        const timeA = moment(a.employee_arrival_time, 'HH:mm:ss');
+        const timeB = moment(b.employee_arrival_time, 'HH:mm:ss');
+        return timeA.diff(timeB);
+      });
+
       setTickets(list);
     } catch (error) {
       console.error('Error fetching tickets:', error);
@@ -126,10 +133,16 @@ const TicketPage = ({ navigation }) => {
 
     const fetchTicketCounts = async () => {
       try {
+        const clientId = await AsyncStorage.getItem('clientId');
+
         const response = await axios.get(
           `${BASE_URL}/api/tickets/employee/ticket-counts/${userId}`,
+          {
+            headers: {
+              'x-client-id': clientId,
+            },
+          },
         );
-
         console.log('📊 Ticket counts response:', response.data);
 
         const counts = response.data.list;
@@ -139,6 +152,9 @@ const TicketPage = ({ navigation }) => {
           inProgress: counts['In-Progress']?.total_count || 0,
           pending: counts.Pending?.total_count || 0,
           done: counts.Done?.total_count || 0,
+          Closed: counts.Closed?.total_count || 0,
+
+          onHold: counts['On-Hold']?.total_count || 0,
         });
       } catch (error) {
         console.error('❌ Error fetching ticket counts:', error);

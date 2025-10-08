@@ -162,6 +162,13 @@ const Dashboard = ({ navigation }) => {
       const allTickets = res?.data?.list || [];
 
       let filteredTickets = allTickets;
+
+      filteredTickets = filteredTickets.filter(
+        ticket =>
+          ticket.status_name?.toLowerCase().trim().replace(/[-_]/g, ' ') !==
+          'in progress',
+      );
+
       if (statusFilter && statusFilter !== 'all') {
         filteredTickets = allTickets.filter(
           ticket => ticket.status_id.toString() === statusFilter,
@@ -181,11 +188,17 @@ const Dashboard = ({ navigation }) => {
 
         return isToday && isNotDone;
       });
-
       const sortedTodayTickets = todayTickets.sort((a, b) => {
-        const timeA = a.employee_arrival_time || '00:00:00';
-        const timeB = b.employee_arrival_time || '00:00:00';
-        return moment(timeA, 'HH:mm:ss') - moment(timeB, 'HH:mm:ss');
+        const dateTimeA = moment(
+          `${a.employee_arrival_date} ${a.employee_arrival_time}`,
+          'YYYY-MM-DD HH:mm:ss',
+        );
+        const dateTimeB = moment(
+          `${b.employee_arrival_date} ${b.employee_arrival_time}`,
+          'YYYY-MM-DD HH:mm:ss',
+        );
+
+        return dateTimeA.diff(dateTimeB);
       });
 
       let finalTickets = [];
@@ -194,8 +207,22 @@ const Dashboard = ({ navigation }) => {
         const highPriorityToday = sortedTodayTickets.filter(
           ticket => ticket.priority_rank === 'High',
         );
+
         finalTickets = highPriorityToday
-          .sort((a, b) => b.urgency - a.urgency)
+          .sort((a, b) => {
+            const dateTimeA = moment(
+              `${a.employee_arrival_date} ${a.employee_arrival_time}`,
+              'YYYY-MM-DD HH:mm:ss',
+            );
+            const dateTimeB = moment(
+              `${b.employee_arrival_date} ${b.employee_arrival_time}`,
+              'YYYY-MM-DD HH:mm:ss',
+            );
+
+            const timeDiff = dateTimeA.diff(dateTimeB);
+            if (timeDiff !== 0) return timeDiff;
+            return b.urgency - a.urgency;
+          })
           .slice(0, 3);
       } else {
         const highPriorityTodo = filteredTickets.filter(

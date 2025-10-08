@@ -23,7 +23,7 @@ const screenWidth = Dimensions.get('window').width;
 const isTablet = screenWidth > 600;
 
 const ITEM_WIDTH = isTablet ? screenWidth / 7 : 63;
-const AGENDA_ITEM_HEIGHT = 74;
+const AGENDA_ITEM_HEIGHT = 73;
 
 const EventsCalendar = () => {
   const [events, setEvents] = useState([]);

@@ -22,12 +22,10 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import messaging from '@react-native-firebase/messaging';
 import { BASE_URL } from '@env';
 
-
 const Login = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const [secureText, setSecureText] = useState(true);
 
-  // ✅ Request notification permission
   const requestNotificationPermission = async () => {
     if (Platform.OS === 'android' && Platform.Version >= 33) {
       const result = await PermissionsAndroid.request(
@@ -42,14 +40,12 @@ const Login = ({ navigation }) => {
     );
   };
 
-  // ✅ Get FCM token
   const getFcmToken = async () => {
     const token = await messaging().getToken();
     console.log('📱 FCM token:', token);
     return token;
   };
 
-  // ✅ Send token to backend
   const storeFcmToken = async (userId, role) => {
     try {
       const fcmToken = await getFcmToken();
@@ -63,7 +59,6 @@ const Login = ({ navigation }) => {
 
       await AsyncStorage.setItem('fcmToken', fcmToken);
 
-      // Listen for token refresh
       messaging().onTokenRefresh(async newToken => {
         await axios.post(`${BASE_URL}/fcm-tokens/store-token`, {
           employee_id: role === 'employee' ? userId : null,
@@ -79,7 +74,6 @@ const Login = ({ navigation }) => {
     }
   };
 
-  // ✅ Listen for incoming notifications
   const listenForNotifications = () => {
     messaging().onMessage(async remoteMessage => {
       console.log('📩 Foreground notification:', remoteMessage);
@@ -90,7 +84,6 @@ const Login = ({ navigation }) => {
     });
   };
 
-  // ✅ Login handler
   const handleLogin = async (values, { setSubmitting }) => {
     try {
       setLoading(true);
@@ -107,16 +100,14 @@ const Login = ({ navigation }) => {
       await AsyncStorage.setItem('roleId', userData.roleId.toString());
       await AsyncStorage.setItem('clientId', userData.client_id.toString());
 
-      // Navigate to dashboard
       navigation.reset({
         index: 0,
         routes: [{ name: 'Dashboard' }],
       });
 
-      // Setup FCM
       const granted = await requestNotificationPermission();
       if (granted) {
-        const fcmToken = await storeFcmToken(userData.userId, 'employee'); // employee login
+        const fcmToken = await storeFcmToken(userData.userId, 'employee');
         console.log('✅ FCM token stored:', fcmToken);
       } else {
         console.log('❌ Notification permission denied');
@@ -234,7 +225,7 @@ export default Login;
 
 const styles = StyleSheet.create({
   background: { flex: 1, justifyContent: 'center', paddingHorizontal: 20 },
-  container: { justifyContent: 'flex-start', flex: 1, paddingTop: 50 },
+  container: { justifyContent: 'flex-start', flex: 1, paddingTop: 170 },
   logo: { width: 180, height: 180, alignSelf: 'center', marginBottom: 10 },
   welcome: {
     color: 'white',
