@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "331792976147",
+    "project_id": "scouttrack-58f53",
+    "storage_bucket": "scouttrack-58f53.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:331792976147:android:bf8434f5d0e2284340b2e6",
+        "android_client_info": {
+          "package_name": "com.employee"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAprAnx41LkHVfiUb4_kisE02doXF-xB2g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

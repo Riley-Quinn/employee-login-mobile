@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { Dimensions } from 'react-native';
 import { Animated } from 'react-native';
 import {
   View,
@@ -16,6 +17,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Dropdown } from 'react-native-element-dropdown';
 import moment from 'moment';
 import dayjs from 'dayjs';
+import { PieChart } from 'react-native-gifted-charts';
 
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -28,6 +30,9 @@ import { BarChart } from 'react-native-gifted-charts';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import { BASE_URL } from '@env';
 import { SafeAreaView } from 'react-native-safe-area-context';
+const { width } = Dimensions.get('window');
+const isTablet = width >= 768;
+const screenWidth = Dimensions.get('window').width;
 
 const serviceReasons = [
   'Power Supply Issues',
@@ -76,6 +81,7 @@ const Dashboard = ({ navigation }) => {
     statusCounts.inProgress +
     statusCounts.pending +
     statusCounts.onHold;
+
   const getPriorityTicket = ticketsArray => {
     const high = ticketsArray.find(t => t.priority_rank === 'High');
     if (high) return high;
@@ -88,6 +94,38 @@ const Dashboard = ({ navigation }) => {
 
     return null;
   };
+  const pieData = [
+    {
+      value: statusCounts.todo,
+      color: '#d8b487',
+      text: 'ToDo',
+    },
+    {
+      value: statusCounts.inProgress,
+      color: '#ff954d',
+      text: 'In Progress',
+    },
+    {
+      value: statusCounts.pending,
+      color: '#6C63FF',
+      text: 'Pending',
+    },
+    {
+      value: statusCounts.onHold,
+      color: '#cf82ac',
+      text: 'On Hold',
+    },
+    {
+      value: statusCounts.done,
+      color: '#008080',
+      text: 'Done',
+    },
+    {
+      value: statusCounts.Closed,
+      color: '#22C55E',
+      text: 'Closed',
+    },
+  ];
 
   const ticketToDisplay = getPriorityTicket(tickets);
 
@@ -105,6 +143,7 @@ const Dashboard = ({ navigation }) => {
           `${BASE_URL}/api/ticket-statuses`,
         );
         const res = await axios.get(`${BASE_URL}/api/ticket-statuses`);
+
         console.log('✅ Ticket statuses API response:', res?.data);
 
         setTicketStatuses(res?.data || []);
@@ -119,13 +158,17 @@ const Dashboard = ({ navigation }) => {
     if (!userId) return;
 
     try {
-      const response = await axios.get(
-        `${BASE_URL}/api/tickets/employee/${userId}`,
-      );
-
-      const allTickets = response?.data?.list || [];
+      const res = await axios.get(`${BASE_URL}/api/tickets/employee/${userId}`);
+      const allTickets = res?.data?.list || [];
 
       let filteredTickets = allTickets;
+
+      filteredTickets = filteredTickets.filter(
+        ticket =>
+          ticket.status_name?.toLowerCase().trim().replace(/[-_]/g, ' ') !==
+          'in progress',
+      );
+
       if (statusFilter && statusFilter !== 'all') {
         filteredTickets = allTickets.filter(
           ticket => ticket.status_id.toString() === statusFilter,
@@ -145,11 +188,17 @@ const Dashboard = ({ navigation }) => {
 
         return isToday && isNotDone;
       });
-
       const sortedTodayTickets = todayTickets.sort((a, b) => {
-        const timeA = a.employee_arrival_time || '00:00:00';
-        const timeB = b.employee_arrival_time || '00:00:00';
-        return moment(timeA, 'HH:mm:ss') - moment(timeB, 'HH:mm:ss');
+        const dateTimeA = moment(
+          `${a.employee_arrival_date} ${a.employee_arrival_time}`,
+          'YYYY-MM-DD HH:mm:ss',
+        );
+        const dateTimeB = moment(
+          `${b.employee_arrival_date} ${b.employee_arrival_time}`,
+          'YYYY-MM-DD HH:mm:ss',
+        );
+
+        return dateTimeA.diff(dateTimeB);
       });
 
       let finalTickets = [];
@@ -158,8 +207,22 @@ const Dashboard = ({ navigation }) => {
         const highPriorityToday = sortedTodayTickets.filter(
           ticket => ticket.priority_rank === 'High',
         );
+
         finalTickets = highPriorityToday
-          .sort((a, b) => b.urgency - a.urgency)
+          .sort((a, b) => {
+            const dateTimeA = moment(
+              `${a.employee_arrival_date} ${a.employee_arrival_time}`,
+              'YYYY-MM-DD HH:mm:ss',
+            );
+            const dateTimeB = moment(
+              `${b.employee_arrival_date} ${b.employee_arrival_time}`,
+              'YYYY-MM-DD HH:mm:ss',
+            );
+
+            const timeDiff = dateTimeA.diff(dateTimeB);
+            if (timeDiff !== 0) return timeDiff;
+            return b.urgency - a.urgency;
+          })
           .slice(0, 3);
       } else {
         const highPriorityTodo = filteredTickets.filter(
@@ -175,46 +238,9 @@ const Dashboard = ({ navigation }) => {
       }
 
       setTickets(finalTickets);
-      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-      const weeklyCounts = days.map(day => ({ label: day, done: 0, todo: 0 }));
-
-      allTickets.forEach(ticket => {
-        const createdDate = moment(ticket.created_at);
-        const dayIndex = createdDate.day();
-
-        if (
-          ticket.status_id === 2 ||
-          ticket.status_name?.toLowerCase() === 'todo'
-        ) {
-          weeklyCounts[dayIndex].todo += 1;
-        }
-
-        if (
-          ticket.status_id === 6 ||
-          ticket.status_name?.toLowerCase() === 'done'
-        ) {
-          let doneDate = createdDate;
-
-          if (Array.isArray(ticket.status_tracker)) {
-            const doneEntry = ticket.status_tracker.find(
-              entry =>
-                entry.status?.toLowerCase() === 'done' &&
-                (entry.Date || entry.updatedDate),
-            );
-            if (doneEntry)
-              doneDate = moment(doneEntry.Date || doneEntry.updatedDate);
-          }
-
-          const dayIndexDone = doneDate.day();
-          weeklyCounts[dayIndexDone].done += 1;
-        }
-      });
-
-      setWeeklyData(weeklyCounts);
     } catch (error) {
       console.error('Error fetching tickets:', error);
       setTickets([]);
-      setWeeklyData([]);
     }
   }, [userId, statusFilter]);
   const BlinkingText = ({ children, style, duration = 500 }) => {
@@ -250,10 +276,16 @@ const Dashboard = ({ navigation }) => {
 
     const fetchTicketCounts = async () => {
       try {
+        const clientId = await AsyncStorage.getItem('clientId');
+
         const response = await axios.get(
           `${BASE_URL}/api/tickets/employee/ticket-counts/${userId}`,
+          {
+            headers: {
+              'x-client-id': clientId,
+            },
+          },
         );
-
         console.log('📊 Ticket counts response:', response.data);
 
         const counts = response.data.list;
@@ -263,7 +295,7 @@ const Dashboard = ({ navigation }) => {
           inProgress: counts['In-Progress']?.total_count || 0,
           pending: counts.Pending?.total_count || 0,
           done: counts.Done?.total_count || 0,
-          open: counts.Open?.total_count || 0,
+          Closed: counts.Closed?.total_count || 0,
 
           onHold: counts['On-Hold']?.total_count || 0,
         });
@@ -274,34 +306,6 @@ const Dashboard = ({ navigation }) => {
 
     fetchTicketCounts();
   }, [userId, fetchTickets, statusFilter]);
-  const groupedBarData = [];
-  weeklyData.forEach(day => {
-    groupedBarData.push({
-      value: day.done,
-      label: day.label,
-      spacing: 2,
-      labelWidth: 30,
-      labelTextStyle: { color: 'gray' },
-      frontColor: '#008080',
-      onPress: () => {
-        setPopupData({
-          label: day.label,
-          done: day.done ?? 0,
-          todo: day.todo ?? 0,
-        });
-        setPopupVisible(true);
-      },
-    });
-    groupedBarData.push({
-      value: day.todo,
-      frontColor: '#377df7',
-      onPress: () => {
-        console.log('Clicked day:', day);
-        setPopupData(day);
-        setPopupVisible(true);
-      },
-    });
-  });
 
   const handleStartWork = async item => {
     const userStr = await AsyncStorage.getItem('userId');
@@ -372,11 +376,15 @@ const Dashboard = ({ navigation }) => {
       serviceReason === 'Other'
         ? customServiceReason
         : serviceReason || 'Service Update';
+
+    const newStatusId = serviceReason === 'Spare Parts Replacement' ? 4 : 3;
+    const newStatusText = newStatusId === 4 ? 'On Hold' : 'In Progress';
+
     const trackerData = StatusTracker(
       selectedTicket.status_tracker,
       reason,
-      'In Progress',
-      3,
+      newStatusText,
+      newStatusId,
       user.name,
       selectedTicket.employee_name,
       selectedTicket.employee_phone || '',
@@ -384,8 +392,9 @@ const Dashboard = ({ navigation }) => {
 
     try {
       await axios.put(`${BASE_URL}/api/tickets/${selectedTicket.ticket_id}`, {
-        ticketData: { status_tracker: trackerData, status_id: 3 },
+        ticketData: { status_tracker: trackerData, status_id: newStatusId },
       });
+
       fetchTickets();
       setServiceVisible(false);
       setServiceReason('');
@@ -438,7 +447,6 @@ const Dashboard = ({ navigation }) => {
       Alert.alert('Error', 'Failed to update status');
     }
   };
-
   const getStatusChipStyle = status => {
     switch (status?.toLowerCase()) {
       case 'open':
@@ -453,7 +461,7 @@ const Dashboard = ({ navigation }) => {
         };
       case 'in-progress':
         return {
-          backgroundColor: '#A6C8FF',
+          backgroundColor: '#ff954d',
           color: '#FFFFFF',
         };
       case 'pending':
@@ -461,7 +469,11 @@ const Dashboard = ({ navigation }) => {
           backgroundColor: '#6C63FF',
           color: '#FFFFFF',
         };
-
+      case 'on-hold':
+        return {
+          backgroundColor: '#cf82ac',
+          color: '#FFFFFF',
+        };
       case 'done':
         return {
           backgroundColor: '#22C55E',
@@ -469,7 +481,7 @@ const Dashboard = ({ navigation }) => {
         };
       default:
         return {
-          backgroundColor: '#cf82ac',
+          backgroundColor: '#008080',
           color: '#FFFFFF',
         };
     }
@@ -480,6 +492,7 @@ const Dashboard = ({ navigation }) => {
 
     return (
       <TouchableOpacity
+        style={styles.ticketCard}
         onPress={() => {
           if (item.status_id !== 1) {
             navigation.navigate('ViewTickets', { ticketId: item.ticket_id });
@@ -488,7 +501,13 @@ const Dashboard = ({ navigation }) => {
       >
         <View style={styles.cardWrapper}>
           <View style={styles.cardHeader}>
-            <Text style={styles.ticketId}>#{item.ticket_id}</Text>
+            <Text style={styles.ticketId}>{item.ticket_service_id}</Text>
+            <Text style={styles.employee}>
+              {item.employee_arrival_date
+                ? dayjs(item.employee_arrival_date).format('MMM D, YYYY')
+                : ''}
+            </Text>
+
             <BlinkingText style={styles.employeee}>
               {item.employee_arrival_time
                 ? dayjs(`1970-01-01T${item.employee_arrival_time}`).format(
@@ -521,10 +540,20 @@ const Dashboard = ({ navigation }) => {
           <View style={styles.cardBody}>
             <View style={styles.infoSection}>
               <View style={styles.infoRows}>
-                <Text style={styles.title}>
+                <Text
+                  style={styles.title}
+                  numberOfLines={2}
+                  ellipsizeMode="tail"
+                >
                   {item.title ? item.title : '-'}
                 </Text>
-                <Text style={styles.label}>{item.description}</Text>
+                <Text
+                  style={styles.label}
+                  numberOfLines={2}
+                  ellipsizeMode="tail"
+                >
+                  {item.description}
+                </Text>
               </View>
               <View
                 style={[styles.infoRow, { justifyContent: 'space-between' }]}
@@ -542,35 +571,21 @@ const Dashboard = ({ navigation }) => {
             </View>
 
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              {item.status_id === 2 && (
+              {item.status_id === 2 && item.employee_arrival_date && (
                 <View
                   style={{
                     flexDirection: 'row',
-                    justifyContent: item.employee_arrival_date
-                      ? 'space-between'
-                      : 'flex-end',
+                    justifyContent: 'flex-end',
                     alignItems: 'center',
                     width: '100%',
                   }}
                 >
                   <TouchableOpacity
-                    style={styles.arrivalButton}
-                    onPress={() => {
-                      setSelectedTicket(item);
-                      setModalVisible(true);
-                    }}
+                    style={styles.startButton}
+                    onPress={() => handleStartWork(item)}
                   >
-                    <Text style={styles.buttonText}>Arrival Date</Text>
+                    <Text style={styles.buttonText}>Start</Text>
                   </TouchableOpacity>
-
-                  {item.employee_arrival_date && (
-                    <TouchableOpacity
-                      style={styles.startButton}
-                      onPress={() => handleStartWork(item)}
-                    >
-                      <Text style={styles.buttonText}>Start</Text>
-                    </TouchableOpacity>
-                  )}
                 </View>
               )}
 
@@ -654,8 +669,8 @@ const Dashboard = ({ navigation }) => {
                   justifyContent: 'center',
                   alignItems: 'center',
                   position: 'absolute',
-                  top: -20,
-                  right: 5,
+                  top: isTablet ? -13 : -20,
+                  right: isTablet ? -5 : 5,
                 }}
               >
                 <FontAwesome6
@@ -702,8 +717,8 @@ const Dashboard = ({ navigation }) => {
                   justifyContent: 'center',
                   alignItems: 'center',
                   position: 'absolute',
-                  top: -20,
-                  right: 5,
+                  top: isTablet ? -13 : -20,
+                  right: isTablet ? -5 : 5,
                 }}
               >
                 <Ionicons name="shield-outline" size={15} color="#fff" />
@@ -745,8 +760,8 @@ const Dashboard = ({ navigation }) => {
                   justifyContent: 'center',
                   alignItems: 'center',
                   position: 'absolute',
-                  top: -20,
-                  right: 5,
+                  top: isTablet ? -13 : -20,
+                  right: isTablet ? -5 : 5,
                 }}
               >
                 <Ionicons name="time-outline" size={15} color="#fff" />
@@ -788,8 +803,9 @@ const Dashboard = ({ navigation }) => {
                   justifyContent: 'center',
                   alignItems: 'center',
                   position: 'absolute',
-                  top: -20,
-                  right: 5,
+                  top: isTablet ? -13 : -20,
+
+                  right: isTablet ? -5 : 5,
                 }}
               >
                 <Ionicons name="time-outline" size={15} color="#fff" />
@@ -797,134 +813,70 @@ const Dashboard = ({ navigation }) => {
             </View>
           </View>
         </View>
-        <View style={styles.graph}>
+
+        <View style={{ marginTop: -10, paddingHorizontal: 16 }}>
           <Text
             style={{
-              fontSize: 16,
+              fontSize: 14,
+              fontWeight: 'bold',
               color: '#000',
-              fontWeight: '600',
               marginBottom: 10,
-              marginHorizontal: -2,
             }}
           >
-            Weekly Progress
+            Ticket Statuses
           </Text>
 
-          <BarChart
-            data={groupedBarData}
-            barWidth={12}
-            spacing={15}
-            maxValue={12}
-            yAxisLabelTexts={['0', '2', '4', '6', '8', '10', '12']}
-            yAxisTextStyle={{ color: 'gray', fontSize: 12, fontWeight: 'bold' }}
-            noOfSections={6}
-            xAxisTextStyle={{
-              color: 'black',
-              fontSize: 12,
-              fontWeight: 'bold',
-            }}
-          />
-          <Modal visible={popupVisible} transparent animationType="fade">
-            <View
-              style={{
-                flex: 1,
-                justifyContent: 'center',
-                alignItems: 'center',
-                marginBottom: 350,
-              }}
-            >
-              <View
-                style={{
-                  width: 150,
-                  padding: 15,
-                  borderRadius: 10,
-                  backgroundColor: '#fff',
-                  alignItems: 'center',
-                  position: 'relative',
-                  elevation: 5,
-                }}
-              >
-                <TouchableOpacity
-                  onPress={() => setPopupVisible(false)}
-                  style={{
-                    position: 'absolute',
-                    top: 5,
-                    right: 5,
-                    zIndex: 10,
-                  }}
-                >
-                  <Ionicons name="close-circle" size={25} color="#888" />
-                </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+            <View style={{ width: 150, marginRight: -10 }}>
+              <PieChart
+                data={pieData}
+                donut
+                showText={false}
+                innerRadius={50}
+                radius={70}
+                donutColor="#fff"
+                wedgeColor="#000"
+                showValuesAsLabels={false}
+                textColor="#000"
+                textSize={14}
+                labelPosition="outside"
+                labelsStyle={{ fontWeight: '600' }}
+              />
+            </View>
 
-                {popupData && (
-                  <>
-                    <Text
+            <ScrollView
+              style={{ maxHeight: 200, marginLeft: 40 }}
+              contentContainerStyle={{ paddingVertical: 5 }}
+            >
+              {pieData.map(item => {
+                const percentage = totalTickets
+                  ? ((item.value / totalTickets) * 100).toFixed(0)
+                  : 0;
+                return (
+                  <View
+                    key={item.text}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      marginVertical: 5,
+                    }}
+                  >
+                    <View
                       style={{
-                        fontSize: 18,
-                        fontWeight: '600',
-                        marginBottom: 10,
-                        color: '#000',
+                        width: 16,
+                        height: 16,
+                        backgroundColor: item.color,
+                        marginRight: 6,
+                        borderRadius: 4,
                       }}
-                    >
-                      {popupData.label}
+                    />
+                    <Text style={{ color: 'black' }}>
+                      {`${item.text} ${percentage}% (${item.value})`}
                     </Text>
-
-                    <Text
-                      style={{ fontSize: 16, marginBottom: 5, color: '#000' }}
-                    >
-                      Done: {popupData.done ?? 0}
-                    </Text>
-                    <Text style={{ fontSize: 16, color: '#000' }}>
-                      ToDo: {popupData.todo ?? 0}
-                    </Text>
-                  </>
-                )}
-              </View>
-            </View>
-          </Modal>
-
-          <View
-            style={{
-              flexDirection: 'row',
-              marginTop: 5,
-              justifyContent: 'center',
-            }}
-          >
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                marginRight: 15,
-              }}
-            >
-              <View
-                style={{
-                  width: 12,
-                  height: 12,
-                  borderRadius: 6,
-                  backgroundColor: '#008080',
-                  marginRight: 5,
-                }}
-              />
-              <Text style={{ color: '#000', fontSize: 14, fontWeight: 'bold' }}>
-                Done
-              </Text>
-            </View>
-
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <View
-                style={{
-                  width: 12,
-                  height: 12,
-                  borderRadius: 6,
-                  backgroundColor: '#377df7',
-                  marginRight: 5,
-                }}
-              />
-              <Text style={{ color: '#000', fontSize: 14, fontWeight: 'bold' }}>
-                ToDo
-              </Text>
-            </View>
+                  </View>
+                );
+              })}
+            </ScrollView>
           </View>
         </View>
 
@@ -950,9 +902,12 @@ const Dashboard = ({ navigation }) => {
         </View>
         <FlatList
           data={tickets}
-          keyExtractor={item => item.ticket_id.toString()}
+          key={isTablet ? 'tablet' : 'mobile'}
+          keyExtractor={(item, index) => `${item.ticket_id}-${index}`}
           renderItem={renderItem}
+          numColumns={isTablet ? 2 : 1}
         />
+
         <Modal visible={showDropdown} transparent animationType="slide">
           <View style={styles.modalWrapper}>
             <View style={styles.modalContent}>
@@ -1204,9 +1159,6 @@ const Dashboard = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  headerContainer: {
-    backgroundColor: '#008080',
-  },
   cardContent: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1214,25 +1166,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginTop: 8,
   },
-  graph: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    marginTop: -5,
-    paddingLeft: 20,
-    paddingBottom: 20,
-    paddingTop: 20,
-    marginBottom: 50,
-    marginHorizontal: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
-  },
 
+  ticketCard: {
+    margin: isTablet ? 6 : 0,
+    width: isTablet ? screenWidth / 2 - 10 : '100%',
+  },
   cardWrapper: {
     marginBottom: 12,
-    marginHorizontal: 13,
+    marginHorizontal: isTablet ? 4 : 13,
     borderRadius: 8,
     borderWidth: 0.5,
     borderColor: '#d3d3d3',
@@ -1242,12 +1183,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.5,
     shadowRadius: 4,
     elevation: 4,
+    minHeight: isTablet ? 150 : 0,
+    flex: isTablet ? 1 : 0,
     backgroundColor: '#fff',
   },
 
   cardHeader: {
     backgroundColor: '#008080',
-    padding: 6,
+    padding: 10,
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -1256,9 +1199,108 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     padding: 10,
   },
+  ticketId: {
+    fontWeight: 'bold',
+    fontSize: 14,
+    color: '#fff',
+    marginLeft: 10,
+  },
+  employee: {
+    fontWeight: 'bold',
+    fontSize: 14,
+    color: '#fff',
+    marginLeft: screenWidth < 768 ? 50 : 850,
+  },
+  employeee: {
+    fontWeight: 'bold',
+    fontSize: 14,
+    color: '#fff',
+    marginLeft: screenWidth < 768 ? 10 : 50,
+  },
+  infoSection: {
+    padding: 10,
+  },
+  infoRows: {
+    flexDirection: 'column',
+  },
+  boldLabels: {
+    fontWeight: 'bold',
+    fontSize: 14,
+    marginTop: 5,
+    color: '#555',
+  },
+  title: {
+    fontWeight: 'bold',
+    fontSize: 14,
+    color: '#000',
+    marginLeft: -3,
 
+    marginTop: -10,
+  },
+  labels: {
+    fontWeight: 'bold',
+    color: '#008080',
+    fontsize: 14,
+  },
+
+  arrivalButton: {
+    backgroundColor: '#008080',
+    paddingVertical: 3,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    marginTop: 5,
+
+    textAlign: 'center',
+    marginLeft: 10,
+    marginRight: 10,
+  },
+
+  startButton: {
+    backgroundColor: '#008080',
+    paddingVertical: 3,
+    marginTop: 5,
+
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    marginLeft: 5,
+  },
+
+  serviceButton: {
+    backgroundColor: '#008080',
+    paddingVertical: 3,
+    marginTop: 5,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    textAlign: 'center',
+    marginLeft: 10,
+    marginRight: 10,
+  },
+
+  editButton: {
+    backgroundColor: '#008080',
+    paddingVertical: 3,
+    marginTop: 5,
+
+    paddingHorizontal: 12,
+    borderRadius: 6,
+  },
+
+  buttonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 14,
+    letterSpacing: 0.5,
+  },
+
+  whiteButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
+    fontSize: 14,
+  },
   textBlock: {
-    marginLeft: -10,
+    marginLeft: isTablet ? -15 : -10,
+
     marginTop: -20,
   },
   statusTitle: {
@@ -1279,44 +1321,36 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    margin: 15,
+    margin: 12,
   },
   statusCard: {
-    width: '48%',
-
-    borderRadius: 8,
-    paddingTop: 25,
-    paddingBottom: 15,
-    paddingLeft: 10,
-    marginBottom: 8,
-    marginTop: 3,
+    width: isTablet ? '23%' : '48%',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
-    backgroundColor: '#fff',
   },
 
-  headerRow: {
-    flexDirection: 'row',
-    marginVertical: 6,
-  },
-  ticketId: {
-    fontWeight: 'bold',
-    fontSize: 14,
-    color: '#fff',
-    marginLeft: 10,
-  },
-  employeee: {
-    fontWeight: 'bold',
-    fontSize: 14,
-    color: '#fff',
-    marginLeft: 260,
-  },
+  // statusCard: {
+  //   width: '48%',
+  //   borderRadius: 12,
+  //   padding: 16,
+
+  //   marginBottom: 12,
+  //   shadowColor: '#000',
+  //   shadowOffset: { width: 0, height: 2 },
+  //   shadowOpacity: 0.1,
+  //   shadowRadius: 4,
+  //   elevation: 3,
+  // },
   statusChip: {
     paddingHorizontal: 10,
     paddingVertical: 1,
+
     borderRadius: 10,
   },
 
@@ -1325,34 +1359,15 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 
-  infoSection: {
-    padding: 10,
-  },
   infoRow: {
     flexDirection: 'row',
     marginLeft: -3,
   },
-  infoRows: {
-    flexDirection: 'column',
-  },
+
   boldLabel: {
     fontWeight: 'bold',
     fontSize: 14,
     color: '#555',
-  },
-  boldLabels: {
-    fontWeight: 'bold',
-    fontSize: 14,
-    marginTop: 5,
-    color: '#555',
-  },
-  title: {
-    fontWeight: 'bold',
-    fontSize: 14,
-    color: '#000',
-    marginLeft: -3,
-
-    marginTop: -10,
   },
 
   label: {
@@ -1362,20 +1377,12 @@ const styles = StyleSheet.create({
     marginLeft: -3,
     marginTop: 5,
   },
-  labels: {
-    fontWeight: 'bold',
-    color: '#008080',
-    fontsize: 14,
-  },
+
   divider: {
     height: 1,
     backgroundColor: '#ddd',
     marginTop: 6,
     marginBottom: -7,
-  },
-
-  infoIcon: {
-    marginRight: 6,
   },
 
   Tickets: {
@@ -1390,81 +1397,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#efedf4',
-    flex: 1,
-    marginLeft: 12,
-  },
-
-  cardLabel: {
-    fontSize: 14,
-    marginBottom: 4,
-    color: '#333',
-  },
-
-  ticketHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  avatar: {
-    width: 30,
-    height: 30,
-    backgroundColor: '#008080',
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
-    marginTop: -50,
-  },
-  avatarText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  headerInfo: {
-    flex: 1,
-  },
-  ticketTitle: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 3,
-    color: '#000',
-  },
-
-  categoryLabel: {
-    fontSize: 14,
-    color: '#000',
-    fontWeight: '400',
-  },
-
-  categoryName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#000',
-  },
   row: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     marginBottom: 5,
-  },
-
-  iconBox: {
-    width: 10,
-    height: 10,
-    backgroundColor: '#008080',
-    marginRight: 8,
-    marginTop: 6,
-    borderRadius: 2,
-  },
-
-  emptyBox: {
-    width: 10,
-    height: 10,
-    marginRight: 8,
-    marginTop: 6,
   },
 
   ticketDate: {
@@ -1487,10 +1423,6 @@ const styles = StyleSheet.create({
     borderColor: '#000',
   },
 
-  ticketDates: {
-    fontSize: 14,
-    color: '#000',
-  },
   tickets: {
     fontSize: 14,
     color: '#000',
@@ -1501,37 +1433,8 @@ const styles = StyleSheet.create({
   ticketNumber: {
     fontSize: 20,
     fontWeight: 'bold',
-    marginLeft: 10,
+    marginLeft: isTablet ? 13 : 10,
     color: '#fff',
-  },
-
-  priorityText: {
-    fontSize: 14,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    backgroundColor: '#eee',
-    borderRadius: 8,
-    color: '#222',
-    fontWeight: 'bold',
-  },
-  subText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    marginLeft: 8,
-    color: '#888',
-  },
-  buttonFilled: {
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    backgroundColor: '#008080',
-
-    borderRadius: 8,
-    marginTop: 8,
-  },
-  dropdownWrapper: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    backgroundColor: '#fff',
   },
 
   picker: {
@@ -1607,14 +1510,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
-  buttonRows: {
+  filterRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: 5,
 
-    gap: 10,
+    marginTop: isTablet ? -45 : -10,
   },
-
+  filterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+  },
   bottomBar: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -1631,125 +1538,6 @@ const styles = StyleSheet.create({
     color: '#888',
     fontWeight: 'bold',
     marginTop: 4,
-  },
-
-  actionButton: {
-    flex: 1,
-    backgroundColor: '#008080',
-    paddingVertical: 10,
-    marginHorizontal: 5,
-
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-
-  filterSection: {
-    marginTop: 12,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 1 },
-    shadowRadius: 4,
-    elevation: 3,
-  },
-
-  filterLabel: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: 'black',
-    marginBottom: 6,
-  },
-  filterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 5,
-    marginTop: -50,
-  },
-  filterButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 10,
-  },
-  pickerWrapper: {
-    borderColor: '#000',
-    borderWidth: 0.5,
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-
-  buttonRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 12,
-    gap: 10,
-  },
-
-  arrivalButton: {
-    backgroundColor: '#008080',
-    paddingVertical: 3,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-    marginTop: 5,
-
-    textAlign: 'center',
-    marginLeft: 10,
-    marginRight: 10,
-  },
-
-  startButton: {
-    backgroundColor: '#008080',
-    paddingVertical: 3,
-    marginTop: 5,
-
-    paddingHorizontal: 12,
-    borderRadius: 6,
-    marginLeft: 5,
-  },
-
-  serviceButton: {
-    backgroundColor: '#008080',
-    paddingVertical: 3,
-    marginTop: 5,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-    textAlign: 'center',
-    marginLeft: 10,
-    marginRight: 10,
-  },
-
-  editButton: {
-    backgroundColor: '#008080',
-    paddingVertical: 3,
-    marginTop: 5,
-
-    paddingHorizontal: 12,
-    borderRadius: 6,
-  },
-
-  arrivalDateAlone: {
-    marginLeft: 'auto',
-    backgroundColor: '#008080',
-    paddingVertical: 3,
-    marginTop: 5,
-
-    paddingHorizontal: 12,
-    borderRadius: 8,
-  },
-
-  buttonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 14,
-    letterSpacing: 0.5,
-  },
-
-  whiteButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    letterSpacing: 0.5,
-    fontSize: 14,
   },
 });
 

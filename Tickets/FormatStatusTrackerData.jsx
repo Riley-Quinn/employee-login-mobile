@@ -123,15 +123,20 @@ const styles = StyleSheet.create({
   },
   historyHeader: {
     backgroundColor: '#008080',
-    padding: 8,
-    borderRadius: 6,
+    padding: 12,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+    marginHorizontal: -16,
+    marginTop: -38,
     marginBottom: 12,
   },
+
   historyText: {
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 16,
   },
+
   entry: {
     marginBottom: 12,
   },

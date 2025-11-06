@@ -29,7 +29,7 @@ const AddComments = ({ ticket, user, fetchData, fetchError, fetchSuccess }) => {
       ticket?.comments,
       commentData,
       commentId,
-      user?.userId,
+      user?.userId, // Participant ID
       user?.Role[0],
       user?.name,
     );

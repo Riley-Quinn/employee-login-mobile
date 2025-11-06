@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Text } from 'react-native';
-import { reverseGeocode } from './Geocode';
+import { reverseGeocode } from './Geocode'; // updated file
 
 const LocationDisplay = ({ latitude, longitude }) => {
   const [locationName, setLocationName] = useState('Loading location...');

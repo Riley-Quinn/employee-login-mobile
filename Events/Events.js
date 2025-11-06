@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { Animated } from 'react-native';
 import {
   View,
   Text,
@@ -7,6 +8,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   StatusBar,
+  Dimensions,
 } from 'react-native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -16,13 +18,21 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Modal from 'react-native-modal';
+
 import { BASE_URL } from '@env';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+
+dayjs.extend(utc);
+
+const { width } = Dimensions.get('window');
+const isTablet = width >= 768;
 const EventsOverview = () => {
   const [eventType, setEventType] = useState('Scheduled');
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState(null);
-  const [isFilterVisible, setIsFilterVisible] = useState(false); // modal state
+  const [isFilterVisible, setIsFilterVisible] = useState(false);
   const navigation = useNavigation();
 
   const eventOptions = [
@@ -46,6 +56,7 @@ const EventsOverview = () => {
         `${BASE_URL}/api/tickets/employee/${userId}`,
         { params: { status_id: 2 } },
       );
+
       const tickets = response.data?.list || [];
 
       const scheduledTickets = tickets.filter(t => t.employee_arrival_date);
@@ -64,18 +75,43 @@ const EventsOverview = () => {
   useEffect(() => {
     if (userId) fetchTickets();
   }, [fetchTickets, userId, eventType]);
+  const BlinkingText = ({ children, style, duration = 500 }) => {
+    const opacity = useRef(new Animated.Value(1)).current;
 
+    useEffect(() => {
+      const blink = Animated.loop(
+        Animated.sequence([
+          Animated.timing(opacity, {
+            toValue: 0,
+            duration,
+            useNativeDriver: true,
+          }),
+          Animated.timing(opacity, {
+            toValue: 1,
+            duration,
+            useNativeDriver: true,
+          }),
+        ]),
+      );
+      blink.start();
+      return () => blink.stop();
+    }, [opacity, duration]);
+
+    return (
+      <Animated.Text style={[style, { opacity }]}>{children}</Animated.Text>
+    );
+  };
   const renderItem = ({ item }) => {
     const address = `${item.address}, ${item.state_name}`;
 
     return (
-      <View style={styles.ticketCard}>
+      <View style={[styles.ticketCard, isTablet && { flex: 0.48 }]}>
         <View style={styles.card}>
           <View style={styles.cards}>
             <View style={styles.avatars}>
               <FontAwesome name="ticket" size={24} color="#fff" />
             </View>
-            <Text style={styles.serviceId}>#{item.ticket_service_id}</Text>
+            <Text style={styles.serviceId}>{item.title}</Text>
           </View>
           <View style={styles.infoSection}>
             <View style={styles.row}>
@@ -91,6 +127,18 @@ const EventsOverview = () => {
                 {item.city_name}, {item.region_name}
               </Text>
             </View>
+            {item.employee_arrival_date ? (
+              <View style={styles.row}>
+                <Text style={styles.label}>ArrivalDate</Text>
+                <Text style={styles.colon}>:</Text>
+                <BlinkingText style={styles.value}>
+                  {dayjs
+                    .utc(item.employee_arrival_date)
+                    .local()
+                    .format('YYYY-MM-DD h:mm A')}
+                </BlinkingText>
+              </View>
+            ) : null}
 
             <View style={styles.row}>
               <Text style={styles.label}>Customer</Text>
@@ -184,6 +232,13 @@ const EventsOverview = () => {
               data={rows}
               keyExtractor={item => item.ticket_id.toString()}
               renderItem={renderItem}
+              numColumns={isTablet ? 2 : 1}
+              key={isTablet ? 'tablet' : 'phone'}
+              columnWrapperStyle={
+                isTablet
+                  ? { justifyContent: 'space-between', marginBottom: 4 }
+                  : undefined
+              }
               contentContainerStyle={styles.listContent}
             />
           )}
@@ -262,12 +317,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 10,
     padding: 12,
-    marginVertical: 8,
+    marginVertical: isTablet ? 4 : 8,
+
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
+
   cards: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -315,19 +372,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginTop: 2,
   },
-  picker: {
-    backgroundColor: '#f1f1f1',
-    borderRadius: 8,
-    marginBottom: 16,
-    marginHorizontal: 8,
-  },
-  dropdownContainer: {
-    marginVertical: 8,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    elevation: 2,
-    paddingHorizontal: 8,
-  },
+
   listContent: {
     paddingBottom: 100,
   },

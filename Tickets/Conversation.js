@@ -49,19 +49,15 @@ const AddConversation = ({ data, user, customerComments, fetchData }) => {
     try {
       const parsed = JSON.parse(customerComments || '[]');
 
-      // Flatten all messages into one array
       const allMessages = parsed.flatMap(item => {
         if (Array.isArray(item.message)) {
-          // If message is an array, keep all
           return item.message.filter(m => m && m.text);
         } else if (item.message && item.message.text) {
-          // Single message object
           return [item.message];
         }
         return [];
       });
 
-      // Append only new messages by id
       setConversationData(prev => {
         const existingIds = new Set(prev.map(m => m.id));
         const newMessages = allMessages.filter(m => !existingIds.has(m.id));
@@ -73,7 +69,7 @@ const AddConversation = ({ data, user, customerComments, fetchData }) => {
   }, [customerComments]);
 
   const setupSocketIO = useCallback(() => {
-    const socketUrl = `${BASE_URL}`;
+    const socketUrl = `$${BASE_URL}`;
     socket.current = io(socketUrl, {
       transports: ['websocket'],
     });
@@ -122,7 +118,7 @@ const AddConversation = ({ data, user, customerComments, fetchData }) => {
         ),
       };
 
-      await axios.put(`${BASE_URL}/api/tickets/${data?.ticket_id}`, {
+      await axios.put(`$${BASE_URL}/api/tickets/${data?.ticket_id}`, {
         ticketData,
       });
 
@@ -152,14 +148,22 @@ const AddConversation = ({ data, user, customerComments, fetchData }) => {
         {conversationData.length === 0 ? (
           <Text style={styles.noData}>No conversation yet.</Text>
         ) : (
-          conversationData.map((msg, index) => (
-            <View key={msg.id || index} style={styles.messageBubble}>
-              <Text style={styles.sender}>
-                {msg.sender_name} ({msg.sender_role}) - {msg.date}
-              </Text>
-              <Text style={styles.messageText}>{msg.text}</Text>
-            </View>
-          ))
+          conversationData.map((msg, index) => {
+            const isMe = String(msg.sender_id) === String(userInfo.userId);
+            return (
+              <View
+                key={msg.id || index}
+                style={[
+                  styles.messageBubble,
+                  isMe ? styles.myMessage : styles.theirMessage,
+                ]}
+              >
+                <Text style={styles.sender}>{msg.sender_name}</Text>
+                <Text style={styles.messageText}>{msg.text}</Text>
+                <Text style={styles.dateText}>{msg.date}</Text>
+              </View>
+            );
+          })
         )}
       </View>
 
@@ -218,6 +222,31 @@ const styles = StyleSheet.create({
   messagesContainer: {
     paddingBottom: 10,
   },
+  myMessage: {
+    backgroundColor: '#fff',
+    alignSelf: 'flex-end',
+
+    marginHorizontal: 12,
+    marginBottom: 6,
+    padding: 10,
+  },
+  theirMessage: {
+    backgroundColor: '#fff',
+    alignSelf: 'flex-start',
+
+    marginHorizontal: 12,
+    marginBottom: 6,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#eee',
+  },
+  dateText: {
+    fontSize: 10,
+    color: '#999',
+    alignSelf: 'flex-end',
+    marginTop: 4,
+  },
+
   title: {
     fontSize: 14,
     fontWeight: 'bold',

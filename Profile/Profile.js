@@ -1,65 +1,66 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
+  TextInput,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
+  Image,
+  ActivityIndicator,
   Alert,
+  ScrollView,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import FontAwesome6 from 'react-native-vector-icons/FontAwesome6';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import Feather from 'react-native-vector-icons/Feather';
 import { BASE_URL } from '@env';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
+import { launchImageLibrary } from 'react-native-image-picker';
 
 const ProfileScreen = ({ navigation }) => {
-  const [profile, setProfile] = useState({});
-  const [userId, setUserId] = useState(null);
+  const [userData, setUserData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
 
-  useEffect(() => {
-    const getUserId = async () => {
-      try {
-        const id = await AsyncStorage.getItem('userId');
-        console.log('🔑 Retrieved userId:', id); // ✅ Debug log
+  const fetchUserData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const userId = await AsyncStorage.getItem('userId');
+      const token = await AsyncStorage.getItem('token');
+      const clientId = await AsyncStorage.getItem('clientId');
 
-        if (id) setUserId(id);
-      } catch (error) {
-        console.error(error);
-      }
-    };
-    getUserId();
+      console.log('Fetching user data with userId:', userId);
+
+      const res = await axios.get(`${BASE_URL}/api/employee/${userId}`, {
+        headers: { Authorization: `Bearer ${token}`, 'x-client-id': clientId },
+      });
+
+      console.log('Fetched user data:', res.data);
+
+      setUserData(res.data);
+      setName(res.data.name);
+      setEmail(res.data.email);
+      setPhone(res.data.phone);
+    } catch (err) {
+      console.log('Fetch user error:', err);
+      Alert.alert('Error', 'Failed to fetch user data');
+    }
+    setLoading(false);
   }, []);
 
   useEffect(() => {
-    if (userId) {
-      const fetchProfile = async () => {
-        try {
-          const res = await axios.get(`${BASE_URL}/api/employee/${userId}`);
+    fetchUserData();
+  }, [fetchUserData]);
 
-          setProfile(res.data);
-        } catch (error) {
-          console.error(error.message);
-        }
-      };
-      fetchProfile();
-    }
-  }, [userId]);
-
-  const handleLogout = async () => {
-    try {
-      await AsyncStorage.removeItem('userId');
-      await AsyncStorage.removeItem('userName');
-      navigation.navigate('Login');
-    } catch (error) {
-      Alert.alert('Error', 'Error logging out');
-    }
-  };
   const CardButton = ({ icon, title, subtitle, onPress }) => (
     <TouchableOpacity style={styles.cardButton} onPress={onPress}>
       <View style={styles.iconContainer}>
@@ -78,20 +79,38 @@ const ProfileScreen = ({ navigation }) => {
     </TouchableOpacity>
   );
 
+  if (loading || !userData) {
+    return <ActivityIndicator size="large" style={{ flex: 1 }} />;
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Profile</Text>
-
         <View style={styles.profileCircle}>
-          <View style={styles.iconBackground}>
-            <Feather name="user" size={50} color="#fff" />
-          </View>
-          <Text style={styles.profileEmail}>{profile.name}</Text>
-
-          <Text style={styles.profileEmail}>{profile.email}</Text>
-          <Text style={styles.profilePhone}>{profile.phone}</Text>
+          {selectedImage ? (
+            <Image
+              source={{ uri: selectedImage.uri }}
+              style={styles.profileImage}
+              resizeMode="cover"
+            />
+          ) : userData?.profile_image &&
+            userData.profile_image.trim() !== '' ? (
+            <Image
+              source={{
+                uri: `https://innovative-lifts.blr1.cdn.digitaloceanspaces.com/${userData.profile_image}`,
+              }}
+              style={styles.profileImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <Feather name="user" size={40} color="#fff" />
+          )}
         </View>
+
+        <Text style={styles.profileName}>{userData.name}</Text>
+        <Text style={styles.profileEmail}>{userData.email}</Text>
+        <Text style={styles.profilePhone}>{userData.phone}</Text>
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 20 }}>
@@ -111,7 +130,11 @@ const ProfileScreen = ({ navigation }) => {
           icon="log-out-outline"
           title="Logout"
           subtitle="Sign out of your account"
-          onPress={handleLogout}
+          onPress={async () => {
+            await AsyncStorage.removeItem('userId');
+            await AsyncStorage.removeItem('token');
+            navigation.navigate('Login');
+          }}
         />
       </ScrollView>
       <View style={styles.bottomBar}>
@@ -130,6 +153,7 @@ const ProfileScreen = ({ navigation }) => {
           <Ionicons name="calendar" size={30} color="#888" />
           <Text style={styles.navText}>Calendar</Text>
         </TouchableOpacity>
+
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => navigation.navigate('EventsOverview')}
@@ -164,17 +188,21 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     marginLeft: 20,
   },
-  iconBackground: {
+  profileCircle: {
     width: 100,
     height: 100,
-    borderRadius: 55,
-    backgroundColor: '#4ac7b7',
-    alignItems: 'center',
+    borderRadius: 50,
+    backgroundColor: '#00BFA6',
     justifyContent: 'center',
-    marginBottom: 10,
+    alignItems: 'center',
+    marginTop: 50,
+  },
+  profileImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 50,
   },
 
-  profileCircle: { marginTop: 20, alignItems: 'center' },
   profileName: {
     color: '#fff',
     fontSize: 18,
@@ -183,16 +211,17 @@ const styles = StyleSheet.create({
   },
   profileEmail: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginTop: 7,
-  },
-  profilePhone: {
-    color: '#fff',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
     marginTop: 5,
   },
+  profilePhone: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginTop: 5,
+  },
+
   cardButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -207,7 +236,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 3,
   },
-
   iconContainer: {
     width: 40,
     height: 40,
@@ -216,7 +244,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-
+  saveButton: {
+    backgroundColor: '#008080',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginVertical: 20,
+  },
   bottomBar: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -234,13 +268,22 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginTop: 4,
   },
-
   cardTitle: { fontSize: 16, fontWeight: 'bold', color: '#000' },
   cardSubtitle: {
     fontSize: 14,
     color: '#888',
     marginTop: 3,
     fontWeight: 'bold',
+  },
+  editIconWrapper: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#008080',
+    borderRadius: 20,
+    padding: 6,
+    borderWidth: 2,
+    borderColor: '#fff',
   },
 });
 
