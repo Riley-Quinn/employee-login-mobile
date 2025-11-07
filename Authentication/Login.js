@@ -93,8 +93,7 @@ const Login = ({ navigation }) => {
         rememberMe: true,
       });
 
-      const userData = response.data.empData;
-
+      const userData = response.data.user;
       await AsyncStorage.setItem('userId', userData.userId.toString());
       await AsyncStorage.setItem('userName', userData.name);
       await AsyncStorage.setItem('roleId', userData.roleId.toString());
