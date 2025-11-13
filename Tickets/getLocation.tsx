@@ -1,5 +1,6 @@
 import Geolocation from 'react-native-geolocation-service';
 import { PermissionsAndroid, Platform } from 'react-native';
+import { AxiosError } from 'axios';
 
 const getLocation = async () => {
   return new Promise(async resolve => {
@@ -10,7 +11,6 @@ const getLocation = async () => {
         );
 
         if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-          console.log('Location permission denied');
           return resolve(null); // return null instead of reject
         }
       }
@@ -26,7 +26,8 @@ const getLocation = async () => {
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 },
       );
     } catch (error) {
-      console.log('Unexpected location error:', error.message);
+      const err = error as AxiosError<any>;
+      console.log('Unexpected location error:', err.message);
       resolve(null);
     }
   });

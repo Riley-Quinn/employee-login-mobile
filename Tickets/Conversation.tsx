@@ -9,20 +9,45 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
-import { Formik } from 'formik';
+import { Formik, FormikState } from 'formik';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-
-import axios from 'axios';
-import io from 'socket.io-client';
+import axios, { AxiosError } from 'axios';
+import { io, Socket } from 'socket.io-client';
 import DateFormat from './DateFormat';
 import { BASE_URL } from '@env';
+import { DefaultEventsMap } from '@socket.io/component-emitter';
 
-const AddConversation = ({ data, user, customerComments, fetchData }) => {
-  const [conversationData, setConversationData] = useState([]);
+type AddConversationProps = {
+  data: any;
+  customerComments: any;
+  fetchData: () => void;
+};
+interface User {
+  userId: any;
+  name: any;
+  Role: any;
+}
+interface Conversation {
+  sender_id: string;
+  sender_name: string;
+  text: string;
+  date: string;
+  id: any;
+}
+
+const AddConversation = ({
+  data,
+  customerComments,
+  fetchData,
+}: AddConversationProps) => {
+  const [conversationData, setConversationData] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(false);
-  const [userInfo, setUserInfo] = useState(null);
-  const socket = useRef(null);
+  const [userInfo, setUserInfo] = useState<User | null>(null);
+  // const socket = useRef(null);
+  const socket = useRef<Socket<DefaultEventsMap, DefaultEventsMap> | null>(
+    null,
+  );
+
   const currentTime = DateFormat();
 
   useEffect(() => {
@@ -49,18 +74,24 @@ const AddConversation = ({ data, user, customerComments, fetchData }) => {
     try {
       const parsed = JSON.parse(customerComments || '[]');
 
-      const allMessages = parsed.flatMap(item => {
-        if (Array.isArray(item.message)) {
-          return item.message.filter(m => m && m.text);
-        } else if (item.message && item.message.text) {
-          return [item.message];
-        }
-        return [];
-      });
+      const allMessages = parsed.flatMap(
+        (item: {
+          message: { filter: (arg0: (m: any) => any) => any; text: any };
+        }) => {
+          if (Array.isArray(item.message)) {
+            return item.message.filter((m: { text: any }) => m && m.text);
+          } else if (item.message && item.message.text) {
+            return [item.message];
+          }
+          return [];
+        },
+      );
 
       setConversationData(prev => {
         const existingIds = new Set(prev.map(m => m.id));
-        const newMessages = allMessages.filter(m => !existingIds.has(m.id));
+        const newMessages = allMessages.filter(
+          (m: { id: any }) => !existingIds.has(m.id),
+        );
         return [...prev, ...newMessages];
       });
     } catch (err) {
@@ -78,21 +109,29 @@ const AddConversation = ({ data, user, customerComments, fetchData }) => {
       console.log('Socket connected');
     });
 
-    socket.current.on('message', msg => {
-      console.log('Received via socket:', msg);
+    socket.current.on('message', (msg: Conversation) => {
       setConversationData(prev => [...prev, msg]);
     });
 
     return () => {
-      socket.current.disconnect();
+      socket.current?.disconnect();
     };
   }, []);
-
   useEffect(() => {
     const cleanup = setupSocketIO();
     return cleanup;
   }, [setupSocketIO]);
-  const handleConversation = async (values, resetForm) => {
+  const handleConversation = async (
+    values: { customer_comments: any },
+    resetForm: {
+      (
+        nextState?:
+          | Partial<FormikState<{ customer_comments: string }>>
+          | undefined,
+      ): void;
+      (): void;
+    },
+  ) => {
     if (!userInfo) {
       Alert.alert('Error', 'User not loaded');
       return;
@@ -107,29 +146,25 @@ const AddConversation = ({ data, user, customerComments, fetchData }) => {
       sender_name: userInfo?.name,
       date: currentTime,
     };
-
     const updatedConversation = [...conversationData, newMessage];
     setConversationData(updatedConversation);
-
     try {
       const ticketData = {
         customer_comments: JSON.stringify(
           updatedConversation.map(msg => ({ message: msg })),
         ),
       };
-
       await axios.put(`$${BASE_URL}/api/tickets/${data?.ticket_id}`, {
         ticketData,
       });
-
       if (socket.current?.connected) {
         socket.current.emit('message', newMessage);
       }
-
       resetForm();
       fetchData();
     } catch (err) {
-      Alert.alert('Error', err?.response?.data?.error || 'Failed to send');
+      const error = err as AxiosError<any>;
+      Alert.alert('Error', error?.response?.data?.error || 'Failed to send');
       setConversationData(prev => prev.filter(m => m.id !== newMessage.id));
     }
   };

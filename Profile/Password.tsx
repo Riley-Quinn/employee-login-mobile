@@ -9,14 +9,15 @@ import {
   Alert,
   ScrollView,
 } from 'react-native';
+// @ts-ignore
 import Ionicons from 'react-native-vector-icons/Ionicons';
+// @ts-ignore
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import FontAwesome from 'react-native-vector-icons/FontAwesome';
-import Feather from 'react-native-vector-icons/Feather';
+// @ts-ignore
 import EvilIcons from 'react-native-vector-icons/EvilIcons';
 import { BASE_URL } from '@env';
 
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Formik } from 'formik';
 import * as Yup from 'yup';
@@ -36,12 +37,15 @@ const validationSchema = Yup.object().shape({
     .required('Please confirm your password'),
 });
 
-const Password = ({ navigation }) => {
+const Password = ({ navigation }: { navigation: any }) => {
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  const handleSave = async values => {
+  const handleSave = async (values: {
+    currentPassword: any;
+    newPassword: any;
+  }) => {
     try {
       const userId = await AsyncStorage.getItem('userId');
       if (!userId) {
@@ -61,7 +65,8 @@ const Password = ({ navigation }) => {
         Alert.alert('Success', 'Password updated successfully');
         navigation.navigate('ProfileScreen');
       }
-    } catch (err) {
+    } catch (error) {
+      const err = error as AxiosError<any>;
       Alert.alert(
         'Error',
         err.response?.data?.error || 'Something went wrong. Please try again.',

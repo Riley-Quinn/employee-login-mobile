@@ -1,6 +1,7 @@
 // Locations.js
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+// @ts-ignore
 import { BASE_URL } from '@env';
 const Locations = () => {
   const [states, setStates] = useState(null);
@@ -21,7 +22,7 @@ const Locations = () => {
     }
   };
 
-  const handleCities = async state => {
+  const handleCities = async (state: never) => {
     try {
       const response = await axios.get(`${BASE_URL}/api/cities/state/${state}`);
       const { data } = response;
@@ -31,7 +32,7 @@ const Locations = () => {
     }
   };
 
-  const handleAreas = async city => {
+  const handleAreas = async (city: never) => {
     try {
       const response = await axios.get(`${BASE_URL}/api/regions/city/${city}`);
       const { data } = response;

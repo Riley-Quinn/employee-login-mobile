@@ -7,10 +7,11 @@ import {
   StyleSheet,
   Alert,
 } from 'react-native';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
+// @ts-ignore
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { BASE_URL } from '@env';
-const ForgotPassword = ({ navigation }) => {
+const ForgotPassword = () => {
   const [email, setEmail] = useState('');
 
   const handleSubmit = async () => {
@@ -33,8 +34,8 @@ const ForgotPassword = ({ navigation }) => {
         // navigation.navigate('Login');
       }
     } catch (error) {
-      const message =
-        error?.response?.data?.error || 'Failed to send reset link';
+      const err = error as AxiosError<any>;
+      const message = err?.response?.data?.error || 'Failed to send reset link';
       Alert.alert('Error', message);
     }
   };

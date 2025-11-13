@@ -10,16 +10,23 @@ import {
   ScrollView,
   Image,
 } from 'react-native';
+// @ts-ignore
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import axios from 'axios';
+// @ts-ignore
 import Feather from 'react-native-vector-icons/Feather';
+// @ts-ignore
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Formik } from 'formik';
 import * as Yup from 'yup';
-import { BASE_URL } from '@env';
+import { BASE_URL, REACT_APP_CLOUD_FRONT_URL } from '@env';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { launchImageLibrary } from 'react-native-image-picker';
+import {
+  launchImageLibrary,
+  Asset,
+  ImagePickerResponse,
+} from 'react-native-image-picker';
 
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
@@ -32,13 +39,13 @@ const validationSchema = Yup.object().shape({
   email: Yup.string().email('Invalid email').required('Email is required'),
 });
 
-const EditProfile = ({ navigation }) => {
+const EditProfile = ({ navigation }: { navigation: any }) => {
   const [initialValues, setInitialValues] = useState({
     name: '',
     phone: '',
     email: '',
   });
-  const [selectedImage, setSelectedImage] = useState(null);
+  const [selectedImage, setSelectedImage] = useState<Asset | null>(null);
   const [profileImageName, setProfileImageName] = useState('');
 
   useEffect(() => {
@@ -64,14 +71,22 @@ const EditProfile = ({ navigation }) => {
   }, []);
 
   const handleChooseImage = () => {
-    launchImageLibrary({ mediaType: 'photo' }, response => {
-      if (!response.didCancel && !response.errorCode) {
-        setSelectedImage(response.assets[0]);
-      }
-    });
+    launchImageLibrary(
+      { mediaType: 'photo' },
+      (response: ImagePickerResponse) => {
+        if (
+          !response.didCancel &&
+          !response.errorCode &&
+          response.assets &&
+          response.assets.length > 0
+        ) {
+          setSelectedImage(response.assets[0]);
+        }
+      },
+    );
   };
 
-  const handleSave = async values => {
+  const handleSave = async (values: any) => {
     try {
       const userId = await AsyncStorage.getItem('userId');
       const token = await AsyncStorage.getItem('token');
@@ -133,7 +148,7 @@ const EditProfile = ({ navigation }) => {
               source={{
                 uri: selectedImage
                   ? selectedImage.uri
-                  : `https://innovative-lifts.blr1.cdn.digitaloceanspaces.com/${profileImageName}`,
+                  : `${REACT_APP_CLOUD_FRONT_URL}/${profileImageName}`,
               }}
               style={{ width: 100, height: 100, borderRadius: 50 }}
             />
