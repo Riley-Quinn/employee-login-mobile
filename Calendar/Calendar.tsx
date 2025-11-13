@@ -15,31 +15,49 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { BASE_URL } from '@env';
+// @ts-ignore
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
+// @ts-ignore
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+// @ts-ignore
 import Ionicons from 'react-native-vector-icons/Ionicons';
-
+import { RootStackParamList } from '../types'; // path to your types file
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 const screenWidth = Dimensions.get('window').width;
 const isTablet = screenWidth > 600;
 
 const ITEM_WIDTH = isTablet ? screenWidth / 7 : 63;
 const AGENDA_ITEM_HEIGHT = 73;
-
+interface EventItem {
+  ticket: any;
+  time: any;
+  Title: string;
+  ticket_id: string | number;
+  title: string;
+  date: string;
+}
+interface DateWithMonth {
+  date: string;
+  monthHeader: boolean;
+}
 const EventsCalendar = () => {
-  const [events, setEvents] = useState([]);
+  const [events, setEvents] = useState<EventItem[]>([]);
   const [selectedDate, setSelectedDate] = useState(
     dayjs().format('YYYY-MM-DD'),
   );
   const [activeTab, setActiveTab] = useState('agenda');
   const [loading, setLoading] = useState(false);
-  const [allDates, setAllDates] = useState([]);
-  const [allDatesWithMonth, setAllDatesWithMonth] = useState([]);
+  const [allDates, setAllDates] = useState<string[]>([]);
+  const [allDatesWithMonth, setAllDatesWithMonth] = useState<DateWithMonth[]>(
+    [],
+  );
   const [visibleMonth, setVisibleMonth] = useState(dayjs().format('MMMM YYYY'));
-  const [showFullAgenda, setShowFullAgenda] = useState(false); // <-- new state
+  const [showFullAgenda, setShowFullAgenda] = useState(false);
 
-  const navigation = useNavigation();
-  const flatListRef = useRef();
-  const agendaRef = useRef();
+  const navigation = useNavigation<NavigationProp>();
+  const flatListRef = useRef<FlatList | null>(null);
+  const agendaRef = useRef<any>(null);
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -51,17 +69,31 @@ const EventsCalendar = () => {
         );
         const tickets = res.data?.list || [];
         const mapped = tickets
-          .filter(t => t.employee_arrival_date)
-          .map(ticket => {
-            const dateObj = dayjs(ticket.employee_arrival_date);
-            return {
-              date: dateObj.format('YYYY-MM-DD'),
-              title: `${ticket.region_name}`,
-              Title: `${ticket.title}`,
-              time: dateObj.format('h:mm A'),
-              ticket,
-            };
-          });
+          .filter(
+            (t: { employee_arrival_date: any }) => t.employee_arrival_date,
+          )
+          .map(
+            (ticket: {
+              employee_arrival_date:
+                | string
+                | number
+                | dayjs.Dayjs
+                | Date
+                | null
+                | undefined;
+              region_name: any;
+              title: any;
+            }) => {
+              const dateObj = dayjs(ticket.employee_arrival_date);
+              return {
+                date: dateObj.format('YYYY-MM-DD'),
+                title: `${ticket.region_name}`,
+                Title: `${ticket.title}`,
+                time: dateObj.format('h:mm A'),
+                ticket,
+              };
+            },
+          );
         setEvents(mapped);
       } catch (err) {
         console.error('Failed to fetch events', err);
@@ -72,11 +104,14 @@ const EventsCalendar = () => {
     fetchEvents();
   }, []);
 
-  const groupedEvents = events.reduce((acc, evt) => {
-    if (!acc[evt.date]) acc[evt.date] = [];
-    acc[evt.date].push(evt);
-    return acc;
-  }, {});
+  const groupedEvents = events.reduce<Record<string, EventItem[]>>(
+    (acc, evt) => {
+      if (!acc[evt.date]) acc[evt.date] = [];
+      acc[evt.date].push(evt);
+      return acc;
+    },
+    {},
+  );
 
   useEffect(() => {
     const startOfYear = dayjs().startOf('year');
@@ -116,11 +151,14 @@ const EventsCalendar = () => {
     }
   }, [allDatesWithMonth]);
 
-  const handleEventPress = evt => {
-    navigation.navigate('ViewTickets', { ticketId: evt.ticket.ticket_id });
+  const handleEventPress = (evt: EventItem) => {
+    navigation.navigate('ViewTickets', { ticketId: evt.ticket_id });
   };
-
-  const onAgendaViewableItemsChanged = ({ viewableItems }) => {
+  const onAgendaViewableItemsChanged = ({
+    viewableItems,
+  }: {
+    viewableItems: any[];
+  }) => {
     if (viewableItems.length > 0) {
       const firstDate = viewableItems[0].item;
       setVisibleMonth(dayjs(firstDate).format('MMMM YYYY'));
@@ -494,7 +532,6 @@ const EventsCalendar = () => {
           <FontAwesome name="home" size={26} color="#888" />
           <Text style={styles.navText}>Home</Text>
         </TouchableOpacity>
-
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => navigation.navigate('EventsCalendar')}

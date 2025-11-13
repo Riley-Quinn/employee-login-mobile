@@ -1,13 +1,12 @@
-import DateFormat from './DateFormat';
 const StatusTracker = (
-  previousData,
-  message,
-  statusName,
-  statusId,
-  createdBy,
-  employeeName,
-  employeePhone,
-  arrivalDate,
+  previousData: string,
+  message: string,
+  statusName: string,
+  statusId: number,
+  createdBy: any,
+  employeeName: string | undefined,
+  employeePhone: any,
+  arrivalDate?: any,
 ) => {
   const newEntry = {
     message,

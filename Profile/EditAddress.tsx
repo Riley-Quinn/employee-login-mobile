@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, JSX } from 'react';
 import {
   View,
   Text,
@@ -12,10 +12,51 @@ import { Formik } from 'formik';
 import * as Yup from 'yup';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, NavigationProp } from '@react-navigation/native';
+// @ts-ignore
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { BASE_URL } from '@env';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+// -------------------- TYPES --------------------
+
+interface State {
+  state_id: string;
+  state_name: string;
+}
+
+interface City {
+  city_id: string;
+  city_name: string;
+}
+
+interface Region {
+  region_id: string;
+  region_name: string;
+}
+
+interface User {
+  employee_id: string;
+  state_id: string;
+  city_id: string;
+  region_id: string;
+  address: string;
+  email: string;
+}
+
+interface AddressFormValues {
+  state_id: string;
+  city_id: string;
+  region_id: string;
+  address: string;
+}
+
+type RootStackParamList = {
+  EditAddress: undefined;
+  [key: string]: object | undefined;
+};
+
+// -------------------- VALIDATION SCHEMA --------------------
 
 const addressValidationSchema = Yup.object({
   state_id: Yup.string().required('State is required'),
@@ -24,24 +65,29 @@ const addressValidationSchema = Yup.object({
   address: Yup.string().required('Address is required'),
 });
 
-export default function EditAddress() {
-  const [states, setStates] = useState([]);
-  const [cities, setCities] = useState([]);
-  const [regions, setRegions] = useState([]);
-  const [userData, setUserData] = useState(null);
+// -------------------- COMPONENT --------------------
 
-  const navigation = useNavigation();
+export default function EditAddress(): JSX.Element {
+  const [states, setStates] = useState<State[]>([]);
+  const [cities, setCities] = useState<City[]>([]);
+  const [regions, setRegions] = useState<Region[]>([]);
+  const [userData, setUserData] = useState<User | null>(null);
+
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
   // Fetch user and states on mount
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
         const userId = await AsyncStorage.getItem('userId');
-        if (!userId) return Alert.alert('Error', 'User ID not found');
+        if (!userId) {
+          Alert.alert('Error', 'User ID not found');
+          return;
+        }
 
         const [userRes, stateRes] = await Promise.all([
-          axios.get(`${BASE_URL}/api/employee/${JSON.parse(userId)}`),
-          axios.get(`${BASE_URL}/api/states`),
+          axios.get<User>(`${BASE_URL}/api/employee/${JSON.parse(userId)}`),
+          axios.get<State[]>(`${BASE_URL}/api/states`),
         ]);
 
         const user = userRes.data;
@@ -49,10 +95,10 @@ export default function EditAddress() {
         setStates(Array.isArray(stateRes.data) ? stateRes.data : []);
 
         if (user.state_id) {
-          fetchCities(user.state_id);
+          await fetchCities(user.state_id);
         }
         if (user.city_id) {
-          fetchRegions(user.city_id);
+          await fetchRegions(user.city_id);
         }
       } catch (error) {
         Alert.alert('Error', 'Failed to load data');
@@ -62,25 +108,29 @@ export default function EditAddress() {
     fetchInitialData();
   }, []);
 
-  const fetchCities = async stateId => {
+  const fetchCities = async (stateId: string) => {
     try {
-      const res = await axios.get(`${BASE_URL}/api/cities/${stateId}`);
+      const res = await axios.get<City[]>(`${BASE_URL}/api/cities/${stateId}`);
       setCities(Array.isArray(res.data) ? res.data : []);
     } catch (error) {
       console.error('Error fetching cities:', error);
     }
   };
 
-  const fetchRegions = async cityId => {
+  const fetchRegions = async (cityId: string) => {
     try {
-      const res = await axios.get(`${BASE_URL}/api/regions/${cityId}`);
+      const res = await axios.get<Region[]>(
+        `${BASE_URL}/api/regions/${cityId}`,
+      );
       setRegions(Array.isArray(res.data) ? res.data : []);
     } catch (error) {
       console.error('Error fetching regions:', error);
     }
   };
 
-  const handleUpdate = async values => {
+  const handleUpdate = async (values: AddressFormValues) => {
+    if (!userData) return;
+
     try {
       await axios.put(`${BASE_URL}/api/employee/${userData.employee_id}`, {
         state_id: values.state_id,
@@ -90,10 +140,12 @@ export default function EditAddress() {
         email: userData.email,
       });
       Alert.alert('Success', 'Address updated successfully');
-    } catch (err) {
+    } catch (err: any) {
       Alert.alert('Error', err.response?.data?.error || 'Failed to update');
     }
   };
+
+  // -------------------- RENDER --------------------
 
   return (
     <View style={{ flex: 1 }}>
@@ -105,8 +157,9 @@ export default function EditAddress() {
           <Text style={styles.headerTitle}>Edit Address</Text>
         </View>
       </SafeAreaView>
+
       {userData && (
-        <Formik
+        <Formik<AddressFormValues>
           enableReinitialize
           initialValues={{
             state_id: userData?.state_id || '',
@@ -209,7 +262,10 @@ export default function EditAddress() {
                 <Text style={styles.error}>{errors.address}</Text>
               )}
 
-              <TouchableOpacity style={styles.btn} onPress={handleSubmit}>
+              <TouchableOpacity
+                style={styles.btn}
+                onPress={handleSubmit as any}
+              >
                 <Text style={styles.btnText}>Update</Text>
               </TouchableOpacity>
             </ScrollView>
@@ -219,6 +275,8 @@ export default function EditAddress() {
     </View>
   );
 }
+
+// -------------------- STYLES --------------------
 
 const styles = StyleSheet.create({
   container: { padding: 20 },

@@ -10,21 +10,27 @@ import {
   Alert,
   ScrollView,
 } from 'react-native';
+// @ts-ignore
 import Icon from 'react-native-vector-icons/Ionicons';
+// @ts-ignore
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+// @ts-ignore
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import FontAwesome6 from 'react-native-vector-icons/FontAwesome6';
-import { SafeAreaView } from 'react-native-safe-area-context';
-
+// @ts-ignore
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
+// @ts-ignore
 import Feather from 'react-native-vector-icons/Feather';
-import { BASE_URL } from '@env';
+import { BASE_URL, REACT_APP_CLOUD_FRONT_URL } from '@env';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
-import { launchImageLibrary } from 'react-native-image-picker';
-
-const ProfileScreen = ({ navigation }) => {
-  const [userData, setUserData] = useState(null);
+interface User {
+  email: string;
+  profile_image: any;
+  name: string;
+  phone: string;
+}
+const ProfileScreen = ({ navigation }: { navigation: any }) => {
+  const [userData, setUserData] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(null);
   const [name, setName] = useState('');
@@ -37,15 +43,9 @@ const ProfileScreen = ({ navigation }) => {
       const userId = await AsyncStorage.getItem('userId');
       const token = await AsyncStorage.getItem('token');
       const clientId = await AsyncStorage.getItem('clientId');
-
-      console.log('Fetching user data with userId:', userId);
-
       const res = await axios.get(`${BASE_URL}/api/employee/${userId}`, {
         headers: { Authorization: `Bearer ${token}`, 'x-client-id': clientId },
       });
-
-      console.log('Fetched user data:', res.data);
-
       setUserData(res.data);
       setName(res.data.name);
       setEmail(res.data.email);
@@ -61,7 +61,17 @@ const ProfileScreen = ({ navigation }) => {
     fetchUserData();
   }, [fetchUserData]);
 
-  const CardButton = ({ icon, title, subtitle, onPress }) => (
+  const CardButton = ({
+    icon,
+    title,
+    subtitle,
+    onPress,
+  }: {
+    icon: React.ReactNode;
+    title: string;
+    subtitle?: string;
+    onPress?: () => void;
+  }) => (
     <TouchableOpacity style={styles.cardButton} onPress={onPress}>
       <View style={styles.iconContainer}>
         <Icon name={icon} size={24} color="#fff" />
@@ -88,17 +98,10 @@ const ProfileScreen = ({ navigation }) => {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Profile</Text>
         <View style={styles.profileCircle}>
-          {selectedImage ? (
-            <Image
-              source={{ uri: selectedImage.uri }}
-              style={styles.profileImage}
-              resizeMode="cover"
-            />
-          ) : userData?.profile_image &&
-            userData.profile_image.trim() !== '' ? (
+          {userData?.profile_image && userData.profile_image.trim() !== '' ? (
             <Image
               source={{
-                uri: `https://innovative-lifts.blr1.cdn.digitaloceanspaces.com/${userData.profile_image}`,
+                uri: `${REACT_APP_CLOUD_FRONT_URL}/${userData.profile_image}`,
               }}
               style={styles.profileImage}
               resizeMode="cover"

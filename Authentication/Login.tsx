@@ -16,13 +16,14 @@ import {
 } from 'react-native';
 import { Formik } from 'formik';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import * as Yup from 'yup';
+// @ts-ignore
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import messaging from '@react-native-firebase/messaging';
 import { BASE_URL } from '@env';
 
-const Login = ({ navigation }) => {
+const Login = ({ navigation }: { navigation: any }) => {
   const [loading, setLoading] = useState(false);
   const [secureText, setSecureText] = useState(true);
 
@@ -42,11 +43,10 @@ const Login = ({ navigation }) => {
 
   const getFcmToken = async () => {
     const token = await messaging().getToken();
-    console.log('📱 FCM token:', token);
     return token;
   };
 
-  const storeFcmToken = async (userId, role) => {
+  const storeFcmToken = async (userId: number, role: any) => {
     try {
       const fcmToken = await getFcmToken();
       const clientId = await AsyncStorage.getItem('clientId');
@@ -70,7 +70,8 @@ const Login = ({ navigation }) => {
 
       return fcmToken;
     } catch (err) {
-      console.error('❌ Error storing FCM token:', err.message);
+      const error = err as AxiosError<any>;
+      console.error('❌ Error storing FCM token:', error.message);
     }
   };
 
@@ -84,7 +85,10 @@ const Login = ({ navigation }) => {
     });
   };
 
-  const handleLogin = async (values, { setSubmitting }) => {
+  const handleLogin = async (
+    values: { email: any; password: any },
+    { setSubmitting }: any,
+  ) => {
     try {
       setLoading(true);
       const response = await axios.post(`${BASE_URL}/api/auth/admin/login`, {
@@ -106,16 +110,14 @@ const Login = ({ navigation }) => {
 
       const granted = await requestNotificationPermission();
       if (granted) {
-        const fcmToken = await storeFcmToken(userData.userId, 'employee');
-        console.log('✅ FCM token stored:', fcmToken);
-      } else {
-        console.log('❌ Notification permission denied');
+        await storeFcmToken(userData.userId, 'employee');
       }
 
       listenForNotifications();
     } catch (error) {
+      const err = error as AxiosError<any>;
       const errorMessage =
-        error.response?.data?.message || error.message || 'Login failed';
+        err.response?.data?.message || err.message || 'Login failed';
       Alert.alert('Login Failed', errorMessage);
     } finally {
       setSubmitting(false);

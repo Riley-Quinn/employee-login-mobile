@@ -13,16 +13,21 @@ import {
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
+// @ts-ignore
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+// @ts-ignore
 import Ionicons from 'react-native-vector-icons/Ionicons';
+// @ts-ignore
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Modal from 'react-native-modal';
-
 import { BASE_URL } from '@env';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-
+import { RootStackParamList } from '../types'; // path to your types file
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { TextStyle } from 'react-native';
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 dayjs.extend(utc);
 
 const { width } = Dimensions.get('window');
@@ -31,9 +36,9 @@ const EventsOverview = () => {
   const [eventType, setEventType] = useState('Scheduled');
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [userId, setUserId] = useState(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const [isFilterVisible, setIsFilterVisible] = useState(false);
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavigationProp>();
 
   const eventOptions = [
     { label: 'Scheduled', value: 'Scheduled' },
@@ -59,8 +64,12 @@ const EventsOverview = () => {
 
       const tickets = response.data?.list || [];
 
-      const scheduledTickets = tickets.filter(t => t.employee_arrival_date);
-      const unscheduledTickets = tickets.filter(t => !t.employee_arrival_date);
+      const scheduledTickets = tickets.filter(
+        (t: { employee_arrival_date: any }) => t.employee_arrival_date,
+      );
+      const unscheduledTickets = tickets.filter(
+        (t: { employee_arrival_date: any }) => !t.employee_arrival_date,
+      );
 
       setRows(
         eventType === 'Scheduled' ? scheduledTickets : unscheduledTickets,
@@ -75,7 +84,15 @@ const EventsOverview = () => {
   useEffect(() => {
     if (userId) fetchTickets();
   }, [fetchTickets, userId, eventType]);
-  const BlinkingText = ({ children, style, duration = 500 }) => {
+  const BlinkingText = ({
+    children,
+    style,
+    duration = 500,
+  }: {
+    children: React.ReactNode;
+    style?: TextStyle;
+    duration?: number;
+  }) => {
     const opacity = useRef(new Animated.Value(1)).current;
 
     useEffect(() => {
@@ -101,7 +118,7 @@ const EventsOverview = () => {
       <Animated.Text style={[style, { opacity }]}>{children}</Animated.Text>
     );
   };
-  const renderItem = ({ item }) => {
+  const renderItem = ({ item }: { item: any }) => {
     const address = `${item.address}, ${item.state_name}`;
 
     return (

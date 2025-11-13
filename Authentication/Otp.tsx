@@ -7,15 +7,15 @@ import {
   Alert,
   TextInput,
 } from 'react-native';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import { BASE_URL } from '@env';
 
-const OTPScreen = ({ route, navigation }) => {
+const OTPScreen = ({ navigation, route }: { navigation: any; route: any }) => {
   const { email } = route.params;
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
-  const inputRefs = useRef([]);
+  const inputRefs = useRef<Array<TextInput | null>>([]);
 
-  const handleChange = (text, index) => {
+  const handleChange = (text: string, index: number) => {
     if (/^\d?$/.test(text)) {
       const newOtp = [...otp];
       newOtp[index] = text;
@@ -27,7 +27,7 @@ const OTPScreen = ({ route, navigation }) => {
     }
   };
 
-  const handleBackspace = (text, index) => {
+  const handleBackspace = (text: string, index: number) => {
     if (text === '' && index > 0) {
       inputRefs.current[index - 1]?.focus();
     }
@@ -62,7 +62,8 @@ const OTPScreen = ({ route, navigation }) => {
         navigation.navigate('ResetPassword', { email });
       }
     } catch (error) {
-      Alert.alert('Verification Failed', error.response?.data?.error);
+      const err = error as AxiosError<any>;
+      Alert.alert('Verification Failed', err.response?.data?.error);
     }
   };
 
@@ -77,7 +78,9 @@ const OTPScreen = ({ route, navigation }) => {
         {otp.map((digit, index) => (
           <TextInput
             key={index}
-            ref={ref => (inputRefs.current[index] = ref)}
+            ref={ref => {
+              inputRefs.current[index] = ref;
+            }}
             style={styles.otpInput}
             keyboardType="number-pad"
             maxLength={1}

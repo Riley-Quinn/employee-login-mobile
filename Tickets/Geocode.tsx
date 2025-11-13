@@ -1,4 +1,4 @@
-export const reverseGeocode = async (latitude, longitude) => {
+export const reverseGeocode = async (latitude: any, longitude: any) => {
   const latNum = Number(latitude);
   const lonNum = Number(longitude);
 

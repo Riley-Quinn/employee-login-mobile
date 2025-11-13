@@ -7,7 +7,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   Linking,
-  FlatList,
   TextInput,
   Modal,
   Image,
@@ -15,10 +14,14 @@ import {
   Alert,
   SafeAreaView,
 } from 'react-native';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
+// @ts-ignore
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
+// @ts-ignore
 import FontAwesome6 from 'react-native-vector-icons/FontAwesome6';
+// @ts-ignore
 import Feather from 'react-native-vector-icons/Feather';
+// @ts-ignore
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import StatusTracker from './StatusTracker';
 import moment from 'moment';
@@ -35,34 +38,105 @@ import {
 } from '@react-navigation/native';
 import FormatStatusTrackerData from './FormatStatusTrackerData';
 import AddConversation from './Conversation';
+// @ts-ignore
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { BASE_URL } from '@env';
+import { BASE_URL, REACT_APP_CLOUD_FRONT_URL } from '@env';
 import getLocation from './getLocation';
 import { reverseGeocode } from './Geocode';
-import LocationExample from './LoactionDisplay';
 import { launchImageLibrary } from 'react-native-image-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
-const isTablet = width >= 768;
 const { width, height } = Dimensions.get('window');
-const GOOGLE_MAPS_API_KEY = 'AIzaSyBUusGFrajBXyPHb2yuwF_VGBjmaVRzLqY';
+import { RouteProp } from '@react-navigation/native';
 
-const ViewTickets = () => {
+type RootStackParamList = {
+  TicketDetails: { ticketId: string };
+};
+
+type TicketDetailsRouteProp = RouteProp<RootStackParamList, 'TicketDetails'>;
+
+type Props = {
+  route: TicketDetailsRouteProp;
+};
+interface Ticket {
+  ticket_id: any;
+  status_name: string;
+  status_id: number;
+  employee_phone: any;
+  employee_name: string;
+  status_tracker: any;
+  employee_arrival_date: string;
+  customer_comment?: any;
+  address_type?: string;
+  customer_email?: string;
+  customer_phone?: any;
+  customer_division?: string;
+  customer_type?: string;
+  rating?: any;
+  feedback?: any;
+  region_name?: string;
+  state_name?: any;
+  city_name?: any;
+  address?: any;
+  category_name?: string;
+  assigned_on?: any;
+  customer_name?: string;
+  asset_name?: string;
+  priority_rank?: string;
+  description?: string;
+  ticket_service_id?: string;
+  title?: string;
+  multimedia?: any;
+}
+interface TicketDetail {
+  ticket_id?: any;
+  employee_phone?: any;
+  customer_comments?: any;
+  status_tracker: React.JSX.Element;
+  address_type: string;
+  customer_email: string;
+  customer_phone: any;
+  customer_division: string;
+  customer_type: string;
+  rating: any;
+  feedback: any;
+  employee_arrival_date: React.JSX.Element;
+  status_id: number;
+  region_name: string;
+  state_name: any;
+  city_name: any;
+  address: any;
+  category_name: string;
+  assigned_on: any;
+  customer_name: string;
+  asset_name: string;
+  employee_name: string;
+  priority_rank: string;
+  description: string;
+  ticket_service_id: string;
+  status_name: string;
+  title: string;
+  multimedia: any;
+}
+interface Media {
+  file_name: any;
+  file_type: any;
+}
+const ViewTickets: React.FC<Props> = ({ route }) => {
   const navigation = useNavigation();
-  const route = useRoute();
+  // const route = useRoute();
   const ticketId = route.params?.ticketId;
-  const [emailPopup, setEmailPopup] = useState(null);
-  const [selectedMedia, setSelectedMedia] = useState(null);
-  const [showDropdownPost, setShowDropdownPost] = useState(true);
+  const [selectedMedia, setSelectedMedia] = useState<Media | null>(null);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
-  const [visible, setVisible] = useState(false);
   const [locationName, setLocationName] = useState('Loading location...');
-  const [ticket, setTicket] = useState(null);
+  const [ticket, setTicket] = useState<TicketDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [tickets, setTickets] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [editVisible, setEditVisible] = useState(false);
   const [serviceVisible, setServiceVisible] = useState(false);
-  const [selectedTicket, setSelectedTicket] = useState(null);
+  const [selectedTicket, setSelectedTicket] = useState<
+    Ticket | TicketDetail | null
+  >(null);
   const [arrivalDate, setArrivalDate] = useState(new Date());
   const [arrivalTime, setArrivalTime] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -70,13 +144,10 @@ const ViewTickets = () => {
   const [reasonForDelay, setReasonForDelay] = useState('');
   const [serviceReason, setServiceReason] = useState('');
   const [customServiceReason, setCustomServiceReason] = useState('');
-  const [userId, setUserId] = useState(null);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [weeklyData, setWeeklyData] = useState([]);
+  const [userId, setUserId] = useState<string | null>(null);
   const [editStatus, setEditStatus] = useState('');
   const [editReason, setEditReason] = useState('');
-  const [popupVisible, setPopupVisible] = useState(false);
-  const [popupData, setPopupData] = useState(null);
+
   useEffect(() => {
     const init = async () => {
       try {
@@ -94,7 +165,9 @@ const ViewTickets = () => {
   useEffect(() => {
     if (!ticket) return;
 
-    const preuploads = ticket.multimedia?.filter(m => m.media_stage === 'pre');
+    const preuploads = ticket.multimedia?.filter(
+      (m: { media_stage: string }) => m.media_stage === 'pre',
+    );
 
     if (preuploads && preuploads.length > 0) {
       const { latitude, longitude } = preuploads[0];
@@ -110,7 +183,7 @@ const ViewTickets = () => {
       setLocationName('No Preupload media');
     }
   }, [ticket]);
-  const handleEmployeeMediaUpload = async mediaStage => {
+  const handleEmployeeMediaUpload = async (mediaStage: string) => {
     try {
       const result = await launchImageLibrary({
         mediaType: 'mixed',
@@ -122,7 +195,10 @@ const ViewTickets = () => {
       }
 
       const file = result.assets[0];
-      const { latitude, longitude } = await getLocation();
+      const { latitude, longitude } = (await getLocation()) as {
+        latitude: any;
+        longitude: number;
+      };
 
       const isImage = file.type?.startsWith('image/');
       const mediaType = isImage ? 'Photo' : 'Video';
@@ -140,7 +216,7 @@ const ViewTickets = () => {
       formData.append('longitude', longitude);
       formData.append('uploaded_by', userId);
 
-      for (let [key, value] of formData._parts) {
+      for (let [key, value] of (formData as any)._parts) {
         console.log(`${key}:`, value);
       }
 
@@ -152,16 +228,17 @@ const ViewTickets = () => {
 
       fetchTicket();
     } catch (err) {
-      if (err.response) {
+      const error = err as AxiosError<any>;
+      if (error.response) {
         console.error(
-          '❌ Server responded with:',
-          err.response.status,
-          err.response.data,
+          'Server responded with:',
+          error.response.status,
+          error.response.data,
         );
-      } else if (err.request) {
-        console.error('❌ No response, request was:', err.request);
+      } else if (error.request) {
+        console.error(' No response, request was:', error.request);
       } else {
-        console.error('❌ Upload setup error:', err.message);
+        console.error('Upload setup error:', error.message);
       }
       Alert.alert('Error', 'Upload failed. Try again.');
     }
@@ -180,15 +257,15 @@ const ViewTickets = () => {
     'Other',
   ];
 
-  const openMediaModal = media => {
+  const openMediaModal = (media: Media | null) => {
     setSelectedMedia(media);
   };
 
   const closeModal = () => {
     setSelectedMedia(null);
   };
-  const handleStartWork = async item => {
-    const userStr = await AsyncStorage.getItem('userId');
+  const handleStartWork = async (item: any) => {
+    const userStr = (await AsyncStorage.getItem('userId')) ?? '{}';
     const user = JSON.parse(userStr);
     const trackerData = StatusTracker(
       item.status_tracker,
@@ -212,7 +289,7 @@ const ViewTickets = () => {
   };
 
   const handleSaveArrival = async () => {
-    const userStr = await AsyncStorage.getItem('userId');
+    const userStr = (await AsyncStorage.getItem('userId')) ?? '{}';
     const user = JSON.parse(userStr);
     const formattedDate = `${arrivalDate.toISOString().split('T')[0]}T${
       arrivalTime.toTimeString().split(' ')[0]
@@ -226,16 +303,16 @@ const ViewTickets = () => {
         }`;
 
     const trackerData = StatusTracker(
-      selectedTicket.status_tracker,
+      selectedTicket?.status_tracker,
       msg,
       'Todo',
       3,
       user.name,
-      selectedTicket.employee_name,
-      selectedTicket.employee_phone,
+      selectedTicket?.employee_name,
+      selectedTicket?.employee_phone,
     );
     try {
-      await axios.put(`${BASE_URL}/api/tickets/${selectedTicket.ticket_id}`, {
+      await axios.put(`${BASE_URL}/api/tickets/${selectedTicket?.ticket_id}`, {
         ticketData: {
           employee_arrival_date: formattedDate,
           status_tracker: trackerData,
@@ -253,71 +330,75 @@ const ViewTickets = () => {
 
     try {
       const res = await axios.get(`${BASE_URL}/api/tickets/employee/${userId}`);
-      const allTickets = response?.data?.list || [];
+      const allTickets = res?.data?.list || [];
 
       const today = moment().format('YYYY-MM-DD');
 
       const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       const weeklyCounts = days.map(day => ({ label: day, done: 0, todo: 0 }));
 
-      allTickets.forEach(ticket => {
-        const createdDate = moment(ticket.created_at);
-        const dayIndex = createdDate.day();
+      allTickets.forEach(
+        (ticket: {
+          created_at: moment.MomentInput;
+          status_id: number;
+          status_name: string;
+          status_tracker: any[];
+        }) => {
+          const createdDate = moment(ticket.created_at);
+          const dayIndex = createdDate.day();
 
-        if (
-          ticket.status_id === 2 ||
-          ticket.status_name?.toLowerCase() === 'todo'
-        ) {
-          weeklyCounts[dayIndex].todo += 1;
-        }
-
-        if (
-          ticket.status_id === 6 ||
-          ticket.status_name?.toLowerCase() === 'done'
-        ) {
-          let doneDate = createdDate;
-
-          if (Array.isArray(ticket.status_tracker)) {
-            const doneEntry = ticket.status_tracker.find(
-              entry =>
-                entry.status?.toLowerCase() === 'done' &&
-                (entry.Date || entry.updatedDate),
-            );
-            if (doneEntry)
-              doneDate = moment(doneEntry.Date || doneEntry.updatedDate);
+          if (
+            ticket.status_id === 2 ||
+            ticket.status_name?.toLowerCase() === 'todo'
+          ) {
+            weeklyCounts[dayIndex].todo += 1;
           }
 
-          const dayIndexDone = doneDate.day();
-          weeklyCounts[dayIndexDone].done += 1;
-        }
-      });
+          if (
+            ticket.status_id === 6 ||
+            ticket.status_name?.toLowerCase() === 'done'
+          ) {
+            let doneDate = createdDate;
 
-      setWeeklyData(weeklyCounts);
+            if (Array.isArray(ticket.status_tracker)) {
+              const doneEntry = ticket.status_tracker.find(
+                entry =>
+                  entry.status?.toLowerCase() === 'done' &&
+                  (entry.Date || entry.updatedDate),
+              );
+              if (doneEntry)
+                doneDate = moment(doneEntry.Date || doneEntry.updatedDate);
+            }
+
+            const dayIndexDone = doneDate.day();
+            weeklyCounts[dayIndexDone].done += 1;
+          }
+        },
+      );
     } catch (error) {
       console.error('Error fetching tickets:', error);
       setTickets([]);
-      setWeeklyData([]);
     }
   }, [userId]);
   const handleServiceUpdate = async () => {
-    const userStr = await AsyncStorage.getItem('userId');
+    const userStr = (await AsyncStorage.getItem('userId')) ?? '{}';
     const user = JSON.parse(userStr);
     const reason =
       serviceReason === 'Other'
         ? customServiceReason
         : serviceReason || 'Service Update';
     const trackerData = StatusTracker(
-      selectedTicket.status_tracker,
+      selectedTicket?.status_tracker,
       reason,
       'In Progress',
       3,
       user.name,
-      selectedTicket.employee_name,
-      selectedTicket.employee_phone || '',
+      selectedTicket?.employee_name,
+      selectedTicket?.employee_phone || '',
     );
 
     try {
-      await axios.put(`${BASE_URL}/api/tickets/${selectedTicket.ticket_id}`, {
+      await axios.put(`${BASE_URL}/api/tickets/${selectedTicket?.ticket_id}`, {
         ticketData: { status_tracker: trackerData, status_id: 3 },
       });
       fetchTickets();
@@ -331,7 +412,7 @@ const ViewTickets = () => {
   };
 
   const handleEditUpdate = async () => {
-    const userStr = await AsyncStorage.getItem('userId');
+    const userStr = (await AsyncStorage.getItem('userId')) ?? '{}';
     const user = JSON.parse(userStr);
 
     let status_id = 3;
@@ -345,22 +426,25 @@ const ViewTickets = () => {
         : `${editStatus} - ${editReason}`;
 
     const trackerData = StatusTracker(
-      selectedTicket.status_tracker,
+      selectedTicket?.status_tracker,
       reasonMsg,
       editStatus,
       status_id,
       user.name,
-      selectedTicket.employee_name,
-      selectedTicket.employee_phone || '',
+      selectedTicket?.employee_name,
+      selectedTicket?.employee_phone || '',
     );
-
-    const ticketData = { status_id, status_tracker: trackerData };
+    type TicketUpdate = {
+      status_id: number;
+      status_tracker: string;
+      pending_reason?: string;
+    };
+    const ticketData: TicketUpdate = { status_id, status_tracker: trackerData };
     if (editStatus === 'On Hold' || editStatus === 'Pending') {
       ticketData.pending_reason = editReason;
     }
-
     try {
-      await axios.put(`${BASE_URL}/api/tickets/${selectedTicket.ticket_id}`, {
+      await axios.put(`${BASE_URL}/api/tickets/${selectedTicket?.ticket_id}`, {
         ticketData,
       });
       fetchTickets();
@@ -390,12 +474,8 @@ const ViewTickets = () => {
         Alert.alert('Error', 'Unexpected response from server');
       }
     } catch (err) {
-      console.error(
-        'Error fetching ticket:',
-        err?.response?.status || err.message,
-      );
-
-      if (err?.response?.status === 401) {
+      const error = err as AxiosError<any>;
+      if (error?.response?.status === 401) {
         Alert.alert('Unauthorized', 'You are not allowed to view this ticket');
       } else {
         Alert.alert('Error', 'Unable to load ticket');
@@ -417,14 +497,18 @@ const ViewTickets = () => {
     return <ActivityIndicator size="large" style={{ flex: 1 }} />;
   }
 
-  const openMap = (address, city, state) => {
+  const openMap = (address: any, city: any, state: any) => {
     const query = encodeURIComponent(`${address}, ${city}, ${state}`);
     const url = `https://www.google.com/maps/search/?api=1&query=${query}`;
     Linking.openURL(url);
   };
 
-  const preMedia = ticket?.multimedia?.filter(m => m.media_stage === 'pre');
-  const postMedia = ticket?.multimedia?.filter(m => m.media_stage === 'post');
+  const preMedia = ticket?.multimedia?.filter(
+    (m: { media_stage: string }) => m.media_stage === 'pre',
+  );
+  const postMedia = ticket?.multimedia?.filter(
+    (m: { media_stage: string }) => m.media_stage === 'post',
+  );
 
   return (
     <SafeAreaView style={styles.safeContainer}>
@@ -559,14 +643,14 @@ const ViewTickets = () => {
                     style={styles.modalbutton}
                     onPress={handleEditUpdate}
                   >
-                    <Text style={styles.modalbuttontext}>Update</Text>
+                    <Text>Update</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
                     style={styles.modalCancelButton}
                     onPress={() => setEditVisible(false)}
                   >
-                    <Text style={styles.modalbuttontext}>Cancel</Text>
+                    <Text>Cancel</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -610,13 +694,13 @@ const ViewTickets = () => {
                     style={styles.modalbutton}
                     onPress={handleSaveArrival}
                   >
-                    <Text style={styles.modalbuttontext}>Save</Text>
+                    <Text>Save</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.modalCancelButton}
                     onPress={() => setModalVisible(false)}
                   >
-                    <Text style={styles.modalbuttontext}>Cancel</Text>
+                    <Text>Cancel</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -655,13 +739,13 @@ const ViewTickets = () => {
                     style={styles.modalbutton}
                     onPress={handleServiceUpdate}
                   >
-                    <Text style={styles.modalbuttontext}>Save</Text>
+                    <Text>Save</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.modalCancelButton}
                     onPress={() => setServiceVisible(false)}
                   >
-                    <Text style={styles.modalbuttontext}>Cancel</Text>
+                    <Text>Cancel</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -781,49 +865,59 @@ const ViewTickets = () => {
           </View>
 
           <View style={styles.cardBody}>
-            {ticket?.multimedia?.some(m => m.uploaded_by === null) ? (
+            {ticket?.multimedia?.some(
+              (m: { uploaded_by: null }) => m.uploaded_by === null,
+            ) ? (
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 {ticket.multimedia
-                  .filter(m => m.uploaded_by === null)
-                  .map((media, index) => (
-                    <TouchableOpacity
-                      key={index}
-                      style={styles.mediaWrapper}
-                      onPress={() => openMediaModal(media)}
-                    >
-                      {media.file_type === 'Photo' ? (
-                        <Image
-                          source={{
-                            uri: `https://innovative-lifts.blr1.cdn.digitaloceanspaces.com/${encodeURIComponent(
-                              media.file_name,
-                            )}`,
-                          }}
-                          style={styles.mediaImage}
-                          resizeMode="cover"
-                          onError={e =>
-                            console.log(
-                              'Customer image load error:',
-                              e.nativeEvent.error,
-                              media.file_name,
-                            )
-                          }
-                        />
-                      ) : media.file_type === 'Video' ? (
-                        <Video
-                          source={{
-                            uri: `https://innovative-lifts.blr1.cdn.digitaloceanspaces.com${encodeURIComponent(
-                              media.file_name,
-                            )}`,
-                          }}
-                          style={styles.mediaImage}
-                          controls
-                          resizeMode="contain"
-                        />
-                      ) : (
-                        <Text style={{ color: 'red' }}>Unsupported type</Text>
-                      )}
-                    </TouchableOpacity>
-                  ))}
+                  .filter((m: { uploaded_by: null }) => m.uploaded_by === null)
+                  .map(
+                    (
+                      media: {
+                        file_type: string;
+                        file_name: string | number | boolean;
+                      },
+                      index: React.Key | null | undefined,
+                    ) => (
+                      <TouchableOpacity
+                        key={index}
+                        style={styles.mediaWrapper}
+                        onPress={() => openMediaModal(media)}
+                      >
+                        {media.file_type === 'Photo' ? (
+                          <Image
+                            source={{
+                              uri: `${REACT_APP_CLOUD_FRONT_URL}/${encodeURIComponent(
+                                media.file_name,
+                              )}`,
+                            }}
+                            style={styles.mediaImage}
+                            resizeMode="cover"
+                            onError={e =>
+                              console.log(
+                                'Customer image load error:',
+                                e.nativeEvent.error,
+                                media.file_name,
+                              )
+                            }
+                          />
+                        ) : media.file_type === 'Video' ? (
+                          <Video
+                            source={{
+                              uri: `${REACT_APP_CLOUD_FRONT_URL}${encodeURIComponent(
+                                media.file_name,
+                              )}`,
+                            }}
+                            style={styles.mediaImage}
+                            controls
+                            resizeMode="contain"
+                          />
+                        ) : (
+                          <Text style={{ color: 'red' }}>Unsupported type</Text>
+                        )}
+                      </TouchableOpacity>
+                    ),
+                  )}
               </ScrollView>
             ) : (
               <Text style={styles.noMediaText}>No customer media found</Text>
@@ -857,50 +951,63 @@ const ViewTickets = () => {
           <View style={styles.cardBody}>
             {preMedia?.length > 0 ? (
               <View style={styles.mediaGrid}>
-                {preMedia.map((media, index) => (
-                  <View key={index} style={styles.mediaItem}>
-                    <TouchableOpacity
-                      onPress={() => openMediaModal(media)}
-                      style={styles.mediaWrapper}
-                    >
-                      {media.file_type === 'Photo' ? (
-                        <Image
-                          source={{
-                            uri: `https://innovative-lifts.blr1.cdn.digitaloceanspaces.com/${media.file_name}`,
-                          }}
-                          style={styles.mediaImage}
-                        />
-                      ) : (
-                        <Video
-                          source={{
-                            uri: `https://innovative-lifts.blr1.cdn.digitaloceanspaces.com/${media.file_name}`,
-                          }}
-                          style={styles.mediaImage}
-                          controls
-                          resizeMode="contain"
-                        />
-                      )}
-                    </TouchableOpacity>
-
-                    {media.latitude && media.longitude && (
+                {preMedia.map(
+                  (
+                    media: {
+                      file_type: string;
+                      file_name: any;
+                      latitude: string;
+                      longitude: string;
+                      address: any;
+                      city: any;
+                      state: any;
+                    },
+                    index: React.Key | null | undefined,
+                  ) => (
+                    <View key={index} style={styles.mediaItem}>
                       <TouchableOpacity
-                        onPress={() =>
-                          openMap(media.address, media.city, media.state)
-                        }
-                        style={styles.mapRow}
+                        onPress={() => openMediaModal(media)}
+                        style={styles.mediaWrapper}
                       >
-                        <Text style={styles.maptext}>Google Maps</Text>
+                        {media.file_type === 'Photo' ? (
+                          <Image
+                            source={{
+                              uri: `${REACT_APP_CLOUD_FRONT_URL}/${media.file_name}`,
+                            }}
+                            style={styles.mediaImage}
+                          />
+                        ) : (
+                          <Video
+                            source={{
+                              uri: `${REACT_APP_CLOUD_FRONT_URL}/${media.file_name}`,
+                            }}
+                            style={styles.mediaImage}
+                            controls
+                            resizeMode="contain"
+                          />
+                        )}
                       </TouchableOpacity>
-                    )}
 
-                    {media.latitude && media.longitude && (
-                      <LocationExample
-                        latitude={parseFloat(media.latitude)}
-                        longitude={parseFloat(media.longitude)}
-                      />
-                    )}
-                  </View>
-                ))}
+                      {media.latitude && media.longitude && (
+                        <TouchableOpacity
+                          onPress={() =>
+                            openMap(media.address, media.city, media.state)
+                          }
+                          style={styles.mapRow}
+                        >
+                          <Text style={styles.maptext}>Google Maps</Text>
+                        </TouchableOpacity>
+                      )}
+
+                      {/* {media.latitude && media.longitude && (
+                        <LocationExample
+                          latitude={parseFloat(media.latitude)}
+                          longitude={parseFloat(media.longitude)}
+                        />
+                      )} */}
+                    </View>
+                  ),
+                )}
               </View>
             ) : (
               <Text style={styles.noMediaText}>No Preupload media</Text>
@@ -935,46 +1042,85 @@ const ViewTickets = () => {
             <View style={styles.cardBody}>
               {postMedia?.length > 0 ? (
                 <View style={styles.mediaGrid}>
-                  {postMedia.map((media, index) => (
-                    <View key={index} style={styles.mediaItem}>
-                      <TouchableOpacity
-                        onPress={() => openMediaModal(media)}
-                        style={styles.mediaWrapper}
-                      >
-                        {media.file_type === 'Photo' ? (
-                          <Image
-                            source={{
-                              uri: `https://innovative-lifts.blr1.cdn.digitaloceanspaces.com/${media.file_name}`,
-                            }}
-                            style={styles.mediaImage}
-                          />
-                        ) : (
-                          <View style={styles.videoContainer}>
-                            <Text style={styles.videoText}>
-                              {media.file_name}
-                            </Text>
-                          </View>
-                        )}
-                      </TouchableOpacity>
-
-                      {media.latitude && media.longitude && (
+                  {postMedia.map(
+                    (
+                      media: {
+                        file_type: string;
+                        file_name:
+                          | string
+                          | number
+                          | bigint
+                          | boolean
+                          | React.ReactElement<
+                              unknown,
+                              string | React.JSXElementConstructor<any>
+                            >
+                          | Iterable<React.ReactNode>
+                          | React.ReactPortal
+                          | Promise<
+                              | string
+                              | number
+                              | bigint
+                              | boolean
+                              | React.ReactPortal
+                              | React.ReactElement<
+                                  unknown,
+                                  string | React.JSXElementConstructor<any>
+                                >
+                              | Iterable<React.ReactNode>
+                              | null
+                              | undefined
+                            >
+                          | null
+                          | undefined;
+                        latitude: string;
+                        longitude: string;
+                        address: any;
+                        city: any;
+                        state: any;
+                      },
+                      index: React.Key | null | undefined,
+                    ) => (
+                      <View key={index} style={styles.mediaItem}>
                         <TouchableOpacity
-                          onPress={() =>
-                            openMap(media.address, media.city, media.state)
-                          }
-                          style={styles.mapRow}
+                          onPress={() => openMediaModal(media)}
+                          style={styles.mediaWrapper}
                         >
-                          <Text style={styles.maptext}>Google Maps</Text>
+                          {media.file_type === 'Photo' ? (
+                            <Image
+                              source={{
+                                uri: `${REACT_APP_CLOUD_FRONT_URL}/${media.file_name}`,
+                              }}
+                              style={styles.mediaImage}
+                            />
+                          ) : (
+                            <View style={styles.videoContainer}>
+                              <Text style={styles.videoText}>
+                                {media.file_name}
+                              </Text>
+                            </View>
+                          )}
                         </TouchableOpacity>
-                      )}
-                      {media.latitude && media.longitude && (
-                        <LocationExample
-                          latitude={parseFloat(media.latitude)}
-                          longitude={parseFloat(media.longitude)}
-                        />
-                      )}
-                    </View>
-                  ))}
+
+                        {media.latitude && media.longitude && (
+                          <TouchableOpacity
+                            onPress={() =>
+                              openMap(media.address, media.city, media.state)
+                            }
+                            style={styles.mapRow}
+                          >
+                            <Text style={styles.maptext}>Google Maps</Text>
+                          </TouchableOpacity>
+                        )}
+                        {/* {media.latitude && media.longitude && (
+                          <LocationExample
+                            latitude={parseFloat(media.latitude)}
+                            longitude={parseFloat(media.longitude)}
+                          />
+                        )} */}
+                      </View>
+                    ),
+                  )}
                 </View>
               ) : (
                 <Text style={styles.noMediaText}>No Post Upload media</Text>
@@ -1000,7 +1146,7 @@ const ViewTickets = () => {
             {selectedMedia && selectedMedia.file_type === 'Photo' && (
               <Image
                 source={{
-                  uri: `https://innovative-lifts.blr1.cdn.digitaloceanspaces.com/${selectedMedia.file_name}`,
+                  uri: `${REACT_APP_CLOUD_FRONT_URL}/${selectedMedia.file_name}`,
                 }}
                 style={{
                   width: '90%',
@@ -1013,7 +1159,7 @@ const ViewTickets = () => {
             {selectedMedia && selectedMedia.file_type === 'Video' && (
               <Video
                 source={{
-                  uri: `https://innovative-lifts.blr1.cdn.digitaloceanspaces.com/${selectedMedia.file_name}`,
+                  uri: `${REACT_APP_CLOUD_FRONT_URL}/${selectedMedia.file_name}`,
                 }}
                 style={{ width: '90%', height: '80%' }}
                 controls
@@ -1179,7 +1325,7 @@ const ViewTickets = () => {
         </Modal>
 
         {ticket.status_tracker && (
-          <View style={styles.card}>
+          <View>
             <FormatStatusTrackerData trackingData={ticket.status_tracker} />
           </View>
         )}
@@ -1192,6 +1338,7 @@ const ViewTickets = () => {
 
             <View style={styles.cards}>
               <AddConversation
+                //@ts-ignore
                 user={{ userId }}
                 data={ticket}
                 customerComments={ticket?.customer_comments}
@@ -1546,7 +1693,7 @@ const styles = StyleSheet.create({
   },
 
   iconBox: {
-    width: 28, // fixed width so all icons align
+    width: 28,
     alignItems: 'center',
   },
 
@@ -1678,19 +1825,6 @@ const styles = StyleSheet.create({
     right: 10,
     zIndex: 1,
   },
-  // priorityHigh: {
-  //   color: 'red',
-  //   fontWeight: '700',
-  // },
-  // priorityMedium: {
-  //   color: 'orange',
-  //   fontWeight: '700',
-  // },
-  // priorityLow: {
-  //   color: 'pink',
-  //   fontWeight: '700',
-  // },
-
   locationText: {
     color: 'white',
     fontSize: 14,

@@ -4,6 +4,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ActivityIndicator, View } from 'react-native';
+// @ts-ignore
 import PushNotification from 'react-native-push-notification';
 import messaging from '@react-native-firebase/messaging';
 import Login from './Authentication/Login';
@@ -22,7 +23,9 @@ import EditAddress from './Profile/EditAddress';
 const Stack = createStackNavigator();
 
 const App = () => {
-  const [initialRoute, setInitialRoute] = useState(null);
+  const [initialRoute, setInitialRoute] = useState<
+    'Dashboard' | 'Login' | null
+  >(null);
 
   useEffect(() => {
     const checkRememberMe = async () => {
@@ -34,23 +37,18 @@ const App = () => {
         setInitialRoute('Login');
       }
     };
-
     checkRememberMe();
-
-    // 🔴 PushNotification setup
     PushNotification.configure({
-      onRegister: function (token) {
+      onRegister: function (token: any) {
         console.log('PushNotification token:', token);
       },
-      onNotification: function (notification) {
+      onNotification: function (notification: { finish: (arg0: any) => void }) {
         console.log('LOCAL NOTIFICATION:', notification);
         notification.finish(PushNotification.FetchResult.NoData);
       },
       popInitialNotification: true,
-      requestPermissions: false, // you request manually in Login.js
+      requestPermissions: false,
     });
-
-    // 🔴 Create notification channel (Android)
     PushNotification.createChannel(
       {
         channelId: 'default-channel-id',
@@ -58,11 +56,9 @@ const App = () => {
         importance: 4,
         vibrate: true,
       },
-      created =>
+      (created: any) =>
         console.log(`Channel '${created ? 'created' : 'already exists'}'`),
     );
-
-    // 🔔 Foreground FCM messages
     const unsubscribeForeground = messaging().onMessage(async remoteMessage => {
       console.log('Foreground FCM:', remoteMessage);
       PushNotification.localNotification({
@@ -72,14 +68,12 @@ const App = () => {
       });
     });
 
-    // ✅ Background opened
     const unsubscribeBackgroundOpened = messaging().onNotificationOpenedApp(
       remoteMessage => {
         console.log('Opened from background:', remoteMessage);
       },
     );
 
-    // ✅ Opened from quit state
     messaging()
       .getInitialNotification()
       .then(remoteMessage => {
@@ -114,6 +108,7 @@ const App = () => {
         <Stack.Screen name="EventsCalendar" component={EventsCalendar} />
         <Stack.Screen name="Login" component={Login} />
         <Stack.Screen name="Dashboard" component={Dashboard} />
+        {/* @ts-ignore */}
         <Stack.Screen name="ViewTickets" component={ViewTickets} />
         <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
         <Stack.Screen name="OTPScreen" component={OTPScreen} />
