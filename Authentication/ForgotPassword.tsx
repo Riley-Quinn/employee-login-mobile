@@ -10,7 +10,7 @@ import {
 import axios, { AxiosError } from 'axios';
 // @ts-ignore
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { BASE_URL } from '@env';
+import { BASE_URL } from '../config';
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
 

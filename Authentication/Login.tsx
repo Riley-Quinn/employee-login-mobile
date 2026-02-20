@@ -21,7 +21,7 @@ import * as Yup from 'yup';
 // @ts-ignore
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import messaging from '@react-native-firebase/messaging';
-import { BASE_URL } from '@env';
+import { BASE_URL } from '../config';
 
 const Login = ({ navigation }: { navigation: any }) => {
   const [loading, setLoading] = useState(false);
@@ -95,9 +95,34 @@ const Login = ({ navigation }: { navigation: any }) => {
         email: values.email,
         password: values.password,
         rememberMe: true,
-      });
+    },
+     {
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+        },    
+    );
 
       const userData = response.data.user;
+      const data = response.data;
+      const token =
+        data.token ??
+        data.access_token ??
+        data.accessToken ??
+        data.data?.token ??
+        data.data?.access_token ??
+        userData?.token ??
+        userData?.access_token;
+      if (__DEV__ && !token) {
+        console.warn('[Login] No token in response. Keys:', Object.keys(data));
+      }
+      if (token) {
+        await AsyncStorage.setItem(
+          'token',
+          typeof token === 'string' ? token : String(token),
+        );
+      }
       await AsyncStorage.setItem('userId', userData.userId.toString());
       await AsyncStorage.setItem('userName', userData.name);
       await AsyncStorage.setItem('roleId', userData.roleId.toString());
@@ -116,8 +141,19 @@ const Login = ({ navigation }: { navigation: any }) => {
       listenForNotifications();
     } catch (error) {
       const err = error as AxiosError<any>;
+      if (__DEV__ && err.response) {
+        console.warn(
+          '[Login] Request failed:',
+          err.response.status,
+          err.config?.url,
+          err.response?.data,
+        );
+      }
       const errorMessage =
-        err.response?.data?.message || err.message || 'Login failed';
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        err.message ||
+        'Login failed';
       Alert.alert('Login Failed', errorMessage);
     } finally {
       setSubmitting(false);

@@ -3,7 +3,9 @@ import { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
 import { ActivityIndicator, View } from 'react-native';
+import { BASE_URL } from './config';
 // @ts-ignore
 import PushNotification from 'react-native-push-notification';
 import messaging from '@react-native-firebase/messaging';
@@ -26,6 +28,50 @@ const App = () => {
   const [initialRoute, setInitialRoute] = useState<
     'Dashboard' | 'Login' | null
   >(null);
+
+  useEffect(() => {
+    const requestInterceptor = axios.interceptors.request.use(async config => {
+      const url =
+        (typeof config.url === 'string' ? config.url : '') ||
+        (config.baseURL ?? '');
+      const isOurApi =
+        BASE_URL && (url.startsWith(BASE_URL) || url.startsWith('/api'));
+      if (isOurApi) {
+        const token = await AsyncStorage.getItem('token');
+        const clientId = await AsyncStorage.getItem('clientId');
+        if (config.headers) {
+          if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+          }
+          if (clientId) {
+            config.headers['x-client-id'] = clientId;
+          }
+        }
+      }
+      return config;
+    });
+
+    const responseInterceptor = axios.interceptors.response.use(
+      res => res,
+      async err => {
+        if (err.response?.status === 401) {
+          if (__DEV__) {
+            console.warn(
+              '[API] 401 Unauthorized:',
+              err.config?.url ?? err.config?.baseURL,
+            );
+          }
+          await AsyncStorage.removeItem('token');
+        }
+        return Promise.reject(err);
+      },
+    );
+
+    return () => {
+      axios.interceptors.request.eject(requestInterceptor);
+      axios.interceptors.response.eject(responseInterceptor);
+    };
+  }, []);
 
   useEffect(() => {
     const checkRememberMe = async () => {
@@ -60,7 +106,6 @@ const App = () => {
         console.log(`Channel '${created ? 'created' : 'already exists'}'`),
     );
     const unsubscribeForeground = messaging().onMessage(async remoteMessage => {
-      console.log('Foreground FCM:', remoteMessage);
       PushNotification.localNotification({
         channelId: 'default-channel-id',
         title: remoteMessage.notification?.title || 'Notification',

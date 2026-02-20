@@ -20,7 +20,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 // @ts-ignore
 import Feather from 'react-native-vector-icons/Feather';
-import { BASE_URL, REACT_APP_CLOUD_FRONT_URL } from '@env';
+import { BASE_URL, REACT_APP_CLOUD_FRONT_URL } from '../config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 interface User {

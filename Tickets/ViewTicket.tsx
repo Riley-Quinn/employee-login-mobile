@@ -27,21 +27,27 @@ import StatusTracker from './StatusTracker';
 import moment from 'moment';
 import { Dropdown } from 'react-native-element-dropdown';
 import dayjs from 'dayjs';
+
 import Video from 'react-native-video';
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import {
+  useNavigation,
+  useRoute,
+  useFocusEffect,
+} from '@react-navigation/native';
 import FormatStatusTrackerData from './FormatStatusTrackerData';
 import AddConversation from './Conversation';
 // @ts-ignore
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { BASE_URL, REACT_APP_CLOUD_FRONT_URL } from '@env';
+import { BASE_URL, REACT_APP_CLOUD_FRONT_URL } from '../config';
 import getLocation from './getLocation';
 import { reverseGeocode } from './Geocode';
 import { launchImageLibrary } from 'react-native-image-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 const { width, height } = Dimensions.get('window');
 import { RouteProp } from '@react-navigation/native';
-import LocationDisplay from './LoactionDisplay';
+
 type RootStackParamList = {
   TicketDetails: { ticketId: string };
 };
@@ -993,12 +999,12 @@ const ViewTickets: React.FC<Props> = ({ route }) => {
                         </TouchableOpacity>
                       )}
 
-                      {media.latitude && media.longitude && (
-                        <LocationDisplay
+                      {/* {media.latitude && media.longitude && (
+                        <LocationExample
                           latitude={parseFloat(media.latitude)}
                           longitude={parseFloat(media.longitude)}
                         />
-                      )}
+                      )} */}
                     </View>
                   ),
                 )}
@@ -1106,12 +1112,12 @@ const ViewTickets: React.FC<Props> = ({ route }) => {
                             <Text style={styles.maptext}>Google Maps</Text>
                           </TouchableOpacity>
                         )}
-                        {media.latitude && media.longitude && (
-                          <LocationDisplay
+                        {/* {media.latitude && media.longitude && (
+                          <LocationExample
                             latitude={parseFloat(media.latitude)}
                             longitude={parseFloat(media.longitude)}
                           />
-                        )}
+                        )} */}
                       </View>
                     ),
                   )}

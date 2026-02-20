@@ -15,7 +15,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 // @ts-ignore
 import EvilIcons from 'react-native-vector-icons/EvilIcons';
-import { BASE_URL } from '@env';
+import { BASE_URL } from '../config';
 
 import axios, { AxiosError } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';

@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 // @ts-ignore
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 // @ts-ignore
 import Feather from 'react-native-vector-icons/Feather';
 // @ts-ignore
@@ -20,7 +20,7 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Formik } from 'formik';
 import * as Yup from 'yup';
-import { BASE_URL, REACT_APP_CLOUD_FRONT_URL } from '@env';
+import { BASE_URL, REACT_APP_CLOUD_FRONT_URL } from '../config';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   launchImageLibrary,
@@ -105,25 +105,58 @@ const EditProfile = ({ navigation }: { navigation: any }) => {
         });
 
         const uploadRes = await axios.post(`${BASE_URL}/api/upload`, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
+          headers: { Accept: 'application/json' },
         });
-        uploadedImageName = uploadRes.data.uniqueFilename;
+        uploadedImageName =
+          uploadRes.data.uniqueFilename ??
+          uploadRes.data.filename ??
+          uploadRes.data.name ??
+          profileImageName;
       }
 
-      const payload = { ...values, profile_image: uploadedImageName };
+      const payload = {
+        name: values.name,
+        phone: values.phone,
+        email: values.email,
+        profile_image: uploadedImageName || undefined,
+      };
 
       await axios.put(`${BASE_URL}/api/employee/${userId}`, payload, {
         headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
           Authorization: `Bearer ${token}`,
-          'x-client-id': clientId,
+          'x-client-id': clientId ?? '',
         },
       });
 
-      Alert.alert('Success', 'Profile updated successfully!');
       setSelectedImage(null);
+      Alert.alert('Success', 'Profile updated successfully!', [
+        {
+          text: 'OK',
+          onPress: () => navigation.navigate('ProfileScreen'),
+        },
+      ]);
     } catch (error) {
-      console.error('Error updating profile:', error);
-      Alert.alert('Error', 'Something went wrong while updating.');
+      const err = error as AxiosError<{
+        message?: string;
+        error?: string;
+        errors?: Record<string, string[]>;
+      }>;
+      const data = err.response?.data;
+      let message = 'Something went wrong while updating.';
+      if (data) {
+        if (typeof data.message === 'string') message = data.message;
+        else if (typeof data.error === 'string') message = data.error;
+        else if (data.errors && typeof data.errors === 'object') {
+          const first = Object.values(data.errors).flat();
+          message = first.length ? first[0] : message;
+        }
+      }
+      if (__DEV__) {
+        console.warn('[EditProfile] Update failed:', err.response?.status, data);
+      }
+      Alert.alert('Error', message);
     }
   };
 
