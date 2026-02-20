@@ -40,7 +40,7 @@ import FormatStatusTrackerData from './FormatStatusTrackerData';
 import AddConversation from './Conversation';
 // @ts-ignore
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { BASE_URL, REACT_APP_CLOUD_FRONT_URL } from '@env';
+import { BASE_URL, REACT_APP_CLOUD_FRONT_URL } from '../config';
 import getLocation from './getLocation';
 import { reverseGeocode } from './Geocode';
 import { launchImageLibrary } from 'react-native-image-picker';

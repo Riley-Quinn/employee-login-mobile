@@ -15,7 +15,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 // @ts-ignore
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { BASE_URL } from '@env';
+import { BASE_URL } from '../config';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 // -------------------- TYPES --------------------

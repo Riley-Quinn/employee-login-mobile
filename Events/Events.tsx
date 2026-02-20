@@ -21,7 +21,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Modal from 'react-native-modal';
-import { BASE_URL } from '@env';
+import { BASE_URL } from '../config';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { RootStackParamList } from '../types'; // path to your types file

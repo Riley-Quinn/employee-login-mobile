@@ -8,7 +8,7 @@ import {
   TextInput,
 } from 'react-native';
 import axios, { AxiosError } from 'axios';
-import { BASE_URL } from '@env';
+import { BASE_URL } from '../config';
 
 const OTPScreen = ({ navigation, route }: { navigation: any; route: any }) => {
   const { email } = route.params;
@@ -41,7 +41,6 @@ const OTPScreen = ({ navigation, route }: { navigation: any; route: any }) => {
       return;
     }
 
-    console.log('Verifying OTP:', { email, otp: otpValue });
 
     try {
       const response = await axios.post(

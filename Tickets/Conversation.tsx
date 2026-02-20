@@ -14,7 +14,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios, { AxiosError } from 'axios';
 import { io, Socket } from 'socket.io-client';
 import DateFormat from './DateFormat';
-import { BASE_URL } from '@env';
+import { BASE_URL } from '../config';
 import { DefaultEventsMap } from '@socket.io/component-emitter';
 
 type AddConversationProps = {
@@ -99,24 +99,34 @@ const AddConversation = ({
     }
   }, [customerComments]);
 
+  const ticketId = data?.ticket_id ?? data?.id;
+
   const setupSocketIO = useCallback(() => {
-    const socketUrl = `$${BASE_URL}`;
+    if (ticketId == null || ticketId === '') return () => {};
+    const socketUrl = `${BASE_URL}`;
     socket.current = io(socketUrl, {
       transports: ['websocket'],
     });
 
     socket.current.on('connect', () => {
       console.log('Socket connected');
+      socket.current?.emit('join_ticket', ticketId);
     });
 
     socket.current.on('message', (msg: Conversation) => {
-      setConversationData(prev => [...prev, msg]);
+      setConversationData(prev => {
+        const hasId = msg.id && prev.some(m => m.id === msg.id);
+        if (hasId) return prev;
+        return [...prev, msg];
+      });
     });
 
     return () => {
       socket.current?.disconnect();
+      socket.current = null;
     };
-  }, []);
+  }, [ticketId]);
+
   useEffect(() => {
     const cleanup = setupSocketIO();
     return cleanup;
@@ -145,6 +155,7 @@ const AddConversation = ({
       sender_role: userInfo?.Role?.[0],
       sender_name: userInfo?.name,
       date: currentTime,
+      ticket_id: ticketId,
     };
     const updatedConversation = [...conversationData, newMessage];
     setConversationData(updatedConversation);
@@ -154,7 +165,7 @@ const AddConversation = ({
           updatedConversation.map(msg => ({ message: msg })),
         ),
       };
-      await axios.put(`$${BASE_URL}/api/tickets/${data?.ticket_id}`, {
+      await axios.put(`${BASE_URL}/api/tickets/${data?.ticket_id}`, {
         ticketData,
       });
       if (socket.current?.connected) {

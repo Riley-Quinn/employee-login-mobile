@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   Modal,
-  ScrollView,
   TextInput,
   Alert,
   StatusBar,
@@ -29,7 +28,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import FontAwesome6 from 'react-native-vector-icons/FontAwesome6';
 // @ts-ignore
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
-import { BASE_URL } from '@env';
+import { BASE_URL } from '../config';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TextStyle } from 'react-native';
 const { width } = Dimensions.get('window');
@@ -151,23 +150,17 @@ const Dashboard = ({ navigation }: { navigation: any }) => {
   useEffect(() => {
     const init = async () => {
       try {
-        console.log('🔄 Initializing useEffect...');
 
         const id = await AsyncStorage.getItem('userId');
-        console.log('📦 Retrieved userId from AsyncStorage:', id);
         setUserId(id);
 
-        console.log(
-          '🌐 Fetching ticket statuses from:',
-          `${BASE_URL}/api/ticket-statuses`,
-        );
+
         const res = await axios.get(`${BASE_URL}/api/ticket-statuses`);
 
-        console.log('✅ Ticket statuses API response:', res?.data);
 
         setTicketStatuses(res?.data || []);
       } catch (err) {
-        console.error('❌ Failed to initialize or fetch statuses:', err);
+        console.error(' Failed to initialize or fetch statuses:', err);
       }
     };
 
@@ -180,121 +173,51 @@ const Dashboard = ({ navigation }: { navigation: any }) => {
       const res = await axios.get(`${BASE_URL}/api/tickets/employee/${userId}`);
       const allTickets = res?.data?.list || [];
 
-      let filteredTickets = allTickets;
-
-      filteredTickets = filteredTickets.filter(
-        (ticket: { status_name: string }) =>
-          ticket.status_name?.toLowerCase().trim().replace(/[-_]/g, ' ') !==
-          'in progress',
-      );
-
-      if (statusFilter && statusFilter !== 'all') {
-        filteredTickets = allTickets.filter(
-          (ticket: { status_id: { toString: () => any } }) =>
-            ticket.status_id.toString() === statusFilter,
-        );
-      }
-
       const today = moment().format('YYYY-MM-DD');
 
-      const todayTickets = filteredTickets.filter(
+      // Only today's tickets with status_id 2 (Todo) — show all such tickets regardless of scheduled time
+      const todayTodoTickets = allTickets.filter(
         (ticket: {
           employee_arrival_date: moment.MomentInput;
+          employee_arrival_time?: string;
           status_id: number;
-          status_name: string;
+          status_name?: string;
         }) => {
           const isToday =
             ticket.employee_arrival_date &&
             moment(ticket.employee_arrival_date).format('YYYY-MM-DD') === today;
 
-          const isNotDone =
-            ticket.status_id !== 6 &&
-            ticket.status_name?.toLowerCase() !== 'done';
+          const isTodo =
+            ticket.status_id === 2 ||
+            ticket.status_name?.toLowerCase().trim().replace(/[-_]/g, ' ') === 'todo';
 
-          return isToday && isNotDone;
+          return isToday && isTodo;
         },
       );
-      const sortedTodayTickets = todayTickets.sort(
+
+      const sortedTickets = todayTodoTickets.sort(
         (
           a: { employee_arrival_date: any; employee_arrival_time: any },
           b: { employee_arrival_date: any; employee_arrival_time: any },
         ) => {
           const dateTimeA = moment(
-            `${a.employee_arrival_date} ${a.employee_arrival_time}`,
+            `${a.employee_arrival_date} ${a.employee_arrival_time || '00:00:00'}`,
             'YYYY-MM-DD HH:mm:ss',
           );
           const dateTimeB = moment(
-            `${b.employee_arrival_date} ${b.employee_arrival_time}`,
+            `${b.employee_arrival_date} ${b.employee_arrival_time || '00:00:00'}`,
             'YYYY-MM-DD HH:mm:ss',
           );
-
           return dateTimeA.diff(dateTimeB);
         },
       );
 
-      let finalTickets = [];
-
-      if (sortedTodayTickets.length > 0) {
-        const highPriorityToday = sortedTodayTickets.filter(
-          (ticket: { priority_rank: string }) =>
-            ticket.priority_rank === 'High',
-        );
-
-        finalTickets = highPriorityToday
-          .sort(
-            (
-              a: {
-                employee_arrival_date: any;
-                employee_arrival_time: any;
-                urgency: number;
-              },
-              b: {
-                employee_arrival_date: any;
-                employee_arrival_time: any;
-                urgency: number;
-              },
-            ) => {
-              const dateTimeA = moment(
-                `${a.employee_arrival_date} ${a.employee_arrival_time}`,
-                'YYYY-MM-DD HH:mm:ss',
-              );
-              const dateTimeB = moment(
-                `${b.employee_arrival_date} ${b.employee_arrival_time}`,
-                'YYYY-MM-DD HH:mm:ss',
-              );
-
-              const timeDiff = dateTimeA.diff(dateTimeB);
-              if (timeDiff !== 0) return timeDiff;
-              return b.urgency - a.urgency;
-            },
-          )
-          .slice(0, 3);
-      } else {
-        const highPriorityTodo = filteredTickets.filter(
-          (ticket: {
-            priority_rank: string;
-            status_id: number;
-            status_name: string;
-          }) =>
-            ticket.priority_rank === 'High' &&
-            (ticket.status_id === 2 ||
-              ticket.status_name?.toLowerCase() === 'todo'),
-        );
-
-        finalTickets = highPriorityTodo
-          .sort(
-            (a: { urgency: number }, b: { urgency: number }) =>
-              b.urgency - a.urgency,
-          )
-          .slice(0, 3);
-      }
-
-      setTickets(finalTickets);
+      setTickets(sortedTickets);
     } catch (error) {
       console.error('Error fetching tickets:', error);
       setTickets([]);
     }
-  }, [userId, statusFilter]);
+  }, [userId]);
   const BlinkingText = ({
     children,
     style,
@@ -346,7 +269,6 @@ const Dashboard = ({ navigation }: { navigation: any }) => {
             },
           },
         );
-        console.log('📊 Ticket counts response:', response.data);
 
         const counts = response.data.list;
 
@@ -388,10 +310,11 @@ const Dashboard = ({ navigation }: { navigation: any }) => {
     try {
       await axios.put(`${BASE_URL}/api/tickets/${item.ticket_id}`, {
         ticketData: { status_id: 3, status_tracker: trackerData },
-      });
+      },  
+    );
       fetchTickets();
       Alert.alert('Success', 'Work started');
-    } catch {
+    } catch(error) {
       Alert.alert('Error', 'Failed to start work');
     }
   };
@@ -695,6 +618,274 @@ const Dashboard = ({ navigation }: { navigation: any }) => {
     );
   };
 
+  const listHeader = (
+    <>
+      <View style={styles.statusGrid}>
+        <View
+          style={[
+            styles.statusCard,
+            {
+              backgroundColor: '#ffdcaf',
+              borderColor: '#ffdcaf',
+              borderWidth: 2,
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.cardContent,
+              {
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              },
+            ]}
+          >
+            <View style={styles.textBlock}>
+              <Text style={styles.statusTitle}>ToDo</Text>
+              <Text style={styles.statusNumber}>{statusCounts.todo}</Text>
+            </View>
+
+            <View
+              style={{
+                backgroundColor: '#d8b487',
+                width: 35,
+                height: 35,
+                borderRadius: 10,
+                justifyContent: 'center',
+                alignItems: 'center',
+                position: 'absolute',
+                top: isTablet ? -13 : -20,
+                right: isTablet ? -5 : 5,
+              }}
+            >
+              <FontAwesome6
+                name="triangle-exclamation"
+                size={15}
+                color="#fff"
+              />
+            </View>
+          </View>
+        </View>
+
+        <View
+          style={[
+            styles.statusCard,
+            {
+              backgroundColor: '#A6C8FF',
+              borderColor: '#A6C8FF',
+              borderWidth: 2,
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.cardContent,
+              {
+                flexDirection: 'row',
+                alignItems: 'center',
+              },
+            ]}
+          >
+            <View style={styles.textBlock}>
+              <Text style={styles.statusTitle}>In Progress</Text>
+              <Text style={styles.statusNumber}>
+                {statusCounts.inProgress}
+              </Text>
+            </View>
+
+            <View
+              style={{
+                backgroundColor: '#81b4f5',
+                width: 35,
+                height: 35,
+                borderRadius: 10,
+                justifyContent: 'center',
+                alignItems: 'center',
+                position: 'absolute',
+                top: isTablet ? -13 : -20,
+                right: isTablet ? -5 : 5,
+              }}
+            >
+              <Ionicons name="shield-outline" size={15} color="#fff" />
+            </View>
+          </View>
+        </View>
+
+        <View
+          style={[
+            styles.statusCard,
+            {
+              backgroundColor: '#dbbeff',
+              borderColor: '#dbbeff',
+              borderWidth: 2,
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.cardContent,
+              {
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              },
+            ]}
+          >
+            <View style={styles.textBlock}>
+              <Text style={styles.statusTitle}>Pending</Text>
+              <Text style={styles.statusNumber}>{statusCounts.pending}</Text>
+            </View>
+
+            <View
+              style={{
+                backgroundColor: '#9d76cd',
+                width: 35,
+                height: 35,
+                borderRadius: 10,
+                justifyContent: 'center',
+                alignItems: 'center',
+                position: 'absolute',
+                top: isTablet ? -13 : -20,
+                right: isTablet ? -5 : 5,
+              }}
+            >
+              <Ionicons name="time-outline" size={15} color="#fff" />
+            </View>
+          </View>
+        </View>
+
+        <View
+          style={[
+            styles.statusCard,
+            {
+              backgroundColor: '#ffc5e5',
+              borderColor: '#ffc5e5',
+              borderWidth: 2,
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.cardContent,
+              {
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              },
+            ]}
+          >
+            <View style={styles.textBlock}>
+              <Text style={styles.statusTitle}>On-hold</Text>
+              <Text style={styles.statusNumber}>{statusCounts.onHold}</Text>
+            </View>
+
+            <View
+              style={{
+                backgroundColor: '#cf82ac',
+                width: 35,
+                height: 35,
+                borderRadius: 10,
+                justifyContent: 'center',
+                alignItems: 'center',
+                position: 'absolute',
+                top: isTablet ? -13 : -20,
+
+                right: isTablet ? -5 : 5,
+              }}
+            >
+              <Ionicons name="time-outline" size={15} color="#fff" />
+            </View>
+          </View>
+        </View>
+      </View>
+
+      <View style={{ marginTop: -10, paddingHorizontal: 16 }}>
+        <Text
+          style={{
+            fontSize: 14,
+            fontWeight: 'bold',
+            color: '#000',
+            marginBottom: 10,
+          }}
+        >
+          Ticket Statuses
+        </Text>
+
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+          <View style={{ width: 150, marginRight: -10 }}>
+            <PieChart
+              data={pieData}
+              donut
+              showText={false}
+              innerRadius={50}
+              radius={70}
+              // @ts-ignore
+              centerColor="#FFF"
+              showValuesAsLabels={false}
+              textColor="#000"
+              textSize={14}
+              labelPosition="outside"
+              labelsStyle={{ fontWeight: '600' }}
+            />
+          </View>
+
+          <View style={{ marginLeft: 40, paddingVertical: 5 }}>
+            {pieData.map(item => {
+              const percentage = totalTickets
+                ? ((item.value / totalTickets) * 100).toFixed(0)
+                : 0;
+              return (
+                <View
+                  key={item.text}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    marginVertical: 5,
+                  }}
+                >
+                  <View
+                    style={{
+                      width: 16,
+                      height: 16,
+                      backgroundColor: item.color,
+                      marginRight: 6,
+                      borderRadius: 4,
+                    }}
+                  />
+                  <Text style={{ color: 'black' }}>
+                    {`${item.text} ${percentage}% (${item.value})`}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.filterRow}>
+        <TouchableOpacity
+          onPress={() => setShowDropdown(!showDropdown)}
+          style={styles.filterButton}
+        >
+          <Text style={styles.Tickets}>Today's Tickets</Text>
+
+          <View style={{ flex: 1 }} />
+
+          <TouchableOpacity onPress={() => navigation.navigate('TicketPage')}>
+            <Text style={styles.Ticket}>View All</Text>
+          </TouchableOpacity>
+          <MaterialIcons
+            name="filter-list"
+            size={24}
+            color="#000"
+            style={{ marginLeft: 8 }}
+          />
+        </TouchableOpacity>
+      </View>
+    </>
+  );
+
   return (
     <>
       <StatusBar barStyle="light-content" backgroundColor="#008080" />
@@ -702,280 +893,30 @@ const Dashboard = ({ navigation }: { navigation: any }) => {
       <SafeAreaView style={{ backgroundColor: '#008080', flex: 0 }}>
         <Text style={styles.ticketNumber}>Dashboard</Text>
       </SafeAreaView>
-      <ScrollView>
-        <View style={styles.statusGrid}>
-          <View
-            style={[
-              styles.statusCard,
-              {
-                backgroundColor: '#ffdcaf',
-                borderColor: '#ffdcaf',
-                borderWidth: 2,
-              },
-            ]}
-          >
-            <View
-              style={[
-                styles.cardContent,
-                {
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                },
-              ]}
-            >
-              <View style={styles.textBlock}>
-                <Text style={styles.statusTitle}>ToDo</Text>
-                <Text style={styles.statusNumber}>{statusCounts.todo}</Text>
-              </View>
-
-              <View
-                style={{
-                  backgroundColor: '#d8b487',
-                  width: 35,
-                  height: 35,
-                  borderRadius: 10,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  position: 'absolute',
-                  top: isTablet ? -13 : -20,
-                  right: isTablet ? -5 : 5,
-                }}
-              >
-                <FontAwesome6
-                  name="triangle-exclamation"
-                  size={15}
-                  color="#fff"
-                />
-              </View>
-            </View>
-          </View>
-
-          <View
-            style={[
-              styles.statusCard,
-              {
-                backgroundColor: '#A6C8FF',
-                borderColor: '#A6C8FF',
-                borderWidth: 2,
-              },
-            ]}
-          >
-            <View
-              style={[
-                styles.cardContent,
-                {
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                },
-              ]}
-            >
-              <View style={styles.textBlock}>
-                <Text style={styles.statusTitle}>In Progress</Text>
-                <Text style={styles.statusNumber}>
-                  {statusCounts.inProgress}
-                </Text>
-              </View>
-
-              <View
-                style={{
-                  backgroundColor: '#81b4f5',
-                  width: 35,
-                  height: 35,
-                  borderRadius: 10,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  position: 'absolute',
-                  top: isTablet ? -13 : -20,
-                  right: isTablet ? -5 : 5,
-                }}
-              >
-                <Ionicons name="shield-outline" size={15} color="#fff" />
-              </View>
-            </View>
-          </View>
-
-          <View
-            style={[
-              styles.statusCard,
-              {
-                backgroundColor: '#dbbeff',
-                borderColor: '#dbbeff',
-                borderWidth: 2,
-              },
-            ]}
-          >
-            <View
-              style={[
-                styles.cardContent,
-                {
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                },
-              ]}
-            >
-              <View style={styles.textBlock}>
-                <Text style={styles.statusTitle}>Pending</Text>
-                <Text style={styles.statusNumber}>{statusCounts.pending}</Text>
-              </View>
-
-              <View
-                style={{
-                  backgroundColor: '#9d76cd',
-                  width: 35,
-                  height: 35,
-                  borderRadius: 10,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  position: 'absolute',
-                  top: isTablet ? -13 : -20,
-                  right: isTablet ? -5 : 5,
-                }}
-              >
-                <Ionicons name="time-outline" size={15} color="#fff" />
-              </View>
-            </View>
-          </View>
-
-          <View
-            style={[
-              styles.statusCard,
-              {
-                backgroundColor: '#ffc5e5',
-                borderColor: '#ffc5e5',
-                borderWidth: 2,
-              },
-            ]}
-          >
-            <View
-              style={[
-                styles.cardContent,
-                {
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                },
-              ]}
-            >
-              <View style={styles.textBlock}>
-                <Text style={styles.statusTitle}>On-hold</Text>
-                <Text style={styles.statusNumber}>{statusCounts.onHold}</Text>
-              </View>
-
-              <View
-                style={{
-                  backgroundColor: '#cf82ac',
-                  width: 35,
-                  height: 35,
-                  borderRadius: 10,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  position: 'absolute',
-                  top: isTablet ? -13 : -20,
-
-                  right: isTablet ? -5 : 5,
-                }}
-              >
-                <Ionicons name="time-outline" size={15} color="#fff" />
-              </View>
-            </View>
-          </View>
-        </View>
-
-        <View style={{ marginTop: -10, paddingHorizontal: 16 }}>
-          <Text
-            style={{
-              fontSize: 14,
-              fontWeight: 'bold',
-              color: '#000',
-              marginBottom: 10,
-            }}
-          >
-            Ticket Statuses
-          </Text>
-
-          <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-            <View style={{ width: 150, marginRight: -10 }}>
-              <PieChart
-                data={pieData}
-                donut
-                showText={false}
-                innerRadius={50}
-                radius={70}
-                // @ts-ignore
-                centerColor="#FFF"
-                showValuesAsLabels={false}
-                textColor="#000"
-                textSize={14}
-                labelPosition="outside"
-                labelsStyle={{ fontWeight: '600' }}
-              />
-            </View>
-
-            <ScrollView
-              style={{ maxHeight: 200, marginLeft: 40 }}
-              contentContainerStyle={{ paddingVertical: 5 }}
-            >
-              {pieData.map(item => {
-                const percentage = totalTickets
-                  ? ((item.value / totalTickets) * 100).toFixed(0)
-                  : 0;
-                return (
-                  <View
-                    key={item.text}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      marginVertical: 5,
-                    }}
-                  >
-                    <View
-                      style={{
-                        width: 16,
-                        height: 16,
-                        backgroundColor: item.color,
-                        marginRight: 6,
-                        borderRadius: 4,
-                      }}
-                    />
-                    <Text style={{ color: 'black' }}>
-                      {`${item.text} ${percentage}% (${item.value})`}
-                    </Text>
-                  </View>
-                );
-              })}
-            </ScrollView>
-          </View>
-        </View>
-
-        <View style={styles.filterRow}>
-          <TouchableOpacity
-            onPress={() => setShowDropdown(!showDropdown)}
-            style={styles.filterButton}
-          >
-            <Text style={styles.Tickets}>TodayTickets</Text>
-
-            <View style={{ flex: 1 }} />
-
-            <TouchableOpacity onPress={() => navigation.navigate('TicketPage')}>
-              <Text style={styles.Ticket}>ViewAll</Text>
-            </TouchableOpacity>
+      <FlatList
+        data={tickets}
+        key={isTablet ? 'tablet' : 'mobile'}
+        keyExtractor={(item, index) => `${item.ticket_id}-${index}`}
+        renderItem={renderItem}
+        numColumns={isTablet ? 2 : 1}
+        ListHeaderComponent={listHeader}
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
             <MaterialIcons
-              name="filter-list"
-              size={24}
-              color="#000"
-              style={{ marginLeft: 8 }}
+              name="event-available"
+              size={56}
+              color="#008080"
+              style={{ marginBottom: 12 }}
             />
-          </TouchableOpacity>
-        </View>
-        <FlatList
-          data={tickets}
-          key={isTablet ? 'tablet' : 'mobile'}
-          keyExtractor={(item, index) => `${item.ticket_id}-${index}`}
-          renderItem={renderItem}
-          numColumns={isTablet ? 2 : 1}
-        />
+            <Text style={styles.emptyStateTitle}>
+              No tickets scheduled for today
+            </Text>
+            <Text style={styles.emptyStateSubtext}>
+              Click View All to see all your tickets
+            </Text>
+          </View>
+        }
+      />
 
         <Modal visible={showDropdown} transparent animationType="slide">
           <View style={styles.modalWrapper}>
@@ -1189,7 +1130,6 @@ const Dashboard = ({ navigation }: { navigation: any }) => {
             }}
           />
         )}
-      </ScrollView>
 
       <View style={styles.bottomBar}>
         <TouchableOpacity
@@ -1577,6 +1517,36 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 10,
+  },
+  emptyState: {
+    paddingVertical: 48,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyStateTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  emptyStateSubtext: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  emptyStateButton: {
+    backgroundColor: '#008080',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 10,
+  },
+  emptyStateButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   bottomBar: {
     flexDirection: 'row',

@@ -14,7 +14,7 @@ import dayjs from 'dayjs';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
-import { BASE_URL } from '@env';
+import { BASE_URL } from '../config';
 // @ts-ignore
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 // @ts-ignore

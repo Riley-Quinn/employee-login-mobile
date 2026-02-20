@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 // @ts-ignore
-import { BASE_URL } from '@env';
+import { BASE_URL } from '../config';
 const Locations = () => {
   const [states, setStates] = useState(null);
   const [cities, setCities] = useState(null);

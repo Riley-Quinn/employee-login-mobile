@@ -24,7 +24,7 @@ import StatusTracker from './StatusTracker';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 // @ts-ignore
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { BASE_URL } from '@env';
+import { BASE_URL } from '../config';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TextStyle } from 'react-native';
 const screenWidth = Dimensions.get('window').width;
@@ -148,7 +148,6 @@ const TicketPage = ({ navigation }: { navigation: any }) => {
             },
           },
         );
-        console.log('📊 Ticket counts response:', response.data);
 
         const counts = response.data.list;
 
