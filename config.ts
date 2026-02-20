@@ -10,7 +10,7 @@ import {
 export const BASE_URL =
   typeof ENV_BASE_URL === 'string' && ENV_BASE_URL.length > 0
     ? ENV_BASE_URL.replace(/\/$/, '') // strip trailing slash
-    : 'https://saho.in';
+    : 'https://mebo.in';
 
 export const REACT_APP_CLOUD_FRONT_URL =
   typeof ENV_CLOUD_FRONT === 'string' && ENV_CLOUD_FRONT.length > 0

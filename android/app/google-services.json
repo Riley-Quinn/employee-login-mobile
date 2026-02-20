@@ -1,21 +1,21 @@
 {
   "project_info": {
-    "project_number": "331792976147",
-    "project_id": "scouttrack-58f53",
-    "storage_bucket": "scouttrack-58f53.firebasestorage.app"
+    "project_number": "111759870653",
+    "project_id": "employeespeed",
+    "storage_bucket": "employeespeed.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:331792976147:android:bf8434f5d0e2284340b2e6",
+        "mobilesdk_app_id": "1:111759870653:android:6ea73ae143e56a245085d4",
         "android_client_info": {
-          "package_name": "com.employee"
+          "package_name": "com.employeespeed"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAprAnx41LkHVfiUb4_kisE02doXF-xB2g"
+          "current_key": "AIzaSyCwhRnD7fEbhQ_McPV5vxBvtzzhhP42mW8"
         }
       ],
       "services": {
